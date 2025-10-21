@@ -48,6 +48,78 @@ coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
+
+# Environment and configuration files
+.env
+.env.local
+.env.staging  
+.env.production
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# SSL certificates and keys (never commit these!)
+*.crt
+*.key
+*.pem
+*.csr
+nginx/ssl/*.crt
+nginx/ssl/*.key
+nginx/ssl/*.pem
+nginx/ssl/dhparam.pem
+
+# Logs
+logs/
+*.log
+nginx/logs/*.log
+/var/log/
+
+# Temporary files  
+tmp/
+temp/
+.tmp/
+
+# Ansible
+ansible/*.retry
+ansible/host_vars/*.yml
+ansible/group_vars/production.yml
+ansible/.vault_pass.txt
+
+# Kubernetes secrets (generated)
+kubernetes/secrets-generated.yaml
+
+# Backup files
+*.bak
+*.backup
+backup/
+backups/
+
+# IDE and editor files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Monitoring and metrics
+prometheus/
+grafana/data/
+
+# Local development overrides
+docker-compose.dev.yml
+docker-compose.local.yml
 .pytest_cache/
 cover/
 

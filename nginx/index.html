@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Deployment Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            text-align: center;
+            color: #28a745;
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .endpoints {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .endpoint {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: white;
+            border-left: 4px solid #007bff;
+        }
+        code {
+            background-color: #e9ecef;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Deployment Demo</h1>
+        <div class="status">🚀 Application is running successfully!</div>
+        
+        <div class="endpoints">
+            <h3>Available Endpoints:</h3>
+            <div class="endpoint">
+                <strong>GET /</strong> - This welcome page
+            </div>
+            <div class="endpoint">
+                <strong>GET /health</strong> - Health check endpoint
+            </div>
+            <div class="endpoint">
+                <strong>GET /docs</strong> - Interactive API documentation (Swagger UI)
+            </div>
+            <div class="endpoint">
+                <strong>GET /redoc</strong> - Alternative API documentation
+            </div>
+            <div class="endpoint">
+                <strong>POST /users/</strong> - Create a new user
+            </div>
+            <div class="endpoint">
+                <strong>GET /users/</strong> - Get all users
+            </div>
+            <div class="endpoint">
+                <strong>GET /users/{id}</strong> - Get user by ID
+            </div>
+            <div class="endpoint">
+                <strong>DELETE /users/{id}</strong> - Delete user by ID
+            </div>
+        </div>
+        
+        <p><strong>Architecture:</strong></p>
+        <ul>
+            <li>🐍 <strong>Python API:</strong> FastAPI with Gunicorn WSGI server</li>
+            <li>🗄️ <strong>Database:</strong> PostgreSQL</li>
+            <li>🌐 <strong>Web Server:</strong> Nginx (reverse proxy)</li>
+            <li>🐳 <strong>Containerization:</strong> Docker Compose</li>
+        </ul>
+        
+        <p>Visit <code>/docs</code> for interactive API documentation!</p>
+    </div>
+</body>
+</html>

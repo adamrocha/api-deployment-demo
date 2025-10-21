@@ -1,0 +1,104 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: api_postgres_staging
+    environment:
+      POSTGRES_DB: ${DB_NAME:-api_staging}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-staging_password}
+      POSTGRES_HOST_AUTH_METHOD: ${DB_HOST_AUTH_METHOD:-md5}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-api_staging}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Python API Service
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+      args:
+        - BUILD_ENV=staging
+    container_name: api_python_staging
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-staging_password}@postgres:5432/${DB_NAME:-api_staging}
+      API_ENV: ${API_ENV:-staging}
+      DEBUG: ${DEBUG:-false}
+      SECRET_KEY: ${SECRET_KEY:-staging-secret-key-change-in-production}
+      API_WORKERS: ${API_WORKERS:-4}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+
+  # Nginx Reverse Proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: api_nginx_staging
+    environment:
+      NGINX_ENVSUBST_TEMPLATE_SUFFIX: .template
+      API_UPSTREAM: ${API_UPSTREAM:-api:8000}
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+      SSL_ENABLED: ${SSL_ENABLED:-true}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - api
+    networks:
+      - app_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.25'
+
+networks:
+  app_network:
+    driver: bridge
+    name: api_staging_network
+
+volumes:
+  postgres_data:
+    driver: local
+    name: api_staging_postgres_data

@@ -1,0 +1,25 @@
+---
+# Monitoring role default variables
+
+# Node Exporter configuration
+node_exporter_enabled: true
+node_exporter_version: "1.6.1"
+node_exporter_port: 9100
+
+# PostgreSQL Exporter configuration  
+postgres_exporter_enabled: false
+postgres_exporter_version: "0.13.2"
+postgres_exporter_port: 9187
+
+# Prometheus configuration
+prometheus_server: "{{ prometheus_endpoint | default('http://monitoring.local:9090') }}"
+prometheus_targets_dir: "/etc/prometheus/targets"
+prometheus_job_name: "node"
+prometheus_scrape_interval: "15s"
+
+# Monitoring system settings
+monitoring_user: "monitoring"
+monitoring_group: "monitoring"
+
+# Firewall settings
+ufw_enabled: false

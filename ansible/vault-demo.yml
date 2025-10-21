@@ -1,0 +1,22 @@
+---
+# Vault decryption demonstration playbook
+- name: Demonstrate Vault Decryption Process
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  tasks:
+    - name: Show that vault variables are decrypted automatically
+      debug:
+        msg: |
+          Database Name: {{ vault_db_name }}
+          Database User: {{ vault_db_user }}
+          Password Length: {{ vault_db_password | length }} characters
+          Monitoring User: {{ vault_monitoring_db_user }}
+          
+    - name: Show staging vault variables
+      debug:
+        msg: |
+          Staging DB Password Length: {{ vault_staging_db_password | length }} characters
+          Staging Secret Key Length: {{ vault_staging_secret_key | length }} characters
+      when: vault_staging_db_password is defined

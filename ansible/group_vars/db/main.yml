@@ -1,0 +1,53 @@
+---
+# Database-specific configuration
+# Group variables for [db] servers
+
+# PostgreSQL configuration
+postgresql_version: "15"
+postgres_port: 5432
+postgres_max_connections: 200
+postgres_listen_addresses:
+  - "localhost" 
+  - "{{ ansible_default_ipv4.address }}"
+
+# Memory settings based on server resources (adjust for production)
+postgres_shared_buffers: "512MB"
+postgres_effective_cache_size: "2GB"
+postgres_work_mem: "8MB"
+postgres_maintenance_work_mem: "128MB"
+
+# Security settings
+postgres_auth_method: "md5"
+
+# Backup configuration
+backup_enabled: true
+backup_retention_days: 30
+backup_schedule: "0 2 * * *"  # Daily at 2 AM
+db_backup_dir: "/var/backups/postgresql"
+
+# Monitoring configuration
+monitoring_enabled: true
+node_exporter_enabled: true
+postgres_exporter_enabled: true
+
+# Prometheus configuration
+prometheus_endpoint: "{{ prometheus_server_url | default('http://monitoring.local:9090') }}"
+prometheus_job_name: "postgresql"
+prometheus_scrape_interval: "30s"
+
+# Log configuration
+postgres_log_directory: "/var/log/postgresql"
+postgres_log_filename: "postgresql-%Y-%m-%d_%H%M%S.log"
+postgres_log_rotation_age: "1d"
+postgres_log_rotation_size: "100MB"
+
+# Performance tuning
+postgres_checkpoint_segments: 32
+postgres_checkpoint_completion_target: 0.9
+postgres_wal_buffers: "16MB"
+
+# Connection pooling (if using pgbouncer)
+pgbouncer_enabled: false
+pgbouncer_pool_mode: "transaction"
+pgbouncer_max_client_conn: 100
+pgbouncer_default_pool_size: 20

@@ -1,0 +1,39 @@
+---
+# Database role default variables
+
+# PostgreSQL version and paths
+postgresql_version: "15"
+postgres_bin_dir: "/usr/lib/postgresql/{{ postgresql_version }}/bin"
+postgres_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
+postgres_config_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+
+# Database connection settings  
+postgres_port: 5432
+postgres_listen_addresses: 
+  - "localhost"
+  - "{{ ansible_default_ipv4.address }}"
+postgres_max_connections: 100
+
+# Locale and encoding
+postgres_locale: "en_US.UTF-8"
+
+# Memory configuration (adjust based on server resources)
+postgres_shared_buffers: "256MB"
+postgres_effective_cache_size: "1GB" 
+postgres_work_mem: "4MB"
+postgres_maintenance_work_mem: "64MB"
+
+# Backup configuration
+backup_enabled: false
+db_backup_dir: "/var/backups/postgresql"
+backup_minute: "0"
+backup_hour: "2"
+backup_retention_days: 7
+
+# Security settings
+postgres_auth_method: "md5"
+
+# Application database settings (these will be overridden by vault variables)
+db_name: "{{ vault_db_name | default('app_db') }}"
+db_user: "{{ vault_db_user | default('app_user') }}"
+db_password: "{{ vault_db_password | default('change_me') }}"

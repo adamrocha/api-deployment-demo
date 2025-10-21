@@ -1,0 +1,193 @@
+---
+- name: Install monitoring dependencies
+  package:
+    name:
+      - logrotate
+      - rsyslog
+      - htop
+      - iotop
+      - curl
+      - wget
+    state: present
+
+- name: Create monitoring user
+  user:
+    name: monitoring
+    system: yes
+    shell: /bin/false
+    home: /var/lib/monitoring
+    createhome: yes
+
+# Node Exporter Installation
+- name: Check if node_exporter is already installed
+  stat:
+    path: /usr/local/bin/node_exporter
+  register: node_exporter_binary
+  when: node_exporter_enabled | default(true)
+
+- name: Download node_exporter
+  get_url:
+    url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    mode: '0644'
+  when: 
+    - node_exporter_enabled | default(true)
+    - not node_exporter_binary.stat.exists
+
+- name: Extract node_exporter
+  unarchive:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+    dest: "/tmp"
+    remote_src: yes
+    creates: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+  when: 
+    - node_exporter_enabled | default(true)
+    - not node_exporter_binary.stat.exists
+
+- name: Install node_exporter binary
+  copy:
+    src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+    dest: "/usr/local/bin/node_exporter"
+    mode: '0755'
+    owner: root
+    group: root
+    remote_src: yes
+  when: 
+    - node_exporter_enabled | default(true)
+    - not node_exporter_binary.stat.exists
+  notify: restart node_exporter
+
+- name: Create node_exporter systemd service
+  template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    mode: '0644'
+  when: node_exporter_enabled | default(true)
+  notify: 
+    - reload systemd
+    - restart node_exporter
+
+- name: Start and enable node_exporter
+  systemd:
+    name: node_exporter
+    state: started
+    enabled: yes
+    daemon_reload: yes
+  when: node_exporter_enabled | default(true)
+
+# PostgreSQL Exporter (for database servers)
+- name: Install postgres_exporter
+  block:
+    - name: Download postgres_exporter
+      get_url:
+        url: "https://github.com/prometheus-community/postgres_exporter/releases/download/v{{ postgres_exporter_version }}/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
+        mode: '0644'
+
+    - name: Extract postgres_exporter
+      unarchive:
+        src: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
+        dest: "/tmp"
+        remote_src: yes
+
+    - name: Install postgres_exporter binary
+      copy:
+        src: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64/postgres_exporter"
+        dest: "/usr/local/bin/postgres_exporter"
+        mode: '0755'
+        owner: root
+        group: root
+        remote_src: yes
+      notify: restart postgres_exporter
+
+    - name: Create postgres_exporter configuration
+      template:
+        src: postgres_exporter.env.j2
+        dest: /etc/default/postgres_exporter
+        mode: '0640'
+        owner: root
+        group: monitoring
+      notify: restart postgres_exporter
+
+    - name: Create postgres_exporter systemd service
+      template:
+        src: postgres_exporter.service.j2
+        dest: /etc/systemd/system/postgres_exporter.service
+        mode: '0644'
+      notify:
+        - reload systemd
+        - restart postgres_exporter
+
+    - name: Start and enable postgres_exporter
+      systemd:
+        name: postgres_exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+  when: 
+    - postgres_exporter_enabled | default(false)
+    - "'db' in group_names or 'databases' in group_names"
+
+# Prometheus Configuration for Central Server
+- name: Configure Prometheus scrape targets
+  template:
+    src: prometheus-targets.yml.j2
+    dest: "{{ prometheus_targets_dir }}/{{ inventory_hostname }}.yml"
+    mode: '0644'
+  delegate_to: "{{ prometheus_server }}"
+  when: 
+    - prometheus_server is defined
+    - prometheus_targets_dir is defined
+  notify: reload prometheus
+
+# Application Monitoring
+- name: Configure log rotation for application
+  template:
+    src: api-app-logrotate.j2
+    dest: /etc/logrotate.d/api-app
+    mode: '0644'
+
+- name: Create monitoring script
+  template:
+    src: health-monitor.sh.j2
+    dest: /usr/local/bin/health-monitor.sh
+    mode: '0755'
+
+- name: Create monitoring cron job
+  cron:
+    name: "API Health Monitor"
+    minute: "*/5"
+    job: "/usr/local/bin/health-monitor.sh"
+    user: root
+
+- name: Install Docker system monitoring
+  pip:
+    name:
+      - docker
+      - requests
+    executable: pip3
+  when: "'web' in group_names"
+
+- name: Create system monitoring script
+  template:
+    src: system-monitor.py.j2
+    dest: /usr/local/bin/system-monitor.py
+    mode: '0755'
+
+- name: Setup system monitoring cron
+  cron:
+    name: "System Resource Monitor"  
+    minute: "*/10"
+    job: "/usr/bin/python3 /usr/local/bin/system-monitor.py"
+    user: root
+
+# Firewall rules for monitoring
+- name: Open firewall ports for monitoring
+  ufw:
+    rule: allow
+    port: "{{ item }}"
+    proto: tcp
+  loop:
+    - "9100"  # node_exporter
+    - "9187"  # postgres_exporter (if enabled)
+  when: ufw_enabled | default(false)

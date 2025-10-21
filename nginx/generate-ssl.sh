@@ -50,7 +50,7 @@ if [[ -f "$CERT_FILE" && -f "$KEY_FILE" ]]; then
             create_ssl_config
         fi
         
-        return 0
+        exit 0
     else
         echo "Existing certificates are expired or expiring soon. Regenerating..."
     fi

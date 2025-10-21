@@ -1,0 +1,126 @@
+---
+# Database Configuration Playbook - Task 2: Ansible Database Management
+# This playbook configures PostgreSQL database servers with monitoring
+
+- name: Configure PostgreSQL Database Servers
+  hosts: db
+  become: true
+  gather_facts: true
+  
+  vars:
+    # Override default environment if not specified
+    target_env: "{{ environment | default('staging') }}"
+    
+  pre_tasks:
+    - name: Validate that we're targeting database servers
+      assert:
+        that:
+          - "'db' in group_names or 'databases' in group_names"
+        fail_msg: "This playbook should only run on database servers"
+        success_msg: "Confirmed target is a database server"
+
+    - name: Update system packages
+      package:
+        update_cache: yes
+        cache_valid_time: 3600
+      tags: [system]
+
+    - name: Install required collections
+      community.general.ansible_galaxy_install:
+        type: collection
+        name: "{{ item }}"
+      loop:
+        - community.postgresql
+        - community.general
+      delegate_to: localhost
+      run_once: true
+      tags: [setup]
+
+    - name: Ensure Python PostgreSQL library is installed
+      package:
+        name:
+          - python3-psycopg2
+          - postgresql-client
+        state: present
+      tags: [setup]
+
+  roles:
+    - role: database
+      tags: [database, postgres]
+      
+    - role: monitoring  
+      tags: [monitoring, prometheus]
+      vars:
+        postgres_exporter_enabled: true
+        
+  post_tasks:
+    - name: Verify PostgreSQL service is running
+      systemd:
+        name: postgresql
+        state: started
+      check_mode: yes
+      register: postgres_status
+      
+    - name: Verify database connectivity
+      community.postgresql.postgresql_ping:
+        db: "{{ vault_db_name }}"
+        login_user: "{{ vault_db_user }}"
+        login_password: "{{ vault_db_password }}"
+        login_host: localhost
+        login_port: "{{ postgres_port }}"
+      tags: [verification]
+
+    - name: Verify monitoring endpoints
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ item }}/metrics"
+        method: GET
+        timeout: 10
+      loop:
+        - 9100  # node_exporter
+        - 9187  # postgres_exporter
+      register: monitoring_check
+      failed_when: false
+      tags: [verification]
+
+    - name: Display deployment summary
+      debug:
+        msg: |
+          ✅ Database Configuration Complete!
+          
+          Database Details:
+            - Server: {{ inventory_hostname }} ({{ ansible_default_ipv4.address }})
+            - PostgreSQL: {{ postgres_status.status.ActiveState | default('Unknown') }}
+            - Database: {{ vault_db_name }}
+            - Port: {{ postgres_port }}
+            
+          Monitoring Endpoints:
+            - Node Exporter: http://{{ ansible_default_ipv4.address }}:9100/metrics
+            - Postgres Exporter: http://{{ ansible_default_ipv4.address }}:9187/metrics
+            
+          Configuration:
+            - Environment: {{ target_env }}
+            - Backup Enabled: {{ backup_enabled | default(false) }}
+            - Prometheus Integration: {{ monitoring_enabled | default(true) }}
+      tags: [verification]
+
+  handlers:
+    - name: restart postgresql
+      systemd:
+        name: postgresql
+        state: restarted
+        daemon_reload: yes
+
+    - name: reload postgresql  
+      systemd:
+        name: postgresql
+        state: reloaded
+
+    - name: restart monitoring services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+        daemon_reload: yes
+      loop:
+        - node_exporter
+        - postgres_exporter
+      failed_when: false

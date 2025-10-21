@@ -1,0 +1,16 @@
+---
+# Test playbook for individual roles
+- name: Test API App Role
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    app_name: api-deployment-demo
+    app_user: appuser
+    app_group: appuser
+    ansible_user: "{{ lookup('env', 'USER') }}"
+    app_dir: "/tmp/test-ansible"
+  tasks:
+    - name: Debug variables
+      debug:
+        var: app_name

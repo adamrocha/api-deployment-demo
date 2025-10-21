@@ -86,6 +86,38 @@ ansible/host_vars/*.yml
 ansible/group_vars/production.yml
 ansible/.vault_pass.txt
 
+# Ansible Vault - Security Critical
+ansible/.vault_pass
+ansible/.vault_pass_*
+ansible/vault_pass*
+ansible/**/vault_pass*
+ansible/.ansible_vault_password
+ansible/ansible-vault-password*
+
+# SSH Keys and Certificates
+ansible/**/*.pem
+ansible/**/*.key
+ansible/**/*.crt
+ansible/**/id_rsa*
+ansible/**/id_ed25519*
+ansible/.ssh/
+*.pem
+*.key
+
+# Temporary and cache files
+ansible/.ansible/
+ansible/ansible.log
+ansible/**/*.log
+ansible/tmp/
+ansible/.tmp/
+
+# Environment-specific sensitive configs
+ansible/inventories/production/
+ansible/production_*
+ansible/secrets/
+ansible/**/*secret*
+ansible/**/*password*
+
 # Kubernetes secrets (generated)
 kubernetes/secrets-generated.yaml
 

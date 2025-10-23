@@ -45,7 +45,7 @@ class User(Base):
 # Pydantic Models
 class UserCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="User's full name")
-    email: str = Field(..., description="User's email address")
+    email: EmailStr = Field(..., description="User's email address")
 
 class UserResponse(BaseModel):
     id: int = Field(..., description="Unique user identifier")

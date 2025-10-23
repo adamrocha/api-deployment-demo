@@ -10,22 +10,18 @@ nodes:
       kubeletExtraArgs:
         node-labels: "ingress-ready=true"
   extraPortMappings:
-  - containerPort: 80
-    hostPort: 8080
-    protocol: TCP
-  - containerPort: 443
-    hostPort: 8443
-    protocol: TCP
-  # NodePort service mappings - Production uses standard ports
+  # Frontend HTTP/HTTPS access (standard ports)
   - containerPort: 30080
     hostPort: 80
     protocol: TCP
-  - containerPort: 30443  
+  - containerPort: 30443
     hostPort: 443
     protocol: TCP
+  # API Direct access
   - containerPort: 30800
     hostPort: 8000
     protocol: TCP
+  # Monitoring services
   - containerPort: 30300
     hostPort: 3000
     protocol: TCP

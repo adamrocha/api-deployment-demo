@@ -20,7 +20,8 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:1.25-alpine
+        image: api-deployment-demo-nginx:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           name: http
@@ -87,9 +88,11 @@ spec:
   - name: http
     port: 80
     targetPort: 80
+    nodePort: 30080
     protocol: TCP
   - name: https
     port: 443
     targetPort: 443
+    nodePort: 30443
     protocol: TCP
   type: LoadBalancer

@@ -30,22 +30,22 @@ spec:
           valueFrom:
             configMapKeyRef:
               name: postgres-config
-              key: POSTGRES_DB
+              key: DB_NAME
         - name: POSTGRES_USER
           valueFrom:
             configMapKeyRef:
               name: postgres-config
-              key: POSTGRES_USER
+              key: DB_USER
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: POSTGRES_PASSWORD
+              key: DB_PASSWORD
         - name: POSTGRES_HOST_AUTH_METHOD
           valueFrom:
             configMapKeyRef:
               name: postgres-config
-              key: POSTGRES_HOST_AUTH_METHOD
+              key: DB_HOST_AUTH_METHOD
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data

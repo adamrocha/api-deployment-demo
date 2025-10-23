@@ -20,7 +20,7 @@ nginx_cpu_limit: "0.25"
 # SSL configuration for staging
 ssl_enabled: true
 ssl_self_signed: true
-server_name: staging.api-demo.local
+server_name: localhost
 
 # Backup configuration
 backup_enabled: true

@@ -31,7 +31,7 @@ node_exporter_enabled: true
 postgres_exporter_enabled: true
 
 # Prometheus configuration
-prometheus_endpoint: "{{ prometheus_server_url | default('http://monitoring.local:9090') }}"
+prometheus_endpoint: "{{ prometheus_server_url | default('http://localhost:9090') }}"
 prometheus_job_name: "postgresql"
 prometheus_scrape_interval: "30s"
 

@@ -1,0 +1,60 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-network-policy
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Allow nginx to access API
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-demo
+          component: nginx
+    ports:
+    - protocol: TCP
+      port: 8000
+  # Allow API to access database
+  - from:
+    - podSelector:
+        matchLabels:
+          app: api-demo
+          component: api
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow external access to nginx
+  - from: []
+    ports:
+    - protocol: TCP
+      port: 80
+    - protocol: TCP
+      port: 443
+  egress:
+  # Allow DNS resolution
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow API to database communication
+  - to:
+    - podSelector:
+        matchLabels:
+          app: api-demo
+          component: database
+    ports:
+    - protocol: TCP
+      port: 5432
+  # Allow outbound HTTPS for package updates, etc.
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80

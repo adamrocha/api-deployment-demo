@@ -1,0 +1,133 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    component: api
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8000"
+    prometheus.io/path: "/metrics"
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0  # Zero-downtime rolling updates
+  selector:
+    matchLabels:
+      app: api-demo
+      component: api
+  template:
+    metadata:
+      labels:
+        app: api-demo
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: api
+        image: api-deployment-demo:v1.7
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        - containerPort: 8001
+          name: metrics
+        env:
+        - name: POSTGRES_HOST
+          value: "postgres-service"
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          value: "api_db"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: POSTGRES_PASSWORD
+        - name: API_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: API_ENV
+        - name: DEBUG
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: DEBUG
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: SECRET_KEY
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: LOG_LEVEL
+        - name: API_WORKERS
+          valueFrom:
+            configMapKeyRef:
+              name: api-config
+              key: API_WORKERS
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+      initContainers:
+      - name: wait-for-postgres
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          until nc -z postgres-service 5432; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    component: api
+spec:
+  selector:
+    app: api-demo
+    component: api
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+    protocol: TCP
+  type: ClusterIP

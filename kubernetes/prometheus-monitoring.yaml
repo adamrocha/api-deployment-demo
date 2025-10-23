@@ -1,0 +1,362 @@
+# Prometheus ServiceMonitor and Observability Configuration
+# This file configures automatic metrics collection and monitoring
+
+---
+# ServiceMonitor for API application
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: api-servicemonitor
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    component: api
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: api-demo
+      component: api
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+    scheme: http
+    honorLabels: true
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+    honorLabels: true
+  namespaceSelector:
+    matchNames:
+    - api-deployment-demo
+
+---
+# ServiceMonitor for PostgreSQL
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: postgres-servicemonitor
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    component: database
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app: api-demo
+      component: database
+  endpoints:
+  - port: postgres
+    interval: 30s
+    path: /metrics
+    scheme: http
+    honorLabels: true
+  namespaceSelector:
+    matchNames:
+    - api-deployment-demo
+
+---
+# ServiceMonitor for Nginx Ingress Controller
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: nginx-ingress-servicemonitor
+  namespace: ingress-nginx
+  labels:
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    prometheus: kube-prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ingress-nginx
+      app.kubernetes.io/part-of: ingress-nginx
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+    honorLabels: true
+  namespaceSelector:
+    matchNames:
+    - ingress-nginx
+
+---
+# PrometheusRule for API alerts
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: api-alerts
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    prometheus: kube-prometheus
+    role: alert-rules
+spec:
+  groups:
+  - name: api-deployment-demo.rules
+    interval: 30s
+    rules:
+    # High CPU usage alert
+    - alert: HighCPUUsage
+      expr: rate(container_cpu_usage_seconds_total{namespace="api-deployment-demo"}[5m]) > 0.8
+      for: 5m
+      labels:
+        severity: warning
+        namespace: api-deployment-demo
+      annotations:
+        summary: "High CPU usage detected"
+        description: "CPU usage is above 80% for more than 5 minutes"
+    
+    # High memory usage alert
+    - alert: HighMemoryUsage
+      expr: container_memory_usage_bytes{namespace="api-deployment-demo"} / container_spec_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: critical
+        namespace: api-deployment-demo
+      annotations:
+        summary: "High memory usage detected"
+        description: "Memory usage is above 90% for more than 5 minutes"
+    
+    # API service down alert
+    - alert: APIServiceDown
+      expr: up{job="api-demo-api"} == 0
+      for: 1m
+      labels:
+        severity: critical
+        namespace: api-deployment-demo
+      annotations:
+        summary: "API service is down"
+        description: "API service has been down for more than 1 minute"
+    
+    # Database connection alert
+    - alert: DatabaseConnectionHigh
+      expr: pg_stat_database_numbackends > 80
+      for: 5m
+      labels:
+        severity: warning
+        namespace: api-deployment-demo
+      annotations:
+        summary: "High database connections"
+        description: "PostgreSQL has more than 80 active connections"
+    
+    # High HTTP error rate alert
+    - alert: HighHTTPErrorRate
+      expr: rate(nginx_ingress_controller_requests{status=~"5.."}[5m]) / rate(nginx_ingress_controller_requests[5m]) > 0.05
+      for: 5m
+      labels:
+        severity: warning
+        namespace: api-deployment-demo
+      annotations:
+        summary: "High HTTP 5xx error rate"
+        description: "HTTP 5xx error rate is above 5% for more than 5 minutes"
+
+---
+# Grafana Dashboard ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-grafana-dashboard
+  namespace: monitoring  # Assuming Grafana is in monitoring namespace
+  labels:
+    grafana_dashboard: "1"
+    app: grafana
+data:
+  api-deployment-demo.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "API Deployment Demo Dashboard",
+        "tags": ["kubernetes", "api", "production"],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "30s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "API Request Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(nginx_ingress_controller_requests{ingress=\"api-ingress\"}[5m])",
+                "legendFormat": "Requests/sec"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "API Response Time",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, rate(nginx_ingress_controller_request_duration_seconds_bucket{ingress=\"api-ingress\"}[5m]))",
+                "legendFormat": "95th percentile"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "title": "API Error Rate",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "rate(nginx_ingress_controller_requests{ingress=\"api-ingress\",status=~\"5..\"}[5m]) / rate(nginx_ingress_controller_requests{ingress=\"api-ingress\"}[5m]) * 100",
+                "legendFormat": "Error Rate %"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "title": "Pod CPU Usage",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{namespace=\"api-deployment-demo\",container!=\"POD\"}[5m])",
+                "legendFormat": "{{pod}} - {{container}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 5,
+            "title": "Pod Memory Usage",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{namespace=\"api-deployment-demo\",container!=\"POD\"} / 1024 / 1024",
+                "legendFormat": "{{pod}} - {{container}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          },
+          {
+            "id": 6,
+            "title": "Database Connections",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "pg_stat_database_numbackends{datname=\"api_db\"}",
+                "legendFormat": "Active Connections"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
+          },
+          {
+            "id": 7,
+            "title": "Database Size",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "pg_database_size_bytes{datname=\"api_db\"} / 1024 / 1024 / 1024",
+                "legendFormat": "DB Size (GB)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 12, "y": 16}
+          },
+          {
+            "id": 8,
+            "title": "Horizontal Pod Autoscaler",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "kube_horizontalpodautoscaler_status_current_replicas{namespace=\"api-deployment-demo\"}",
+                "legendFormat": "Current Replicas"
+              },
+              {
+                "expr": "kube_horizontalpodautoscaler_status_desired_replicas{namespace=\"api-deployment-demo\"}",
+                "legendFormat": "Desired Replicas"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 6, "x": 18, "y": 16}
+          }
+        ]
+      }
+    }
+
+---
+# Grafana Dashboard ConfigMap for Infrastructure Overview
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infrastructure-grafana-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app: grafana
+data:
+  infrastructure-overview.json: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "Infrastructure Overview - API Deployment Demo",
+        "tags": ["kubernetes", "infrastructure", "overview"],
+        "style": "dark",
+        "timezone": "browser",
+        "refresh": "30s",
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "panels": [
+          {
+            "id": 1,
+            "title": "Cluster Resource Usage",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "sum(rate(container_cpu_usage_seconds_total{namespace=\"api-deployment-demo\"}[5m]))",
+                "legendFormat": "CPU Usage"
+              },
+              {
+                "expr": "sum(container_memory_usage_bytes{namespace=\"api-deployment-demo\"}) / 1024 / 1024 / 1024",
+                "legendFormat": "Memory Usage (GB)"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "title": "Pod Status",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "count(kube_pod_status_phase{namespace=\"api-deployment-demo\",phase=\"Running\"})",
+                "legendFormat": "Running Pods"
+              },
+              {
+                "expr": "count(kube_pod_status_phase{namespace=\"api-deployment-demo\",phase=\"Pending\"})",
+                "legendFormat": "Pending Pods"
+              },
+              {
+                "expr": "count(kube_pod_status_phase{namespace=\"api-deployment-demo\",phase=\"Failed\"})",
+                "legendFormat": "Failed Pods"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+          },
+          {
+            "id": 3,
+            "title": "Service Availability",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "up{namespace=\"api-deployment-demo\"}",
+                "legendFormat": "{{job}} - {{instance}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8}
+          }
+        ]
+      }
+    }

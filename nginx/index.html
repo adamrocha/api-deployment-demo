@@ -1,59 +1,207 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>API Deployment Demo</title>
+    <title>API Deployment Demo - Production Ready</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
         .container {
             background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         h1 {
             color: #333;
             text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .environment {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 30px;
         }
         .status {
             text-align: center;
             color: #28a745;
             font-size: 18px;
             margin: 20px 0;
+            padding: 15px;
+            background-color: #d4edda;
+            border-radius: 5px;
+            border: 1px solid #c3e6cb;
+        }
+        .hello-world-section {
+            background: linear-gradient(135deg, #ff9a56 0%, #ff6b9d 100%);
+            padding: 30px;
+            border-radius: 10px;
+            margin: 30px 0;
+            color: white;
+        }
+        .hello-world-section h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            align-items: center;
+        }
+        .input-group label {
+            min-width: 120px;
+            font-weight: bold;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 6px;
+            background-color: rgba(255,255,255,0.9);
+            font-size: 16px;
+        }
+        .btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: 2px solid white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background: white;
+            color: #333;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 6px;
+            min-height: 50px;
+            display: none;
         }
         .endpoints {
             background-color: #f8f9fa;
             padding: 20px;
-            border-radius: 5px;
+            border-radius: 8px;
             margin: 20px 0;
         }
         .endpoint {
             margin: 10px 0;
-            padding: 10px;
+            padding: 15px;
             background-color: white;
             border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        .deployment-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            color: white;
         }
         code {
             background-color: #e9ecef;
-            padding: 2px 4px;
-            border-radius: 3px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #333;
+        }
+        .architecture-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .arch-item {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            text-align: center;
+        }
+        .loading {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>API Deployment Demo</h1>
-        <div class="status">🚀 Application is running successfully!</div>
+        <h1>🚀 API Deployment Demo</h1>
+        <div class="environment" id="environment">
+            <strong>Environment:</strong> <span id="env-name">Production Ready</span> | 
+            <strong>Deployment:</strong> <span id="deployment-type">Kubernetes</span>
+        </div>
+        <div class="status" id="status">
+            <span class="loading">⚡</span> Checking application status...
+        </div>
+        
+        <!-- Hello World Interactive Section -->
+        <div class="hello-world-section">
+            <h2>🌟 Hello World! Interactive Demo</h2>
+            <p>Test our complete workflow: Add users, update messages, and see the data flow through our production infrastructure!</p>
+            
+            <div class="input-group">
+                <label for="userName">User Name:</label>
+                <input type="text" id="userName" placeholder="Enter your name (e.g., John Doe)" value="World">
+            </div>
+            
+            <div class="input-group">
+                <label for="userEmail">Email:</label>
+                <input type="email" id="userEmail" placeholder="Enter email (e.g., hello@world.com)" value="hello@world.com">
+            </div>
+            
+            <div class="input-group">
+                <button class="btn" onclick="createUser()">👋 Say Hello (Create User)</button>
+                <button class="btn" onclick="getAllUsers()">📋 List All Hellos</button>
+                <button class="btn" onclick="updateUser()">✏️ Update Hello</button>
+                <button class="btn" onclick="checkHealth()">💓 Check Health</button>
+            </div>
+            
+            <div class="result" id="result">
+                Results will appear here...
+            </div>
+        </div>
+        
+        <!-- Deployment Information -->
+        <div class="deployment-info">
+            <h3>🏗️ Production Deployment Architecture</h3>
+            <div class="architecture-grid">
+                <div class="arch-item">
+                    <h4>🎯 Task 1: Docker</h4>
+                    <p>Multi-container orchestration with Docker Compose</p>
+                </div>
+                <div class="arch-item">
+                    <h4>⚙️ Task 2: Ansible</h4>
+                    <p>Infrastructure automation and configuration management</p>
+                </div>
+                <div class="arch-item">
+                    <h4>☸️ Task 3: Kubernetes</h4>
+                    <p>Production orchestration with auto-scaling and monitoring</p>
+                </div>
+            </div>
+        </div>
         
         <div class="endpoints">
-            <h3>Available Endpoints:</h3>
+            <h3>🔗 Available API Endpoints:</h3>
             <div class="endpoint">
-                <strong>GET /</strong> - This welcome page
+                <strong>GET /</strong> - This interactive dashboard
             </div>
             <div class="endpoint">
                 <strong>GET /health</strong> - Health check endpoint
@@ -62,31 +210,236 @@
                 <strong>GET /docs</strong> - Interactive API documentation (Swagger UI)
             </div>
             <div class="endpoint">
-                <strong>GET /redoc</strong> - Alternative API documentation
+                <strong>POST /users/</strong> - Create a new user (Hello World!)
             </div>
             <div class="endpoint">
-                <strong>POST /users/</strong> - Create a new user
+                <strong>GET /users/</strong> - Get all users (List Hellos)
             </div>
             <div class="endpoint">
-                <strong>GET /users/</strong> - Get all users
-            </div>
-            <div class="endpoint">
-                <strong>GET /users/{id}</strong> - Get user by ID
+                <strong>PUT /users/{id}</strong> - Update user by ID
             </div>
             <div class="endpoint">
                 <strong>DELETE /users/{id}</strong> - Delete user by ID
             </div>
         </div>
         
-        <p><strong>Architecture:</strong></p>
-        <ul>
-            <li>🐍 <strong>Python API:</strong> FastAPI with Gunicorn WSGI server</li>
-            <li>🗄️ <strong>Database:</strong> PostgreSQL</li>
-            <li>🌐 <strong>Web Server:</strong> Nginx (reverse proxy)</li>
-            <li>🐳 <strong>Containerization:</strong> Docker Compose</li>
-        </ul>
+        <div class="deployment-info">
+            <h3>🏭 Current Infrastructure:</h3>
+            <div class="architecture-grid">
+                <div class="arch-item">
+                    <h4>🐍 FastAPI Backend</h4>
+                    <p>Python API with automatic validation and documentation</p>
+                </div>
+                <div class="arch-item">
+                    <h4>🗄️ PostgreSQL Database</h4>
+                    <p>StatefulSet with persistent volumes in Kubernetes</p>
+                </div>
+                <div class="arch-item">
+                    <h4>🌐 Nginx Load Balancer</h4>
+                    <p>Reverse proxy with ingress controller and TLS termination</p>
+                </div>
+                <div class="arch-item">
+                    <h4>📊 Monitoring Stack</h4>
+                    <p>Prometheus metrics and Grafana dashboards</p>
+                </div>
+            </div>
+        </div>
         
-        <p>Visit <code>/docs</code> for interactive API documentation!</p>
+        <p style="text-align: center; color: #666;">
+            Visit <code>/docs</code> for interactive API documentation! | 
+            <strong>Environment:</strong> <span id="current-env">Auto-detected</span>
+        </p>
     </div>
+
+    <script>
+        // Auto-detect environment and update UI
+        function detectEnvironment() {
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            let env = 'Production';
+            let deployment = 'Unknown';
+            
+            if (hostname === 'localhost' && port === '8080') {
+                env = 'Kubernetes (Kind)';
+                deployment = 'Local Testing';
+            } else if (hostname === 'localhost' && (port === '' || port === '80')) {
+                env = 'Docker Compose';
+                deployment = 'Task 1';
+            } else if (hostname.includes('staging')) {
+                env = 'Staging';
+                deployment = 'Kubernetes';
+            } else if (hostname.includes('api-demo')) {
+                env = 'Production';
+                deployment = 'Kubernetes';
+            }
+            
+            document.getElementById('env-name').textContent = env;
+            document.getElementById('deployment-type').textContent = deployment;
+            document.getElementById('current-env').textContent = `${env} (${deployment})`;
+        }
+        
+        // API Base URL detection
+        function getApiBaseUrl() {
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            const protocol = window.location.protocol;
+            
+            // For Kubernetes deployment, API is on same host
+            if (port === '8080' || hostname.includes('api-demo')) {
+                return `${protocol}//${hostname}${port ? ':' + port : ''}`;
+            }
+            // For Docker Compose, API might be on different port
+            return `${protocol}//${hostname}${port ? ':' + port : ''}`;
+        }
+        
+        // Check application health
+        async function checkHealth() {
+            const result = document.getElementById('result');
+            result.style.display = 'block';
+            result.innerHTML = '<span class="loading">⚡</span> Checking health...';
+            
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `✅ <strong>Health Check Passed!</strong><br>
+                        Status: ${data.status}<br>
+                        Timestamp: ${data.timestamp}<br>
+                        Environment: ${data.environment || 'Production'}`;
+                    updateStatus('✅ Application is running successfully!', '#28a745');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                result.innerHTML = `❌ <strong>Health Check Failed:</strong> ${error.message}`;
+                updateStatus('⚠️ Application may be starting up...', '#ffc107');
+            }
+        }
+        
+        // Create a new user (Hello World!)
+        async function createUser() {
+            const name = document.getElementById('userName').value || 'World';
+            const email = document.getElementById('userEmail').value || 'hello@world.com';
+            const result = document.getElementById('result');
+            
+            result.style.display = 'block';
+            result.innerHTML = '<span class="loading">⚡</span> Creating user...';
+            
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/users/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: email
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `🎉 <strong>Hello ${name}!</strong><br>
+                        User created successfully!<br>
+                        ID: ${data.id}<br>
+                        Email: ${data.email}<br>
+                        Created: ${new Date(data.created_at).toLocaleString()}`;
+                } else {
+                    const error = await response.json();
+                    result.innerHTML = `❌ <strong>Error:</strong> ${error.detail || 'Failed to create user'}`;
+                }
+            } catch (error) {
+                result.innerHTML = `❌ <strong>Connection Error:</strong> ${error.message}`;
+            }
+        }
+        
+        // Get all users
+        async function getAllUsers() {
+            const result = document.getElementById('result');
+            result.style.display = 'block';
+            result.innerHTML = '<span class="loading">⚡</span> Fetching all users...';
+            
+            try {
+                const response = await fetch(`${getApiBaseUrl()}/users/`);
+                if (response.ok) {
+                    const users = await response.json();
+                    if (users.length === 0) {
+                        result.innerHTML = '📭 <strong>No users found!</strong><br>Create your first "Hello World!" user above.';
+                    } else {
+                        let html = `👥 <strong>Found ${users.length} user(s):</strong><br><br>`;
+                        users.forEach(user => {
+                            html += `• <strong>${user.name}</strong> (${user.email}) - ID: ${user.id}<br>`;
+                        });
+                        result.innerHTML = html;
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                result.innerHTML = `❌ <strong>Error:</strong> ${error.message}`;
+            }
+        }
+        
+        // Update user (simple version - updates the first user found)
+        async function updateUser() {
+            const name = document.getElementById('userName').value || 'Updated World';
+            const result = document.getElementById('result');
+            
+            result.style.display = 'block';
+            result.innerHTML = '<span class="loading">⚡</span> Updating user...';
+            
+            try {
+                // First, get all users to find one to update
+                const usersResponse = await fetch(`${getApiBaseUrl()}/users/`);
+                if (!usersResponse.ok) throw new Error('Failed to fetch users');
+                
+                const users = await usersResponse.json();
+                if (users.length === 0) {
+                    result.innerHTML = '📭 <strong>No users to update!</strong><br>Create a user first.';
+                    return;
+                }
+                
+                // Update the first user
+                const userToUpdate = users[0];
+                const response = await fetch(`${getApiBaseUrl()}/users/${userToUpdate.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        email: userToUpdate.email
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `✏️ <strong>User Updated!</strong><br>
+                        Name: ${data.name}<br>
+                        Email: ${data.email}<br>
+                        ID: ${data.id}`;
+                } else {
+                    const error = await response.json();
+                    result.innerHTML = `❌ <strong>Update Error:</strong> ${error.detail}`;
+                }
+            } catch (error) {
+                result.innerHTML = `❌ <strong>Error:</strong> ${error.message}`;
+            }
+        }
+        
+        // Update status display
+        function updateStatus(message, color) {
+            const status = document.getElementById('status');
+            status.innerHTML = message;
+            status.style.color = color;
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            detectEnvironment();
+            // Auto-check health on load
+            setTimeout(checkHealth, 1000);
+        });
+    </script>
 </body>
 </html>

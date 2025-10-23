@@ -19,13 +19,13 @@ DATABASE_URL = os.getenv(
 )
 if not DATABASE_URL:
     # Construct DATABASE_URL from individual components
-    postgres_user = os.getenv("POSTGRES_USER", "postgres")
-    postgres_password = os.getenv("POSTGRES_PASSWORD")
+    postgres_user = os.getenv("DB_USER", "postgres")
+    postgres_password = os.getenv("DB_PASSWORD")
     if not postgres_password:
-        raise ValueError("POSTGRES_PASSWORD environment variable is required")
-    postgres_host = os.getenv("POSTGRES_HOST", "localhost")
-    postgres_port = os.getenv("POSTGRES_PORT", "5432")
-    postgres_db = os.getenv("POSTGRES_DB", "api_db")
+        raise ValueError("DB_PASSWORD environment variable is required")
+    postgres_host = os.getenv("DB_HOST", "localhost")
+    postgres_port = os.getenv("DB_PORT", "5432")
+    postgres_db = os.getenv("DB_NAME", "api_db")
     DATABASE_URL = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
 
 engine = create_engine(DATABASE_URL)

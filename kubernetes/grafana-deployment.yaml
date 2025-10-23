@@ -10,8 +10,7 @@ data:
     root_url = http://localhost:3000/
     
     [auth.anonymous]
-    enabled = true
-    org_role = Admin
+    enabled = false
     
     [dashboards]
     default_home_dashboard_path = /var/lib/grafana/dashboards/api-metrics-dashboard.json

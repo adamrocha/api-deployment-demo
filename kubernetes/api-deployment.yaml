@@ -33,7 +33,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: api-deployment-demo:v1.7
+        image: api-deployment-demo-api:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
@@ -41,28 +41,33 @@ spec:
         - containerPort: 8001
           name: metrics
         env:
-        - name: POSTGRES_HOST
+        - name: DB_HOST
           value: "postgres-service"
-        - name: POSTGRES_PORT
+        - name: DB_PORT
           value: "5432"
-        - name: POSTGRES_DB
+        - name: DB_NAME
           value: "api_db"
-        - name: POSTGRES_USER
+        - name: DB_USER
           value: "postgres"
-        - name: POSTGRES_PASSWORD
+        - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: POSTGRES_PASSWORD
+              key: DB_PASSWORD
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: api-secrets
+              key: DATABASE_URL
         - name: API_ENV
           valueFrom:
-            configMapKeyRef:
-              name: api-config
+            secretKeyRef:
+              name: api-secrets
               key: API_ENV
         - name: DEBUG
           valueFrom:
-            configMapKeyRef:
-              name: api-config
+            secretKeyRef:
+              name: api-secrets
               key: DEBUG
         - name: SECRET_KEY
           valueFrom:
@@ -71,8 +76,8 @@ spec:
               key: SECRET_KEY
         - name: LOG_LEVEL
           valueFrom:
-            configMapKeyRef:
-              name: api-config
+            secretKeyRef:
+              name: api-secrets
               key: LOG_LEVEL
         - name: API_WORKERS
           valueFrom:

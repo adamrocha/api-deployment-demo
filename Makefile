@@ -422,13 +422,14 @@ stop-forwarding: ## (Legacy) Port forwarding no longer used - services use stand
 
 docker-images: ## Build all Docker images
 	@echo "🔨 Building Docker images..."
-	@cd api && docker build -t api-deployment-demo:latest -t api-deployment-demo:v1.7 .
+	@cd api && docker build -t api-deployment-demo:latest -t api-deployment-demo:v1.7 -t api-deployment-demo-api:latest .
 	@cd nginx && docker build -t api-deployment-demo-nginx:latest .
 	@echo "✅ Docker images built!"
 
 docker-push: docker-images ## Build and push to kind cluster
 	@echo "📤 Loading images to kind cluster..."
 	@kind load docker-image api-deployment-demo:v1.7 --name api-demo-cluster
+	@kind load docker-image api-deployment-demo-api:latest --name api-demo-cluster
 	@kind load docker-image api-deployment-demo-nginx:latest --name api-demo-cluster
 	@echo "✅ Images loaded to kind cluster!"
 

@@ -387,7 +387,8 @@ data:
                                 API_BASE_URL = '/api'; // Through nginx /api proxy
                             } else {
                                 API_BASE_URL = endpoint.replace('/health', ''); // Direct API server
-                            }                                // Update environment display
+                            }
+                                // Update environment display
                                 let className = 'env-kubernetes';
                                 let displayText = `${currentEnvironment.toUpperCase()} (${deployment})`;
                                 

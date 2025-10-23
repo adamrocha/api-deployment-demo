@@ -12,7 +12,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
-      - "5432:5432"
+      - "35432:5432"
     networks:
       - app_network
     restart: unless-stopped
@@ -39,7 +39,7 @@ services:
       API_WORKERS: ${API_WORKERS:-4}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "8000:8000"
+      - "30800:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -73,8 +73,8 @@ services:
       SERVER_NAME: ${SERVER_NAME:-localhost}
       SSL_ENABLED: ${SSL_ENABLED:-true}
     ports:
-      - "80:80"
-      - "443:443"
+      - "30080:80"
+      - "30443:443"
     volumes:
       - ./nginx/logs:/var/log/nginx
     depends_on:

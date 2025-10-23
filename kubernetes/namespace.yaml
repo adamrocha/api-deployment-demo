@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-deployment-demo
+  labels:
+    name: api-deployment-demo
+    environment: staging

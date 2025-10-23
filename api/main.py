@@ -154,7 +154,6 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 @app.get("/users", response_model=list[UserResponse])
-@app.get("/users/", response_model=list[UserResponse])
 async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     start_time = time.time()
     http_requests_total.labels(method='GET', endpoint='/users', status='200').inc()

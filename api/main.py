@@ -3,11 +3,10 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, func
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel
 from datetime import datetime
 import os
 import time
-from typing import List
 from dotenv import load_dotenv
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 
@@ -44,44 +43,17 @@ class User(Base):
 
 # Pydantic Models
 class UserCreate(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100, description="User's full name")
-    email: EmailStr = Field(..., description="User's email address")
+    name: str
+    email: str
 
 class UserResponse(BaseModel):
-    id: int = Field(..., description="Unique user identifier")
-    name: str = Field(..., description="User's full name")
-    email: str = Field(..., description="User's email address")
-    created_at: datetime = Field(..., description="Account creation timestamp")
+    id: int
+    name: str
+    email: str
+    created_at: datetime
     
     class Config:
         from_attributes = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
-
-class HealthResponse(BaseModel):
-    status: str = Field(..., description="Service health status")
-    timestamp: datetime = Field(..., description="Current server time")
-    environment: str = Field(..., description="Deployment environment")
-    deployment: str = Field(..., description="Deployment type")
-    database_url: str = Field(..., description="Database connection status")
-    
-    class Config:
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }
-
-class MessageResponse(BaseModel):
-    message: str = Field(..., description="Response message")
-    status: str = Field(..., description="Response status")
-
-class ProductResponse(BaseModel):
-    id: int = Field(..., description="Product identifier") 
-    name: str = Field(..., description="Product name")
-    price: float = Field(..., gt=0, description="Product price in USD")
-
-class DeleteResponse(BaseModel):
-    message: str = Field(..., description="Deletion confirmation message")
 
 # Prometheus metrics
 http_requests_total = Counter(
@@ -122,7 +94,7 @@ def get_db():
         db.close()
 
 # Routes
-@app.get("/", response_model=MessageResponse)
+@app.get("/")
 async def root():
     start_time = time.time()
     http_requests_total.labels(method='GET', endpoint='/', status='200').inc()
@@ -130,7 +102,7 @@ async def root():
     http_request_duration_seconds.labels(method='GET', endpoint='/').observe(time.time() - start_time)
     return result
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health")
 async def health_check():
     # Detect environment based on available environment variables
     environment = "production"
@@ -181,7 +153,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
-@app.get("/users", response_model=List[UserResponse])
+@app.get("/users", response_model=list[UserResponse])
 async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     start_time = time.time()
     http_requests_total.labels(method='GET', endpoint='/users', status='200').inc()
@@ -196,7 +168,7 @@ async def get_user(user_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-@app.delete("/users/{user_id}", response_model=DeleteResponse)
+@app.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if user is None:
@@ -206,7 +178,7 @@ async def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "User deleted successfully"}
 
-@app.get("/products", response_model=List[ProductResponse])
+@app.get("/products")
 async def get_products():
     """Simple products endpoint for demo purposes"""
     start_time = time.time()

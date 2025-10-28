@@ -98,10 +98,6 @@ data:
             proxy_pass http://api_backend/users;
         }
 
-        location /users/ {
-            proxy_pass http://api_backend/users/;
-        }
-
         # API documentation
         location /docs {
             proxy_pass http://api_backend/docs;
@@ -178,10 +174,6 @@ data:
 
         location /users {
             proxy_pass http://api_backend/users;
-        }
-
-        location /users/ {
-            proxy_pass http://api_backend/users/;
         }
 
         # API documentation

@@ -448,7 +448,7 @@ data:
                 container.innerHTML = '<div class="status info">Loading users...</div>';
                 
                 try {
-                    const users = await apiCall('/users/');
+                    const users = await apiCall('/users');
                     
                     if (users.length === 0) {
                         container.innerHTML = '<div class="status info">No users yet. Add the first one!</div>';
@@ -471,7 +471,7 @@ data:
             // Add new user
             async function addUser(userData) {
                 try {
-                    const newUser = await apiCall('/users/', {
+                    const newUser = await apiCall('/users', {
                         method: 'POST',
                         body: JSON.stringify(userData)
                     });

@@ -140,7 +140,7 @@ async def metrics(db: Session = Depends(get_db)):
     
     return generate_latest()
 
-@app.post("/users/", response_model=UserResponse)
+@app.post("/users", response_model=UserResponse)
 async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     # Check if user already exists
     existing_user = db.query(User).filter(User.email == user.email).first()

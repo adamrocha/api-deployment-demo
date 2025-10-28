@@ -20,18 +20,21 @@ This repository provides **multiple deployment approaches** including Docker Com
 
 **🎯 Zero Manual Intervention Required!**
 
-- ✅ **Standard Port Access**: Production uses standard ports (80, 8000, 3000, 9090)
+- ✅ **Standard Port Access**: Production uses standard ports (80, 443, 8000, 3000, 9090)
+- ✅ **🔒 SSL/HTTPS Integration**: Fully automated SSL certificate generation and HTTPS configuration
 - ✅ **High Port Staging**: Staging uses high ports (30080, 30800) to avoid conflicts
-- ✅ **Intelligent Health Checks**: Robust retry logic and proper wait conditions  
+- ✅ **Intelligent Health Checks**: Robust retry logic with HTTP and HTTPS validation
 - ✅ **Self-Configuring Monitoring**: Complete Prometheus + Grafana stack
-- ✅ **One-Command Deployment**: Complete stack with `make quick-production`
-- ✅ **Automated Port Mapping**: Kind cluster handles all port forwarding
+- ✅ **One-Command Deployment**: Complete SSL-enabled stack with `make production`
+- ✅ **Automated Port Mapping**: Kind cluster handles all port forwarding including HTTPS (443)
 
 | Service      | Production URL              | Staging URL                     | Description                        |
 |--------------|-----------------------------|---------------------------------|------------------------------------|
 | Web Frontend | `http://localhost`          | `http://localhost:30080`        | Main application via Nginx         |
+| **HTTPS Web**| `https://localhost`         | N/A                             | **🔒 Secure HTTPS access**         |
 | API Direct   | `http://localhost:8000`     | `http://localhost:30800`        | Direct API access                  |
 | API Docs     | `http://localhost:8000/docs`| `http://localhost:30800/docs`   | Interactive Swagger documentation  |
+| **HTTPS API**| `https://localhost/health`  | N/A                             | **🔒 Secure API endpoints**        |
 | Prometheus   | `http://localhost:9090`     | N/A                             | Metrics and monitoring             |
 | Grafana      | `http://localhost:3000`     | N/A                             | Dashboards (admin/[see .env]) |
 
@@ -45,11 +48,14 @@ make help
 
 # Quick starts for different environments
 make quick-staging      # Docker Compose environment
-make quick-production   # Kubernetes with monitoring (fully automated!)
+make production         # 🔒 Kubernetes with SSL/HTTPS + monitoring (fully automated!)
 make quick-dev         # Development environment
 
 # Test complete automation
 make test-automated     # Comprehensive automated deployment test
+
+# Check SSL/HTTPS status
+make production-status  # Verify both HTTP and HTTPS endpoints
 ```
 
 ## 🧹 Cleanup Options
@@ -68,6 +74,50 @@ make clean-all          # 💥 NUCLEAR: Delete everything (cluster, images, volu
 ```
 
 See [`CLEANUP.md`](docs/cleanup.md) for detailed cleanup guide.
+
+## 🔒 SSL/HTTPS Integration
+
+**Fully automated HTTPS with zero manual steps!**
+
+### ✅ What Works Automatically
+
+```bash
+make production  # Complete SSL-enabled deployment in one command
+```
+
+**Automated SSL Features:**
+- **🔐 Certificate Generation**: Self-signed certificates with proper SAN entries
+- **🚀 Kubernetes Integration**: TLS secrets automatically created and mounted
+- **🌐 Nginx Configuration**: Both HTTP (80) and HTTPS (443) configured
+- **🧪 Health Validation**: Both protocols tested during deployment
+- **📊 Status Monitoring**: `make production-status` shows HTTP + HTTPS health
+
+### 🌐 HTTPS Access Points
+
+| Service | HTTP URL | HTTPS URL | Notes |
+|---------|----------|-----------|-------|
+| **Web Frontend** | `http://localhost` | `https://localhost` | 🔒 Accept security warning |
+| **API Health** | `http://localhost:8000/health` | `https://localhost/health` | 🔒 Both protocols work |
+| **API Docs** | `http://localhost:8000/docs` | `https://localhost/api/docs` | 🔒 Swagger via HTTPS |
+
+### 🧪 Testing HTTPS
+
+```bash
+# Verify HTTPS is working
+curl -k https://localhost/health
+
+# Check SSL certificate details
+openssl s_client -connect localhost:443 -servername localhost < /dev/null
+
+# Complete status including HTTPS
+make production-status
+```
+
+### 📚 SSL Documentation
+
+- **Integration Guide**: [`SSL-MAKE-INTEGRATION-SUCCESS.md`](SSL-MAKE-INTEGRATION-SUCCESS.md)
+- **Browser Guide**: [`HTTPS-BROWSER-SUCCESS.md`](HTTPS-BROWSER-SUCCESS.md)
+- **Core Script**: [`scripts/validate-ssl-certificates.sh`](scripts/validate-ssl-certificates.sh)
 
 ## 🏗️ Architecture
 
@@ -343,14 +393,18 @@ api-deployment-demo/
 ├── scripts/                           # Utility and security scripts
 │   ├── generate-secrets.sh            # 🔐 Environment-based secret generation
 │   ├── get-grafana-password.sh        # 🔐 Secure password retrieval helper
+│   ├── validate-ssl-certificates.sh   # 🔒 Core SSL certificate generation
 │   ├── quick-start.sh                 # Interactive setup guide
 │   ├── cleanup-all.sh                 # Complete environment cleanup
+│   ├── cleanup-defunct-files.sh       # Remove obsolete SSL files
 │   ├── generate-traffic.sh            # Test traffic generation
 │   ├── setup-local-cluster.sh         # Kind cluster setup
 │   ├── test-automated-deployment.sh   # Comprehensive deployment test
+│   ├── test-production-deployment.sh  # Production deployment testing
 │   ├── verify-dashboard.sh            # Dashboard verification
-│   ├── test-*.sh                      # Additional testing scripts
-│   └── validate-*.sh                  # Task validation scripts
+│   ├── load-test.sh                   # Performance testing
+│   ├── controlled-load-test.sh        # Load testing with controls
+│   └── autoscaling-status.sh          # HPA monitoring
 ├── docs/                              # Documentation
 │   ├── makefile-reference.md          # Complete Makefile guide
 │   ├── grafana-dashboard-guide.md     # Dashboard setup guide (secure credentials)
@@ -359,7 +413,11 @@ api-deployment-demo/
 │   ├── DEPLOYMENT-SUCCESS.md          # Deployment success guide
 │   ├── MONITORING-DASHBOARD.md        # Monitoring setup guide
 │   ├── SECURITY_IMPROVEMENTS.md       # Security enhancements log
+│   ├── ENV_BASED_SECRETS.md           # Environment-based secret management
 │   └── *.md                           # Additional documentation files
+├── SSL-MAKE-INTEGRATION-SUCCESS.md    # 🔒 SSL integration documentation  
+├── HTTPS-BROWSER-SUCCESS.md           # 🔒 HTTPS browser access guide
+├── CLEANUP-SUMMARY.md                 # Defunct file cleanup summary
 └── ansible/                           # Ansible deployment automation
     ├── site.yml                       # Main playbook
     ├── inventory.ini                  # Inventory configuration
@@ -386,11 +444,11 @@ cd api-deployment-demo
 
 # Quick deployment options
 make quick-staging      # Docker Compose staging environment
-make quick-production   # Kubernetes with full monitoring stack
+make production         # 🔒 Kubernetes with SSL/HTTPS + full monitoring stack
 make quick-dev         # Development environment
 
-# Check what's running
-make status
+# Check what's running (includes HTTPS status)
+make production-status  # Shows HTTP + HTTPS health checks
 
 # Generate test traffic for monitoring
 make traffic
@@ -401,8 +459,11 @@ make clean
 
 **Access Points After Setup:**
 - **Staging (Docker Compose)**: http://localhost:30800 (API), http://localhost:30080 (Web)
-- **Production (Kubernetes)**: http://localhost:8000 (API), http://localhost (Web), http://localhost:3000 (Grafana), http://localhost:9090 (Prometheus)
-- **Complete Automation**: All services accessible without manual configuration!
+- **Production (Kubernetes)**: 
+  - **HTTP**: http://localhost:8000 (API), http://localhost (Web)
+  - **🔒 HTTPS**: https://localhost (Web + API), https://localhost/health (API Health)
+  - **Monitoring**: http://localhost:3000 (Grafana), http://localhost:9090 (Prometheus)
+- **Complete Automation**: All services including SSL/HTTPS accessible without manual configuration!
 
 ## 🚀 Deployment Automation
 
@@ -414,8 +475,9 @@ make help  # Show all available automation commands
 
 ### Key Deployment Features
 - ✅ **Zero Manual Configuration**: Complete automation from build to deployment
+- ✅ **🔒 SSL/HTTPS Automation**: Fully automated certificate generation and HTTPS configuration
 - ✅ **Environment Isolation**: Staging and production can run simultaneously
-- ✅ **Health Validation**: Automated health checks and retry logic
+- ✅ **Dual Protocol Health Validation**: Automated HTTP and HTTPS health checks with retry logic
 - ✅ **Monitoring Integration**: Full observability stack included
 - ✅ **Cleanup Automation**: Progressive cleanup options for different scenarios
 
@@ -445,19 +507,29 @@ API_WORKERS=4
 LOG_LEVEL=info
 ```
 
-### SSL Configuration
+### 🔒 SSL/HTTPS Configuration
 
-The `nginx/generate-ssl.sh` script automatically generates self-signed certificates:
+SSL certificates are **automatically generated and configured** during deployment:
 
 ```bash
-# Generate SSL certificates
-./nginx/generate-ssl.sh
+# SSL is fully automated - no manual steps required!
+make production         # Automatically generates SSL certificates and configures HTTPS
 
-# Configure SSL settings
-SSL_ENABLED=true
-SSL_SELF_SIGNED=true
-SERVER_NAME=yourdomain.com
+# SSL configuration happens automatically:
+# ✅ Self-signed certificates generated with proper SAN entries
+# ✅ Kubernetes TLS secrets created
+# ✅ Nginx configured for both HTTP (80) and HTTPS (443)
+# ✅ Browser access ready at https://localhost (accept security warning)
+
+# Verify SSL status
+make production-status  # Shows both HTTP and HTTPS health checks
 ```
+
+**🎯 Key SSL Features:**
+- **Automated Generation**: Certificates created during `make production`
+- **Browser Ready**: HTTPS works immediately at `https://localhost`
+- **Dual Protocol**: Both HTTP and HTTPS endpoints available
+- **Comprehensive Testing**: Status checks verify both protocols
 
 ## 📚 API Documentation
 
@@ -475,14 +547,22 @@ SERVER_NAME=yourdomain.com
 ### Example Usage
 
 ```bash
-# Health check (production)
+# Health check (production HTTP)
 curl http://localhost:8000/health
+
+# Health check (production HTTPS) 🔒
+curl -k https://localhost/health
 
 # Health check (staging)  
 curl http://localhost:30800/health
 
-# Create user (production)
+# Create user (production HTTP)
 curl -X POST "http://localhost:8000/users/" \
+     -H "Content-Type: application/json" \
+     -d '{"name": "John Doe", "email": "john@example.com"}'
+
+# Create user (production HTTPS) 🔒
+curl -k -X POST "https://localhost/users/" \
      -H "Content-Type: application/json" \
      -d '{"name": "John Doe", "email": "john@example.com"}'
 
@@ -491,8 +571,11 @@ curl -X POST "http://localhost:30800/users/" \
      -H "Content-Type: application/json" \
      -d '{"name": "John Doe", "email": "john@example.com"}'
 
-# Get users (production)
+# Get users (production HTTP)
 curl http://localhost:8000/users/
+
+# Get users (production HTTPS) 🔒
+curl -k https://localhost/users/
 
 # Get users (staging)
 curl http://localhost:30800/users/
@@ -699,17 +782,19 @@ async def health_check():
 All monitoring and health check operations are automated through the Makefile:
 
 ```bash
-# Environment status and health
-make status             # Check active environment status
-make logs              # View logs for active environment
-make monitoring-status # Check monitoring stack health
+# Environment status and health (includes HTTPS checks)
+make production-status  # Check HTTP + HTTPS endpoints and pod status
+make logs               # View logs for active environment
+make monitoring-status  # Check monitoring stack health
 
 # Generate test data for monitoring
 make traffic           # Generate test traffic for metrics
 
-# Access monitoring dashboards (after make quick-production)
+# Access monitoring dashboards (after make production)
 # Prometheus: http://localhost:9090
 # Grafana:    http://localhost:3000 (admin/[see .env])
+# HTTPS Web:  https://localhost (accept security warning for self-signed cert)
+# HTTPS API:  https://localhost/health
 
 # Get Grafana credentials easily
 ./scripts/get-grafana-password.sh  # Shows username and password
@@ -717,14 +802,20 @@ make traffic           # Generate test traffic for metrics
 
 ### Automated Health Validation
 - **Staging Environment**: Health checks via `make status`
-- **Production Environment**: Comprehensive monitoring with Prometheus/Grafana
+- **Production Environment**: Comprehensive monitoring with Prometheus/Grafana + SSL/HTTPS validation
+- **🔒 SSL/HTTPS Monitoring**: Automated health checks for both HTTP and HTTPS endpoints
 - **Continuous Monitoring**: Automated health probes and alerting
 
 ## 🔒 Security Features
 
 - **Container Security**: Non-root users, resource limits
 - **Network Security**: Network policies, firewall rules
-- **SSL/TLS**: Automated certificate generation
+- **🔒 SSL/TLS**: **Fully automated HTTPS integration**:
+  - **Zero Manual Steps**: SSL certificates auto-generated during deployment
+  - **Browser Ready**: HTTPS accessible immediately at `https://localhost`
+  - **Dual Protocol Support**: Both HTTP and HTTPS endpoints available
+  - **Comprehensive Testing**: Automated health checks for both protocols
+  - **Makefile Integration**: `make production` includes complete SSL setup
 - **Secret Management**: 🆕 **Environment-based secret management**:
   - **Standard Workflow**: `.env.example` → `.env` → `make apply-secrets`
   - **Secure by Default**: All sensitive values managed via .env files

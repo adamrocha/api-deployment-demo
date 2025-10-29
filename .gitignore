@@ -8,12 +8,10 @@
 # =======================================================================
 # Actual environment files with secrets (NEVER COMMIT)
 .env
-.env.local
 .env.development
-.env.development.local
 .env.staging
 .env.production
-.env.*.local
+.env.backup*
 
 # Template files remain committed:
 # .env.example - Template with placeholders (safe to commit)

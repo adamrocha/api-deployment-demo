@@ -210,10 +210,10 @@
                 <strong>GET /docs</strong> - Interactive API documentation (Swagger UI)
             </div>
             <div class="endpoint">
-                <strong>POST /users/</strong> - Create a new user (Hello World!)
+                <strong>POST /users</strong> - Create a new user (Hello World!)
             </div>
-            <div class="endpoint">
-                <strong>GET /users/</strong> - Get all users (List Hellos)
+            <div class="api-endpoint">
+                <strong>GET /users</strong> - Get all users (List Hellos)
             </div>
             <div class="endpoint">
                 <strong>PUT /users/{id}</strong> - Update user by ID
@@ -326,7 +326,7 @@
             result.innerHTML = '<span class="loading">⚡</span> Creating user...';
             
             try {
-                const response = await fetch(`${getApiBaseUrl()}/users/`, {
+                const response = await fetch(`${getApiBaseUrl()}/users`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -360,7 +360,7 @@
             result.innerHTML = '<span class="loading">⚡</span> Fetching all users...';
             
             try {
-                const response = await fetch(`${getApiBaseUrl()}/users/`);
+                const response = await fetch(`${getApiBaseUrl()}/users`);
                 if (response.ok) {
                     const users = await response.json();
                     if (users.length === 0) {
@@ -390,7 +390,7 @@
             
             try {
                 // First, get all users to find one to update
-                const usersResponse = await fetch(`${getApiBaseUrl()}/users/`);
+                const usersResponse = await fetch(`${getApiBaseUrl()}/users`);
                 if (!usersResponse.ok) throw new Error('Failed to fetch users');
                 
                 const users = await usersResponse.json();

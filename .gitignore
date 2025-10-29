@@ -8,11 +8,10 @@
 # =======================================================================
 # Actual environment files with secrets (NEVER COMMIT)
 .env
-.env.local
-.env.development.local
-.env.staging.local
-.env.production.local
-.env.*.local
+.env.development
+.env.staging
+.env.production
+.env.backup*
 
 # Template files remain committed:
 # .env.example - Template with placeholders (safe to commit)
@@ -149,14 +148,28 @@ cython_debug/
 # SSL/TLS and Certificates (SECURITY CRITICAL)
 # =======================================================================
 # SSL certificates and private keys
-*.crt
 *.key
+*.crt
 *.pem
-*.csr
+*.p12
+*.pfx
+*.jks
+
+# SSL directories and generated certificates
+ssl/
 nginx/ssl/*.crt
 nginx/ssl/*.key
 nginx/ssl/*.pem
 nginx/ssl/dhparam.pem
+nginx/ssl/nginx-selfsigned.*
+/ssl/
+./ssl/
+
+# SSL validation reports (auto-generated)
+ssl-certificate-report.txt
+ssl-validation-report.txt
+*ssl*report*.txt
+*certificate*report*.txt
 
 # =======================================================================
 # Docker and Containers
@@ -164,7 +177,13 @@ nginx/ssl/dhparam.pem
 docker-compose.override.yml
 docker-compose.dev.yml
 docker-compose.local.yml
+docker-compose.*.local.yml
 .dockerignore
+
+# Docker volumes and data
+docker-data/
+volumes/
+docker_volumes/
 
 # =======================================================================
 # Kubernetes (SECURITY CRITICAL)
@@ -172,13 +191,19 @@ docker-compose.local.yml
 # Generated secrets and configurations (from .env files)
 kubernetes/secrets-*.yaml
 kubernetes/configmap-*.yaml
-kubernetes/tls-secrets.yaml
+kubernetes/tls-secret*.yaml
+kubernetes/monitoring-secrets.yaml
 !kubernetes/secrets-*.yaml.example
 
 # Secret directories and local configs
 kubernetes/secrets/
 kubernetes/*-secrets-local.yaml
 kubernetes/monitoring-secrets-local.yaml
+
+# Kubernetes temporary and generated files
+kubernetes/*.tmp
+kubernetes/temp/
+kubernetes/.tmp/
 
 # =======================================================================
 # Ansible (SECURITY CRITICAL)
@@ -225,17 +250,29 @@ logs/
 *.log
 nginx/logs/*.log
 /var/log/
+api.log
+nginx.log
+access.log
+error.log
 
 # Temporary files
 tmp/
 temp/
 .tmp/
+*.tmp
+*.temp
 
 # Backup files
 *.bak
 *.backup
+*.old
 backup/
 backups/
+
+# Process and runtime files
+*.pid
+*.socket
+*.sock
 
 # =======================================================================
 # Monitoring and Data
@@ -243,6 +280,47 @@ backups/
 # Monitoring data directories
 prometheus/
 grafana/data/
+grafana/dashboards/generated/
+grafana.db
+
+# Database files and dumps
+*.db
+*.sqlite
+*.sqlite3
+*.sql
+dumps/
+db_dumps/
+database_backup*
+
+# =======================================================================
+# API Keys, Tokens, and Authentication Files (SECURITY CRITICAL)
+# =======================================================================
+# API keys and tokens
+*api*key*
+*api*token*
+*access*token*
+*refresh*token*
+*.token
+auth.json
+credentials.json
+service-account*.json
+gcp-*.json
+aws-*.json
+azure-*.json
+
+# SSH and authentication
+id_rsa*
+id_ed25519*
+id_ecdsa*
+known_hosts
+authorized_keys
+.ssh/
+ssh_config
+
+# GPG keys
+*.gpg
+*.asc
+.gnupg/
 
 # =======================================================================
 # Development Tools and IDEs
@@ -301,6 +379,31 @@ ehthumbs.db
 Thumbs.db
 
 # =======================================================================
+# Comprehensive Security Patterns (SECURITY CRITICAL)
+# =======================================================================
+# Files with sensitive keywords in names
+*password*
+*secret*
+*private*
+*confidential*
+*credential*
+*token*
+*key*
+*auth*
+
+# Local development overrides
+local.*
+*.local
+dev.*
+development.*
+staging.*
+production.*
+
+# Configuration overrides
+config.local.*
+settings.local.*
+
+# =======================================================================
 # Additional Notes
 # =======================================================================
 # This .gitignore prioritizes security by preventing:
@@ -308,9 +411,16 @@ Thumbs.db
 # 2. SSL certificates and private keys (*.key, *.pem, *.crt)
 # 3. Generated Kubernetes secrets (kubernetes/secrets-*.yaml)
 # 4. Ansible vault passwords and SSH keys
-# 5. Any files containing "secret" or "password" in their names
+# 5. Any files containing "secret", "password", "key", "token" in their names
+# 6. API keys, authentication tokens, and credential files
+# 7. SSL certificate reports and validation files
+# 8. Database files and dumps
+# 9. SSH keys and authentication files
 #
 # Safe to commit:
 # - .env.example (template with placeholders)
 # - kubernetes/secrets-*.yaml.example (example manifests)
 # - Documentation and configuration templates
+# - Files ending in .example, .template, .sample
+kubernetes/monitoring-secrets.yaml
+.env.backup*

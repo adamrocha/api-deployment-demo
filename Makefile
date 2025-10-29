@@ -1,7 +1,13 @@
 # API Deployment Demo Makefile
 # Provides easy commands to manage different environments and services
 
-.PHONY: help clean clean-all clean-all-dry-run build staging production monitoring kind-cluster docker-images
+.PHONY: help setup-env generate-secrets apply-secrets validate-env list-secrets clean-secrets show-env-help
+.PHONY: staging staging-build staging-logs staging-status staging-stop
+.PHONY: production production-logs production-status production-stop kind-cluster docker-images docker-push
+.PHONY: monitoring monitoring-status monitoring-logs access-monitoring access-production access-staging
+.PHONY: clean clean-all clean-all-dry-run clean-staging clean-production clean-images clean-secrets
+.PHONY: traffic logs status validate quick-dev quick-staging quick-production
+.PHONY: test-automated promote validate-promotion
 
 # Default target
 help: ## Show this help message
@@ -22,7 +28,7 @@ help: ## Show this help message
 	@echo "  make clean            # Clean applications (keep cluster & images)"
 	@echo "  make clean-all        # 💥 NUCLEAR: Delete everything (cluster, images, volumes)"
 	@echo ""
-	@echo "📖 For detailed cleanup guide: ./scripts/cleanup-guide.sh"
+	@echo "📖 For comprehensive cleanup: make clean-all"
 
 # =============================================================================
 # Environment Setup
@@ -130,7 +136,7 @@ show-env-help: ## Show environment and secret management help
 
 staging: ## Start staging environment (Docker Compose)
 	@echo "🐳 Starting staging environment with Docker Compose..."
-	@docker-compose up -d
+	@docker compose up -d
 	@echo "✅ Staging environment started!"
 	@echo ""
 	@echo "🌐 Access points (High Ports - Staging):"
@@ -142,17 +148,17 @@ staging: ## Start staging environment (Docker Compose)
 
 staging-build: ## Build and start staging environment
 	@echo "🔨 Building and starting staging environment..."
-	@docker-compose build --no-cache
-	@docker-compose up -d
+	@docker compose build --no-cache
+	@docker compose up -d
 	@echo "✅ Staging environment built and started!"
 
 staging-logs: ## Show staging environment logs
 	@echo "📝 Staging environment logs:"
-	@docker-compose logs -f
+	@docker compose logs -f
 
 staging-status: ## Check staging environment status
 	@echo "📊 Staging environment status:"
-	@docker-compose ps
+	@docker compose ps
 	@echo ""
 	@echo "🌡️ Health checks:"
 	@curl -s http://localhost:30800/health 2>/dev/null || echo "❌ API not responding"
@@ -160,7 +166,7 @@ staging-status: ## Check staging environment status
 
 staging-stop: ## Stop staging environment
 	@echo "🛑 Stopping staging environment..."
-	@docker-compose down
+	@docker compose down
 	@echo "✅ Staging environment stopped!"
 
 # =============================================================================
@@ -172,6 +178,17 @@ production: kind-cluster docker-push ## Start production environment (Kubernetes
 	@kubectl create namespace api-deployment-demo --dry-run=client -o yaml | kubectl apply -f - --validate=false
 	@echo "� Generating and applying secrets for production..."
 	@APPLY=true ./scripts/generate-secrets.sh production api-deployment-demo
+	@echo "🔒 Setting up SSL certificates before deployment..."
+	@bash scripts/validate-ssl-certificates.sh > /dev/null 2>&1 || echo "⚠️  SSL certificate generation skipped"
+	@if ! kubectl get secret nginx-ssl-certs -n api-deployment-demo >/dev/null 2>&1; then \
+		echo "🔐 Creating SSL secret..."; \
+		kubectl create secret tls nginx-ssl-certs -n api-deployment-demo \
+			--cert=nginx/ssl/nginx-selfsigned.crt \
+			--key=nginx/ssl/nginx-selfsigned.key >/dev/null 2>&1 && \
+		echo "✅ SSL secret created" || echo "⚠️  SSL secret creation failed"; \
+	else \
+		echo "✅ SSL secret already exists"; \
+	fi
 	@echo "�📦 Deploying core application resources..."
 	@kubectl apply -f kubernetes/namespace.yaml --validate=false
 	@kubectl apply -f kubernetes/configmaps.yaml --validate=false
@@ -218,9 +235,11 @@ production: kind-cluster docker-push ## Start production environment (Kubernetes
 	@echo ""
 	@echo "🌐 Access points (Standard Ports - Production):"
 	@echo "  Web Frontend: http://localhost"
+	@echo "  HTTPS Access: https://localhost (self-signed cert)"
 	@echo "  API Direct:   http://localhost:8000"
 	@echo "  API Docs:     http://localhost:8000/docs"
 	@echo "  Health Check: http://localhost/health"
+	@echo "  HTTPS Health: https://localhost/health (use -k with curl)"
 	@echo ""
 	@echo "📊 Check status: make production-status"
 
@@ -241,10 +260,18 @@ production-status: ## Check production environment status
 	@echo ""
 	@echo "🌡️ Health check:"
 	@if curl -s --max-time 5 http://localhost/health >/dev/null 2>&1; then \
-		echo "✅ API responding (http://localhost)"; \
+		echo "✅ HTTP API responding (http://localhost)"; \
 		curl -s http://localhost/health | jq -r '"Status: " + .status + " | Environment: " + .environment' 2>/dev/null || curl -s http://localhost/health; \
 	else \
-		echo "❌ API not responding"; \
+		echo "❌ HTTP API not responding"; \
+	fi
+	@echo ""
+	@echo "🔒 HTTPS Health check:"
+	@if curl -k -s --max-time 5 https://localhost/health >/dev/null 2>&1; then \
+		echo "✅ HTTPS API responding (https://localhost)"; \
+		curl -k -s https://localhost/health | jq -r '"HTTPS Status: " + .status + " | Environment: " + .environment' 2>/dev/null || curl -k -s https://localhost/health; \
+	else \
+		echo "❌ HTTPS API not responding"; \
 		echo "💡 Checking if services are ready..."; \
 		kubectl get endpoints -n api-deployment-demo; \
 	fi
@@ -399,7 +426,7 @@ access-all: ## Access all services via NodePort (no port-forwarding needed)
 		echo "  Grafana:     http://localhost:3000 (admin/[see .env])"; \
 		echo "  Prometheus:  http://localhost:9090"; \
 	fi
-	@if docker-compose ps | grep -q Up; then \
+	@if docker compose ps | grep -q Up; then \
 		echo "🐳 Staging services:"; \
 		echo "  Web Frontend: http://localhost:30080"; \
 		echo "  API Direct:   http://localhost:30800"; \
@@ -442,7 +469,7 @@ traffic: ## Generate test traffic (requires running environment)
 	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
 		echo "Generating traffic for production environment..."; \
 		./scripts/generate-traffic.sh; \
-	elif docker-compose ps | grep -q Up; then \
+	elif docker compose ps | grep -q Up; then \
 		echo "Generating traffic for staging environment..."; \
 		for i in {1..20}; do \
 			curl -s http://localhost:30800/users >/dev/null; \
@@ -468,7 +495,7 @@ setup-hosts: ## (Legacy) /etc/hosts no longer needed - standard port access avai
 validate: ## Validate all configurations
 	@echo "✅ Validating configurations..."
 	@echo "📋 Checking Docker Compose..."
-	@docker-compose config >/dev/null && echo "✅ Docker Compose: Valid" || echo "❌ Docker Compose: Invalid"
+	@docker compose config >/dev/null && echo "✅ Docker Compose: Valid" || echo "❌ Docker Compose: Invalid"
 	@echo "📋 Checking Kubernetes manifests..."
 	@kubectl apply --dry-run=client --validate=false -f kubernetes/ >/dev/null 2>&1 && echo "✅ Kubernetes: Valid" || echo "✅ Kubernetes: Valid (syntax check only)"
 	@echo "📋 Checking scripts..."
@@ -487,7 +514,7 @@ clean: ## Clean up everything (containers, images, clusters)
 
 clean-staging: ## Clean up only staging environment
 	@echo "🧹 Cleaning up staging environment..."
-	@docker-compose down -v --remove-orphans
+	@docker compose down -v --remove-orphans
 	@docker rmi api-deployment-demo-api:latest api-deployment-demo-nginx:latest 2>/dev/null || true
 	@echo "✅ Staging cleanup complete!"
 
@@ -540,7 +567,7 @@ clean-all: ## Complete nuclear cleanup - delete everything (cluster, images, vol
 	@echo ""
 	@echo "🧹 Step 6: Stopping any remaining background processes..."
 	@pkill -f "kubectl.*port-forward" 2>/dev/null || true
-	@pkill -f "docker-compose" 2>/dev/null || true
+	@pkill -f "docker compose" 2>/dev/null || true
 	@pkill -f "generate-traffic" 2>/dev/null || true
 	@echo ""
 	@echo "🔍 Step 7: Verification - checking what remains..."
@@ -589,7 +616,7 @@ dev: ## Start development environment (staging + monitoring)
 logs: ## Show logs for active environment
 	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
 		make production-logs; \
-	elif docker-compose ps | grep -q Up; then \
+	elif docker compose ps | grep -q Up; then \
 		make staging-logs; \
 	else \
 		echo "❌ No environment is running"; \
@@ -602,7 +629,7 @@ status: ## Show status for active environment
 			echo ""; \
 			make monitoring-status; \
 		fi; \
-	elif docker-compose ps | grep -q Up; then \
+	elif docker compose ps | grep -q Up; then \
 		make staging-status; \
 	else \
 		echo "❌ No environment is running"; \
@@ -635,4 +662,15 @@ test-automated: ## Run comprehensive automated deployment test
 	@echo "🧪 Running automated deployment test..."
 	@./scripts/test-automated-deployment.sh
 
-.PHONY: test-automated
+promote: ## Promote code from staging to production with validation
+	@echo "🚀 Promoting from staging to production..."
+	@./scripts/promote-to-production.sh
+
+validate-promotion: ## Validate that promotion is ready (staging tests pass)
+	@echo "🔍 Validating staging environment for promotion..."
+	@if ! curl -s http://localhost:30800/health > /dev/null 2>&1; then \
+		echo "❌ Staging environment is not running"; \
+		echo "💡 Start staging first: make staging"; \
+		exit 1; \
+	fi
+	@echo "✅ Staging validation passed - ready for promotion"

@@ -14,7 +14,6 @@
 .env.staging
 .env.production
 .env.*.local
-.envrc
 
 # Template files remain committed:
 # .env.example - Template with placeholders (safe to commit)
@@ -405,7 +404,6 @@ production.*
 # Configuration overrides
 config.local.*
 settings.local.*
-.env.*
 
 # =======================================================================
 # Additional Notes
@@ -426,3 +424,5 @@ settings.local.*
 # - kubernetes/secrets-*.yaml.example (example manifests)
 # - Documentation and configuration templates
 # - Files ending in .example, .template, .sample
+kubernetes/monitoring-secrets.yaml
+.env.backup*

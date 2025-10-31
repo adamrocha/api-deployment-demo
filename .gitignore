@@ -8,9 +8,9 @@
 # =======================================================================
 # Actual environment files with secrets (NEVER COMMIT)
 .env
-.env.development
-.env.staging
-.env.production
+.env.development*
+.env.staging*
+.env.production*
 .env.backup*
 
 # Template files remain committed:

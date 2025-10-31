@@ -994,7 +994,6 @@ kubectl cp api-deployment-demo/api-production-postgres-0:/var/lib/postgresql/dat
 
 ## 🌍 Environment Support
 
-## 🌍 Environment Support
 
 | Environment | Docker Compose | Ansible | Kubernetes |
 |-------------|----------------|---------|------------|

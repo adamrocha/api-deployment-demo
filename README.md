@@ -36,7 +36,7 @@ This repository provides **multiple deployment approaches** including Docker Com
 | API Docs     | `http://localhost:8000/docs`| `http://localhost:30800/docs`   | Interactive Swagger documentation  |
 | **HTTPS API**| `https://localhost/health`  | N/A                             | **🔒 Secure API endpoints**        |
 | Prometheus   | `http://localhost:9090`     | N/A                             | Metrics and monitoring             |
-| Grafana      | `http://localhost:3000`     | N/A                             | Dashboards (admin/[see .env]) |
+| Grafana      | `http://localhost:3000`     | N/A                             | Dashboards (admin/use `scripts/get-grafana-password.sh`) |
 
 ## 🚀 Quick Start
 
@@ -73,7 +73,7 @@ make clean              # Clean applications (keep cluster & images)
 make clean-all          # 💥 NUCLEAR: Delete everything (cluster, images, volumes)
 ```
 
-See [`CLEANUP.md`](docs/cleanup.md) for detailed cleanup guide.
+Use `make clean-all-dry-run` to preview cleanup operations.
 
 ## 🔒 SSL/HTTPS Integration
 
@@ -115,9 +115,9 @@ make production-status
 
 ### 📚 SSL Documentation
 
-- **Integration Guide**: [`SSL-MAKE-INTEGRATION-SUCCESS.md`](SSL-MAKE-INTEGRATION-SUCCESS.md)
-- **Browser Guide**: [`HTTPS-BROWSER-SUCCESS.md`](HTTPS-BROWSER-SUCCESS.md)
-- **Core Script**: [`scripts/validate-ssl-certificates.sh`](scripts/validate-ssl-certificates.sh)
+- **Core Script**: [`scripts/validate-ssl-certificates.sh`](scripts/validate-ssl-certificates.sh) - SSL certificate generation and validation
+- **Certificate Report**: [`ssl-certificate-report.txt`](ssl-certificate-report.txt) - Generated certificate details
+- **SSL Configuration**: [`nginx/ssl-include.conf`](nginx/ssl-include.conf) - Nginx SSL settings
 
 ## 🏗️ Architecture
 
@@ -135,7 +135,7 @@ make production-status
 #### **StatefulSet for PostgreSQL Database**
 **Decision**: Used StatefulSet instead of Deployment for PostgreSQL
 **Justification**:
-- **Persistent Identity**: StatefulSet provides stable, unique network identifiers (`postgres-statefulset-0`) critical for database clustering and backup procedures
+- **Persistent Identity**: StatefulSet provides stable, unique network identifiers (`api-production-postgres-0`) critical for database clustering and backup procedures
 - **Ordered Deployment**: Ensures predictable startup sequence, crucial for database initialization and connection handling
 - **Persistent Storage**: Guarantees consistent PVC attachment across pod restarts, preventing data loss
 - **Stable Network Identity**: Enables reliable service discovery for database connections, especially important in multi-replica scenarios
@@ -143,12 +143,38 @@ make production-status
 **Alternative Considered**: Deployment with PVC
 **Why Rejected**: Deployments don't guarantee pod naming consistency or ordered scaling, risking data corruption in database scenarios
 
+#### **Meaningful Volume Naming Strategy**
+**Decision**: Implemented descriptive PVC naming instead of auto-generated names
+**Implementation**:
+- **StatefulSet Name**: `api-production-postgres` (was: `postgres-statefulset`)
+- **Volume Claim Template**: `data` (was: `postgres-storage`)  
+- **Resulting PVC**: `data-api-production-postgres-0` ✅
+
+**Benefits**:
+- **🏷️ Clear Identification**: PVC name immediately indicates purpose and environment
+- **🔍 Easier Troubleshooting**: Meaningful names in `kubectl get pvc` output
+- **📊 Better Monitoring**: Volume metrics clearly labeled in Prometheus/Grafana
+- **🚀 DevOps Friendly**: Operations team can quickly identify storage resources
+
+**Volume Naming Convention**:
+```bash
+# Pattern: {purpose}-{environment}-{service}-{component}-{replica}
+data-api-production-postgres-0     # Production database storage
+logs-api-staging-app-0            # Staging application logs (future)
+cache-api-production-redis-0      # Production Redis cache (future)
+```
+
+**Docker vs Kubernetes Volume Management**:
+- **Docker Compose**: Uses named volumes (`postgres_data` → `api-deployment-demo_staging_postgres_data`)
+- **Kubernetes**: Uses meaningful PVCs (`data-api-production-postgres-0`)
+- **Kind Nodes**: Use anonymous volumes (normal infrastructure behavior)
+
 #### **Headless Service for Database**
 **Decision**: Implemented headless service (`clusterIP: None`) for PostgreSQL
 **Justification**:
 - **Direct Pod Access**: Allows applications to connect directly to specific database pods without load balancing
 - **StatefulSet Integration**: Works seamlessly with StatefulSet's stable network identities
-- **DNS Resolution**: Provides predictable DNS names (`postgres-statefulset-0.postgres-headless.namespace.svc.cluster.local`)
+- **DNS Resolution**: Provides predictable DNS names (`api-production-postgres-0.postgres-headless.api-deployment-demo.svc.cluster.local`)
 - **Database Clustering**: Essential for future PostgreSQL clustering (primary/replica configurations)
 
 **Alternative Considered**: Standard ClusterIP service
@@ -223,7 +249,7 @@ $ANSIBLE_VAULT;1.1;AES256
 
 #### **Secret Rotation Strategy**
 **Automated Rotation**: Integration with HashiCorp Vault or AWS Secrets Manager
-**Manual Rotation**: Documented procedures in `docs/security-recommendations.md`
+**Manual Rotation**: Use `scripts/validate-ssl-certificates.sh` to regenerate certificates
 **Emergency Procedures**: Break-glass access for critical situations
 
 ### CI/CD Pipeline Integration
@@ -361,6 +387,7 @@ api-deployment-demo/
 │   ├── Dockerfile                     # Nginx container definition
 │   ├── nginx.conf                     # Main Nginx configuration
 │   ├── common-config.conf             # Shared Nginx settings
+│   ├── ssl-include.conf               # SSL configuration include
 │   ├── generate-ssl.sh                # SSL certificate generation script
 │   ├── health-check.sh                # Nginx health monitoring script
 │   ├── index.html                     # Welcome page
@@ -375,49 +402,50 @@ api-deployment-demo/
 │   ├── secrets-*.yaml                 # Generated secrets (gitignored, from .env)
 │   ├── configmap-*.yaml               # Generated configmaps (gitignored, from .env)
 │   ├── persistent-volumes.yaml        # Storage configuration
-│   ├── postgres-deployment.yaml       # Database StatefulSet deployment
+│   ├── postgres-deployment.yaml       # Database StatefulSet deployment (updated naming)
 │   ├── postgres-init-configmap.yaml   # Database initialization
 │   ├── api-deployment.yaml            # API service deployment
 │   ├── nginx-deployment.yaml          # Nginx proxy deployment
+│   ├── nginx-html-configmap.yaml      # Nginx HTML content configuration
+│   ├── nginx-ingress-controller.yaml  # Nginx ingress controller
 │   ├── nodeport-services.yaml         # NodePort service definitions
-│   ├── ingress.yaml                   # Ingress configuration
+│   ├── ingress.yaml                   # Basic ingress configuration
+│   ├── https-ingress.yaml             # HTTPS ingress configuration
 │   ├── production-ingress.yaml        # Production ingress rules
 │   ├── hpa.yaml                       # Horizontal Pod Autoscaler
-│   ├── network-policy.yaml            # Network security policies (optional)
+│   ├── network-policy.yaml            # Network security policies
 │   ├── monitoring-ingress.yaml        # Ingress for monitoring services
-│   ├── monitoring-nodeport.yaml       # NodePort for monitoring services
+│   ├── monitoring-nodeport.yaml       # NodePort for monitoring services  
 │   ├── monitoring-loadbalancer.yaml   # LoadBalancer for monitoring
-│   ├── grafana-*.yaml                 # Grafana configuration files (secure auth)
+│   ├── monitoring-secrets.yaml        # Monitoring authentication secrets
+│   ├── grafana-*.yaml                 # Grafana configuration files
 │   ├── prometheus-*.yaml              # Prometheus configuration files
-│   └── # tls-secrets.yaml            # TLS optional (referenced but not required)
+│   └── tls-secret.yaml                # TLS certificate secrets
 ├── scripts/                           # Utility and security scripts
 │   ├── generate-secrets.sh            # 🔐 Environment-based secret generation
 │   ├── get-grafana-password.sh        # 🔐 Secure password retrieval helper
 │   ├── validate-ssl-certificates.sh   # 🔒 Core SSL certificate generation
 │   ├── quick-start.sh                 # Interactive setup guide
 │   ├── cleanup-all.sh                 # Complete environment cleanup
-│   ├── cleanup-defunct-files.sh       # Remove obsolete SSL files
-│   ├── generate-traffic.sh            # Test traffic generation
+│   ├── generate-traffic.sh            # Test traffic generation with meaningful names
 │   ├── setup-local-cluster.sh         # Kind cluster setup
 │   ├── test-automated-deployment.sh   # Comprehensive deployment test
 │   ├── test-production-deployment.sh  # Production deployment testing
 │   ├── verify-dashboard.sh            # Dashboard verification
 │   ├── load-test.sh                   # Performance testing
 │   ├── controlled-load-test.sh        # Load testing with controls
-│   └── autoscaling-status.sh          # HPA monitoring
-├── docs/                              # Documentation
-│   ├── makefile-reference.md          # Complete Makefile guide
-│   ├── grafana-dashboard-guide.md     # Dashboard setup guide (secure credentials)
-│   ├── frontend-access-guide.md       # Frontend access with security notes
-│   ├── automation.md                  # Automation documentation
-│   ├── DEPLOYMENT-SUCCESS.md          # Deployment success guide
-│   ├── MONITORING-DASHBOARD.md        # Monitoring setup guide
-│   ├── SECURITY_IMPROVEMENTS.md       # Security enhancements log
-│   ├── ENV_BASED_SECRETS.md           # Environment-based secret management
-│   └── *.md                           # Additional documentation files
-├── SSL-MAKE-INTEGRATION-SUCCESS.md    # 🔒 SSL integration documentation  
-├── HTTPS-BROWSER-SUCCESS.md           # 🔒 HTTPS browser access guide
-├── CLEANUP-SUMMARY.md                 # Defunct file cleanup summary
+│   ├── autoscaling-status.sh          # HPA monitoring
+│   ├── demo-architecture.sh           # Architecture demonstration
+│   ├── demo-automation.sh             # Automation demonstration
+│   ├── enable-https.sh                # HTTPS enablement script
+│   ├── health-check-host.sh           # Host health monitoring
+│   ├── promote-to-production.sh       # Production promotion workflow
+│   ├── security-audit.sh              # Security audit and validation
+│   ├── start-monitoring.sh            # Monitoring stack initialization
+│   ├── test-configuration.sh          # Configuration validation
+│   ├── verify-cleanup.sh              # Cleanup verification
+│   └── verify-monitoring.sh           # Monitoring verification
+├── ssl-certificate-report.txt        # SSL certificate generation report
 └── ansible/                           # Ansible deployment automation
     ├── site.yml                       # Main playbook
     ├── inventory.ini                  # Inventory configuration
@@ -792,7 +820,7 @@ make traffic           # Generate test traffic for metrics
 
 # Access monitoring dashboards (after make production)
 # Prometheus: http://localhost:9090
-# Grafana:    http://localhost:3000 (admin/[see .env])
+# Grafana:    http://localhost:3000 (admin/use scripts/get-grafana-password.sh)
 # HTTPS Web:  https://localhost (accept security warning for self-signed cert)
 # HTTPS API:  https://localhost/health
 
@@ -829,7 +857,7 @@ make traffic           # Generate test traffic for metrics
 - **Input Validation**: API request validation
 - **Makefile Integration**: `make generate-secrets`, `make validate-env`, `make apply-secrets`
 
-📖 **Complete Documentation**: See [`docs/ENV_BASED_SECRETS.md`](docs/ENV_BASED_SECRETS.md) for detailed implementation guide
+📖 **Implementation**: See [`scripts/generate-secrets.sh`](scripts/generate-secrets.sh) for detailed secret generation process
 
 ## 🔧 Environment Configuration
 
@@ -842,7 +870,7 @@ The project follows the standard `.env` file pattern for configuration:
 make setup-env        # Copies .env.example to .env
 
 # 2. Edit with your actual values
-nano .env             # Replace placeholders with real values
+nano .env             # Set actual values for empty variables
 
 # 3. Generate Kubernetes secrets
 make generate-secrets # Creates kubernetes/secrets-*.yaml
@@ -852,7 +880,7 @@ make apply-secrets    # Deploys secrets to Kubernetes
 ```
 
 ### File Structure
-- **`.env.example`** - Template with placeholders (committed to git)
+- **`.env.example`** - Template with empty values (committed to git)
 - **`.env`** - Your actual configuration (gitignored for security)
 - **`kubernetes/secrets-*.yaml`** - Generated manifests (gitignored)
 
@@ -870,7 +898,101 @@ API_ENV=production
 GRAFANA_ADMIN_PASSWORD=your_grafana_password
 ```
 
-📖 **Complete Guide**: See [`docs/ENV_BASED_SECRETS.md`](docs/ENV_BASED_SECRETS.md) for advanced configuration options.
+📖 **Advanced Configuration**: Modify [`scripts/generate-secrets.sh`](scripts/generate-secrets.sh) for custom secret management workflows.
+
+## 🔍 Operations and Troubleshooting
+
+### Volume and Storage Management
+
+#### **Inspecting Volume Status**
+```bash
+# Check PersistentVolumeClaims with meaningful names
+kubectl get pvc -n api-deployment-demo
+# Shows: data-api-production-postgres-0  (meaningful! ✅)
+
+# Check PersistentVolumes  
+kubectl get pv
+# Shows underlying storage details
+
+# Describe specific PVC for detailed information
+kubectl describe pvc data-api-production-postgres-0 -n api-deployment-demo
+
+# Check pod volume mounts
+kubectl describe pod api-production-postgres-0 -n api-deployment-demo | grep -A10 "Volumes:"
+```
+
+#### **Docker vs Kubernetes Volume Inspection**
+
+**Docker Compose (Staging)**:
+```bash
+# Check named volumes (meaningful names)
+docker volume ls
+# Shows: api-deployment-demo_staging_postgres_data ✅
+
+# Inspect volume details
+docker volume inspect api-deployment-demo_staging_postgres_data
+```
+
+**Kubernetes (Production)**:
+```bash
+# Check application volumes (meaningful names)  
+kubectl get pvc -n api-deployment-demo
+# Shows: data-api-production-postgres-0 ✅
+
+# Note: Kind infrastructure uses anonymous Docker volumes (normal behavior)
+docker ps --format "table {{.Names}}\t{{.Image}}"
+# Shows: api-demo-cluster-worker (uses internal anonymous volumes)
+```
+
+#### **Volume Troubleshooting**
+
+**Common Issues**:
+1. **PVC Pending**: Check storage class and node capacity
+   ```bash
+   kubectl describe pvc data-api-production-postgres-0 -n api-deployment-demo
+   kubectl get storageclass
+   ```
+
+2. **Pod Stuck in ContainerCreating**: Usually volume mount issues  
+   ```bash
+   kubectl describe pod api-production-postgres-0 -n api-deployment-demo
+   kubectl get events -n api-deployment-demo --sort-by='.lastTimestamp'
+   ```
+
+3. **Data Loss After Pod Restart**: Verify PVC is Bound
+   ```bash
+   kubectl get pvc -n api-deployment-demo
+   # Status should be "Bound", not "Pending" or "Lost"
+   ```
+
+### Health and Status Monitoring
+
+```bash
+# Complete environment status
+make production-status     # HTTP + HTTPS health checks
+
+# Pod health
+kubectl get pods -n api-deployment-demo -o wide
+
+# Service endpoints
+kubectl get svc -n api-deployment-demo
+
+# Resource usage
+kubectl top pods -n api-deployment-demo
+kubectl top nodes
+```
+
+### Backup and Recovery
+
+```bash
+# Database backup (example for PostgreSQL)
+kubectl exec -n api-deployment-demo api-production-postgres-0 -- pg_dump -U postgres api_demo > backup.sql
+
+# Volume backup (copy data from PVC)
+kubectl cp api-deployment-demo/api-production-postgres-0:/var/lib/postgresql/data ./postgres-backup/
+```
+
+## 🌍 Environment Support
 
 ## 🌍 Environment Support
 
@@ -883,7 +1005,7 @@ GRAFANA_ADMIN_PASSWORD=your_grafana_password
 ## 📝 Notes
 
 - **Configuration**: Always start with `make setup-env` to copy the template
-- **Secrets**: Update all placeholder values before deployment
+- **Secrets**: Set all empty values before deployment
 - **SSL**: Replace self-signed certificates with proper SSL certificates for production
 - **Monitoring**: Configure monitoring and alerting for production environments  
 - **Backups**: Implement regular database backup procedures

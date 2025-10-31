@@ -135,7 +135,7 @@ make production-status
 #### **StatefulSet for PostgreSQL Database**
 **Decision**: Used StatefulSet instead of Deployment for PostgreSQL
 **Justification**:
-- **Persistent Identity**: StatefulSet provides stable, unique network identifiers (`api-production-postgres-0`) critical for database clustering and backup procedures
+- **Persistent Identity**: StatefulSet provides stable, unique network identifiers (`api-demo-postgres-0`) critical for database clustering and backup procedures
 - **Ordered Deployment**: Ensures predictable startup sequence, crucial for database initialization and connection handling
 - **Persistent Storage**: Guarantees consistent PVC attachment across pod restarts, preventing data loss
 - **Stable Network Identity**: Enables reliable service discovery for database connections, especially important in multi-replica scenarios
@@ -146,9 +146,9 @@ make production-status
 #### **Meaningful Volume Naming Strategy**
 **Decision**: Implemented descriptive PVC naming instead of auto-generated names
 **Implementation**:
-- **StatefulSet Name**: `api-production-postgres` (was: `postgres-statefulset`)
-- **Volume Claim Template**: `data` (was: `postgres-storage`)  
-- **Resulting PVC**: `data-api-production-postgres-0` ✅
+- **StatefulSet Name**: `api-demo-postgres` (was: `postgres-statefulset`)
+- **Volume Claim Template**: `postgres-data` (was: `postgres-storage`)  
+- **Resulting PVC**: `postgres-data-api-demo-postgres-0` ✅
 
 **Benefits**:
 - **🏷️ Clear Identification**: PVC name immediately indicates purpose and environment
@@ -158,15 +158,15 @@ make production-status
 
 **Volume Naming Convention**:
 ```bash
-# Pattern: {purpose}-{environment}-{service}-{component}-{replica}
-data-api-production-postgres-0     # Production database storage
-logs-api-staging-app-0            # Staging application logs (future)
-cache-api-production-redis-0      # Production Redis cache (future)
+# Pattern: {purpose}-{service}-{component}-{replica}
+postgres-data-api-demo-postgres-0  # Production database storage
+logs-api-staging-app-0             # Staging application logs (future)
+cache-api-production-redis-0       # Production Redis cache (future)
 ```
 
 **Docker vs Kubernetes Volume Management**:
 - **Docker Compose**: Uses named volumes (`postgres_data` → `api-deployment-demo_staging_postgres_data`)
-- **Kubernetes**: Uses meaningful PVCs (`data-api-production-postgres-0`)
+- **Kubernetes**: Uses meaningful PVCs (`postgres-data-api-demo-postgres-0`)
 - **Kind Nodes**: Use anonymous volumes (normal infrastructure behavior)
 
 #### **Headless Service for Database**
@@ -174,7 +174,7 @@ cache-api-production-redis-0      # Production Redis cache (future)
 **Justification**:
 - **Direct Pod Access**: Allows applications to connect directly to specific database pods without load balancing
 - **StatefulSet Integration**: Works seamlessly with StatefulSet's stable network identities
-- **DNS Resolution**: Provides predictable DNS names (`api-production-postgres-0.postgres-headless.api-deployment-demo.svc.cluster.local`)
+- **DNS Resolution**: Provides predictable DNS names (`api-demo-postgres-0.postgres-headless.api-deployment-demo.svc.cluster.local`)
 - **Database Clustering**: Essential for future PostgreSQL clustering (primary/replica configurations)
 
 **Alternative Considered**: Standard ClusterIP service
@@ -908,17 +908,17 @@ GRAFANA_ADMIN_PASSWORD=your_grafana_password
 ```bash
 # Check PersistentVolumeClaims with meaningful names
 kubectl get pvc -n api-deployment-demo
-# Shows: data-api-production-postgres-0  (meaningful! ✅)
+# Shows: postgres-data-api-demo-postgres-0  (meaningful! ✅)
 
 # Check PersistentVolumes  
 kubectl get pv
 # Shows underlying storage details
 
 # Describe specific PVC for detailed information
-kubectl describe pvc data-api-production-postgres-0 -n api-deployment-demo
+kubectl describe pvc postgres-data-api-demo-postgres-0 -n api-deployment-demo
 
 # Check pod volume mounts
-kubectl describe pod api-production-postgres-0 -n api-deployment-demo | grep -A10 "Volumes:"
+kubectl describe pod api-demo-postgres-0 -n api-deployment-demo | grep -A10 "Volumes:"
 ```
 
 #### **Docker vs Kubernetes Volume Inspection**
@@ -937,7 +937,7 @@ docker volume inspect api-deployment-demo_staging_postgres_data
 ```bash
 # Check application volumes (meaningful names)  
 kubectl get pvc -n api-deployment-demo
-# Shows: data-api-production-postgres-0 ✅
+# Shows: postgres-data-api-demo-postgres-0 ✅
 
 # Note: Kind infrastructure uses anonymous Docker volumes (normal behavior)
 docker ps --format "table {{.Names}}\t{{.Image}}"
@@ -949,13 +949,13 @@ docker ps --format "table {{.Names}}\t{{.Image}}"
 **Common Issues**:
 1. **PVC Pending**: Check storage class and node capacity
    ```bash
-   kubectl describe pvc data-api-production-postgres-0 -n api-deployment-demo
+   kubectl describe pvc postgres-data-api-demo-postgres-0 -n api-deployment-demo
    kubectl get storageclass
    ```
 
 2. **Pod Stuck in ContainerCreating**: Usually volume mount issues  
    ```bash
-   kubectl describe pod api-production-postgres-0 -n api-deployment-demo
+   kubectl describe pod api-demo-postgres-0 -n api-deployment-demo
    kubectl get events -n api-deployment-demo --sort-by='.lastTimestamp'
    ```
 
@@ -986,10 +986,10 @@ kubectl top nodes
 
 ```bash
 # Database backup (example for PostgreSQL)
-kubectl exec -n api-deployment-demo api-production-postgres-0 -- pg_dump -U postgres api_demo > backup.sql
+kubectl exec -n api-deployment-demo api-demo-postgres-0 -- pg_dump -U postgres api_demo > backup.sql
 
 # Volume backup (copy data from PVC)
-kubectl cp api-deployment-demo/api-production-postgres-0:/var/lib/postgresql/data ./postgres-backup/
+kubectl cp api-deployment-demo/api-demo-postgres-0:/var/lib/postgresql/data ./postgres-backup/
 ```
 
 ## 🌍 Environment Support

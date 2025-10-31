@@ -230,10 +230,8 @@ echo "🌐 Testing ingress endpoint: $INGRESS_ADDRESS"
 if [[ "$INGRESS_ADDRESS" == "localhost" ]]; then
     echo "🔌 Using kind cluster ports (8080/8443)..."
     TEST_URL="http://localhost:8080"
-    HTTPS_TEST_URL="https://localhost:8443"
 else
     TEST_URL="https://$INGRESS_ADDRESS"
-    HTTPS_TEST_URL="$TEST_URL"
 fi
 
 echo ""

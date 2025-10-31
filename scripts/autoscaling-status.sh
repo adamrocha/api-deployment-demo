@@ -9,8 +9,8 @@ echo "----------------------------------------"
 kubectl top pods -n api-deployment-demo -l component=api | awk '
 NR==1 {print $0} 
 NR>1 {
-    cpu_num = substr($2, 1, length($2)-1)  # Remove 'm' suffix
-    mem_num = substr($3, 1, length($3)-2)  # Remove 'Mi' suffix
+    cpu_num = substr($2, 1, length($2)-1)
+    mem_num = substr($3, 1, length($3)-2)
     
     # Calculate percentage of resource requests (assuming 500m CPU, 256Mi memory)
     cpu_percent = (cpu_num / 500) * 100

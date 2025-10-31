@@ -153,12 +153,12 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.refresh(db_user)
     return db_user
 
-@app.get("/users/", response_model=list[UserResponse])
+@app.get("/users", response_model=list[UserResponse])
 async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     start_time = time.time()
-    http_requests_total.labels(method='GET', endpoint='/users/', status='200').inc()
+    http_requests_total.labels(method='GET', endpoint='/users', status='200').inc()
     users = db.query(User).offset(skip).limit(limit).all()
-    http_request_duration_seconds.labels(method='GET', endpoint='/users/').observe(time.time() - start_time)
+    http_request_duration_seconds.labels(method='GET', endpoint='/users').observe(time.time() - start_time)
     return users
 
 @app.get("/users/{user_id}", response_model=UserResponse)

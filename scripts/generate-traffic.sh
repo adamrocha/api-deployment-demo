@@ -22,13 +22,13 @@ generate_traffic() {
         
         # Execute request
         kubectl exec deployment/api-deployment -n api-deployment-demo -- \
-            curl -s http://localhost:8000$ENDPOINT > /dev/null 2>&1
+            curl -s http://localhost:8000"$ENDPOINT" > /dev/null 2>&1
         
         endpoint_count=$((endpoint_count + 1))
         
         # Random delay between 0.1 and 2 seconds
         DELAY=$(echo "scale=1; ($RANDOM % 20) / 10" | bc -l 2>/dev/null || echo "1")
-        sleep ${DELAY:-1}
+        sleep "${DELAY:-1}"
         
         # Progress indicator every 10 requests
         if [ $((endpoint_count % 10)) -eq 0 ]; then
@@ -43,12 +43,14 @@ generate_traffic() {
 create_db_activity() {
     echo "👥 Creating database activity..."
     
-    # Create a few test users
+    # Create a few test users with unique timestamps
+    timestamp=$(date +%s)
     for i in {1..3}; do
+        unique_id="${timestamp}${i}"
         kubectl exec deployment/api-deployment -n api-deployment-demo -- \
-            curl -s -X POST http://localhost:8000/users/ \
+            curl -s -X POST http://localhost:8000/users \
             -H "Content-Type: application/json" \
-            -d "{\"name\":\"TestUser$i\",\"email\":\"test$i@example.com\"}" > /dev/null 2>&1
+            -d "{\"name\":\"TestUser${unique_id}\",\"email\":\"test${unique_id}@example.com\"}" > /dev/null 2>&1
         sleep 1
     done
     

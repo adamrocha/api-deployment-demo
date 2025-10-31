@@ -8,32 +8,32 @@ cleanup_namespace() {
     local namespace=$1
     echo "🗂️  Cleaning up namespace: $namespace"
     
-    if kubectl get namespace $namespace >/dev/null 2>&1; then
+    if kubectl get namespace "$namespace" >/dev/null 2>&1; then
         echo "   Deleting all resources in $namespace..."
-        kubectl delete all --all -n $namespace --ignore-not-found=true
+        kubectl delete all --all -n "$namespace" --ignore-not-found=true
         
         echo "   Deleting ConfigMaps and Secrets..."
-        kubectl delete configmaps --all -n $namespace --ignore-not-found=true
-        kubectl delete secrets --all -n $namespace --ignore-not-found=true
+        kubectl delete configmaps --all -n "$namespace" --ignore-not-found=true
+        kubectl delete secrets --all -n "$namespace" --ignore-not-found=true
         
         echo "   Deleting PVCs..."
-        kubectl delete pvc --all -n $namespace --ignore-not-found=true
+        kubectl delete pvc --all -n "$namespace" --ignore-not-found=true
         
         echo "   Deleting Ingress resources..."
-        kubectl delete ingress --all -n $namespace --ignore-not-found=true
+        kubectl delete ingress --all -n "$namespace" --ignore-not-found=true
         
         echo "   Deleting namespace $namespace..."
-        kubectl delete namespace $namespace --ignore-not-found=true
+        kubectl delete namespace "$namespace" --ignore-not-found=true
         
         # Wait for namespace to be fully deleted
-        echo "   Waiting for namespace $namespace to be deleted..."
-        while kubectl get namespace $namespace >/dev/null 2>&1; do
-            echo "     Still waiting for $namespace to be deleted..."
+        echo "   Waiting for namespace \"$namespace\" to be deleted..."
+        while kubectl get namespace "$namespace" >/dev/null 2>&1; do
+            echo "     Still waiting for \"$namespace\" to be deleted..."
             sleep 5
         done
-        echo "   ✅ Namespace $namespace deleted"
+        echo "   ✅ Namespace \"$namespace\" deleted"
     else
-        echo "   ⚠️  Namespace $namespace doesn't exist"
+        echo "   ⚠️  Namespace \"$namespace\" doesn't exist"
     fi
 }
 

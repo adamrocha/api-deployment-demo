@@ -38,9 +38,9 @@ echo ""
 # Run for 2 minutes with controlled load
 for i in {1..120}; do
     # Make 5 requests per second
-    for j in {1..5}; do
+    for _j in {1..5}; do
         curl -s "$API_URL/health" > /dev/null &
-        curl -s "$API_URL/users/" > /dev/null &
+        curl -s "$API_URL/users" > /dev/null &
     done
     
     # Check HPA status every 15 seconds

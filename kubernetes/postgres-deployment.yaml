@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: postgres-statefulset
+  name: api-production-postgres
   namespace: api-deployment-demo
   labels:
     app: api-demo
@@ -47,7 +47,7 @@ spec:
               name: postgres-config
               key: DB_HOST_AUTH_METHOD
         volumeMounts:
-        - name: postgres-storage
+        - name: data
           mountPath: /var/lib/postgresql/data
         - name: init-script
           mountPath: /docker-entrypoint-initdb.d
@@ -84,7 +84,7 @@ spec:
           defaultMode: 0755
   volumeClaimTemplates:
   - metadata:
-      name: postgres-storage
+      name: data
       labels:
         app: api-demo
         component: database

@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: api-production-postgres
+  name: api-demo-postgres
   namespace: api-deployment-demo
   labels:
     app: api-demo

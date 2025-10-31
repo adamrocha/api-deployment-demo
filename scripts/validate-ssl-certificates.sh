@@ -23,7 +23,7 @@ SSL_CONFIG_FILE="$SSL_DIR/ssl-params.conf"
 # Certificate Details
 COUNTRY="${SSL_COUNTRY:-US}"
 STATE="${SSL_STATE:-California}"
-CITY="${SSL_CITY:-Los_Angeles}"
+CITY="${SSL_CITY:-Los Angeles}"
 ORGANIZATION="${SSL_ORGANIZATION:-API Demo Company}"
 ORGANIZATIONAL_UNIT="${SSL_ORGANIZATIONAL_UNIT:-IT Department}"
 COMMON_NAME="${SERVER_NAME:-localhost}"

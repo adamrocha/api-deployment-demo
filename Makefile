@@ -211,7 +211,7 @@ production: kind-cluster docker-push ## Start production environment (Kubernetes
 	@echo "🌐 Waiting for Nginx deployment..."
 	@kubectl wait --for=condition=available --timeout=300s deployment/nginx-deployment -n api-deployment-demo || { echo "❌ Nginx deployment timeout"; exit 1; }
 	@echo "🗄️ Waiting for PostgreSQL StatefulSet..."
-	@kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 --timeout=300s statefulset/postgres-statefulset -n api-deployment-demo || { echo "❌ PostgreSQL timeout"; exit 1; }
+	@kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 --timeout=300s statefulset/api-demo-postgres -n api-deployment-demo || { echo "❌ PostgreSQL timeout"; exit 1; }
 	@echo "🔗 Waiting for services to have endpoints..."
 	@for svc in api-service nginx-service; do \
 		echo "  Checking $$svc endpoints..."; \

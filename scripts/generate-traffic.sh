@@ -22,13 +22,13 @@ generate_traffic() {
         
         # Execute request
         kubectl exec deployment/api-deployment -n api-deployment-demo -- \
-            curl -s http://localhost:8000$ENDPOINT > /dev/null 2>&1
+            curl -s http://localhost:8000"$ENDPOINT" > /dev/null 2>&1
         
         endpoint_count=$((endpoint_count + 1))
         
         # Random delay between 0.1 and 2 seconds
         DELAY=$(echo "scale=1; ($RANDOM % 20) / 10" | bc -l 2>/dev/null || echo "1")
-        sleep ${DELAY:-1}
+        sleep "${DELAY:-1}"
         
         # Progress indicator every 10 requests
         if [ $((endpoint_count % 10)) -eq 0 ]; then

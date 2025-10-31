@@ -47,7 +47,7 @@ spec:
               name: postgres-config
               key: DB_HOST_AUTH_METHOD
         volumeMounts:
-        - name: data
+        - name: postgres-data
           mountPath: /var/lib/postgresql/data
         - name: init-script
           mountPath: /docker-entrypoint-initdb.d
@@ -84,7 +84,7 @@ spec:
           defaultMode: 0755
   volumeClaimTemplates:
   - metadata:
-      name: data
+      name: postgres-data
       labels:
         app: api-demo
         component: database

@@ -115,6 +115,23 @@ get_env_file() {
 validate_environment() {
     env_file=$(get_env_file)
     
+    if [[ ! -f "$env_file" ]]; then
+        log_error "Environment file not found: $env_file"
+        log_info ""
+        log_info "Available options:"
+        if [[ -f "$PROJECT_ROOT/.env.example" ]]; then
+            log_info "📋 Copy example file to create needed file:"
+            if [[ "$env_file" == "$PROJECT_ROOT/.env" ]]; then
+                log_info "  cp .env.example .env"
+            else
+                log_info "  cp .env.example $(basename "$env_file")"
+            fi
+        fi
+        ls -1 "$PROJECT_ROOT"/.env.* 2>/dev/null | sed 's/.*\.env\./  - .env./' || echo "  No .env files found"
+        log_info ""
+        exit 1
+    fi
+    
     log_info "Using .env file: $env_file"
     
     # Check for placeholder values that need replacement
@@ -122,52 +139,8 @@ validate_environment() {
         log_info "Found placeholder values in $env_file that will be replaced with secure values"
     fi
     
-    # Fall back to .env file (single file mode)
-    if [[ -f "$PROJECT_ROOT/.env" ]]; then
-        env_file="$PROJECT_ROOT/.env"
-        log_info "Using .env file: $env_file"
-        
-        # Check if .env looks like it came from .env.example (has placeholder values)
-        if grep -q "your_secure_database_password_here\|your-very-secure-secret-key-change-this-in-production" "$env_file"; then
-            log_warning "Your .env file appears to contain placeholder values from .env.example"
-            log_info "Please update the placeholder values with actual secrets before proceeding"
-            log_info "Placeholder values found:"
-            grep -n "your_secure_database_password_here\|your-very-secure-secret-key-change-this-in-production" "$env_file" | sed 's/^/    /'
-            exit 1
-        fi
-        return 0
-    fi
-    
-    # If no .env file exists, check if .env.example exists and guide user
-    if [[ -f "$PROJECT_ROOT/.env.example" ]]; then
-        log_error "No .env file found, but .env.example exists"
-        log_info ""
-        log_info "🔧 Recommended workflow:"
-        log_info "1. Copy the example file:    cp .env.example .env"
-        log_info "2. Edit with actual values:  nano .env"
-        log_info "3. Generate secrets:         ./scripts/generate-secrets.sh"
-        log_info "4. Apply to cluster:         APPLY=true ./scripts/generate-secrets.sh"
-        log_info ""
-        exit 1
-    fi
-    
-    # Fall back to environment-specific files
-    env_file="$PROJECT_ROOT/.env.$ENVIRONMENT"
-    
-    if [[ ! -f "$env_file" ]]; then
-        log_error "Environment file not found: $env_file"
-        log_info ""
-        log_info "Available options:"
-        if [[ -f "$PROJECT_ROOT/.env.example" ]]; then
-            log_info "📋 Copy example file:  cp .env.example .env"
-        fi
-        ls -1 "$PROJECT_ROOT"/.env.* 2>/dev/null | sed 's/.*\.env\./  - .env./' || echo "  No .env files found"
-        log_info ""
-        log_info "💡 Recommended: Use single .env file (copy from .env.example)"
-        exit 1
-    fi
-    
-    log_info "Using environment file: $env_file"
+    # Empty values and null values are fine - they'll be auto-generated
+    log_info "Empty values will be auto-generated with secure passwords"
 }
 
 # Check for placeholder values

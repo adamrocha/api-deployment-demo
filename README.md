@@ -421,30 +421,33 @@ api-deployment-demo/
 │   ├── grafana-*.yaml                 # Grafana configuration files
 │   ├── prometheus-*.yaml              # Prometheus configuration files
 │   └── tls-secret.yaml                # TLS certificate secrets
-├── scripts/                           # Utility and security scripts
+├── scripts/                           # Active utility and automation scripts
 │   ├── generate-secrets.sh            # 🔐 Environment-based secret generation
 │   ├── get-grafana-password.sh        # 🔐 Secure password retrieval helper
 │   ├── validate-ssl-certificates.sh   # 🔒 Core SSL certificate generation
-│   ├── quick-start.sh                 # Interactive setup guide
 │   ├── cleanup-all.sh                 # Complete environment cleanup
-│   ├── generate-traffic.sh            # Test traffic generation with meaningful names
-│   ├── setup-local-cluster.sh         # Kind cluster setup
-│   ├── test-automated-deployment.sh   # Comprehensive deployment test
-│   ├── test-production-deployment.sh  # Production deployment testing
-│   ├── verify-dashboard.sh            # Dashboard verification
+│   ├── generate-traffic.sh            # Test traffic generation for dashboards
+│   ├── test-automated-deployment.sh   # Comprehensive deployment testing
+│   ├── test-production-deployment.sh  # Production deployment validation
+│   ├── promote-to-production.sh       # Production promotion workflow
+│   ├── quick-start.sh                 # Interactive setup guide
 │   ├── load-test.sh                   # Performance testing
 │   ├── controlled-load-test.sh        # Load testing with controls
-│   ├── autoscaling-status.sh          # HPA monitoring
-│   ├── demo-architecture.sh           # Architecture demonstration
-│   ├── demo-automation.sh             # Automation demonstration
-│   ├── enable-https.sh                # HTTPS enablement script
-│   ├── health-check-host.sh           # Host health monitoring
-│   ├── promote-to-production.sh       # Production promotion workflow
+│   ├── autoscaling-status.sh          # HPA monitoring and status
 │   ├── security-audit.sh              # Security audit and validation
-│   ├── start-monitoring.sh            # Monitoring stack initialization
-│   ├── test-configuration.sh          # Configuration validation
-│   ├── verify-cleanup.sh              # Cleanup verification
-│   └── verify-monitoring.sh           # Monitoring verification
+│   ├── git-security-audit.sh          # Git repository security audit
+│   └── archived/                      # Archived obsolete scripts
+│       ├── README.md                  # Archive documentation
+│       ├── start-monitoring.sh        # Legacy port-forwarding script
+│       ├── verify-dashboard.sh        # Legacy manual verification
+│       ├── setup-local-cluster.sh     # Legacy cluster setup
+│       ├── enable-https.sh            # Legacy HTTPS setup
+│       ├── health-check-host.sh       # Legacy health checking
+│       ├── verify-cleanup.sh          # Legacy cleanup verification
+│       ├── verify-monitoring.sh       # Legacy monitoring verification
+│       ├── demo-architecture.sh       # Architecture demo script
+│       ├── demo-automation.sh         # Automation demo script
+│       └── test-configuration.sh      # Legacy configuration testing
 ├── ssl-certificate-report.txt        # SSL certificate generation report
 └── ansible/                           # Ansible deployment automation
     ├── site.yml                       # Main playbook

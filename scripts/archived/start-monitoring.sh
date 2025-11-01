@@ -25,7 +25,7 @@ start_prometheus() {
 check_service() {
     local port=$1
     local service=$2
-    if ! curl -s http://localhost:$port/ --max-time 2 > /dev/null; then
+    if ! curl -s http://localhost:"$port"/ --max-time 2 > /dev/null; then
         echo "$service not responding on port $port, restarting..."
         return 1
     fi

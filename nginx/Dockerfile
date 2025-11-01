@@ -1,4 +1,4 @@
-FROM nginx:1.27-alpine
+FROM nginx:1.27.3-alpine
 
 # Install dependencies for SSL and configuration
 RUN apk add --no-cache \

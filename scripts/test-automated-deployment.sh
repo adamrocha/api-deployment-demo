@@ -23,7 +23,7 @@ wait_for_service() {
     local max_attempts=${3:-30}
     
     echo -e "${YELLOW}⏳ Waiting for $name to be ready...${NC}"
-    for i in $(seq 1 "$max_attempts"); do
+    for ((i=1; i<=max_attempts; i++)); do
         if curl -s --max-time 3 "$url" >/dev/null 2>&1; then
             echo -e "${GREEN}✅ $name is ready!${NC}"
             return 0

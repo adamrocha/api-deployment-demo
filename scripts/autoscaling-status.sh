@@ -10,14 +10,18 @@ echo "----------------------------------------"
 # Check if metrics server is available
 if kubectl top pods -n api-deployment-demo -l component=api >/dev/null 2>&1; then
     kubectl top pods -n api-deployment-demo -l component=api | awk '
+    BEGIN {
+        cpu_request = 500      # CPU request in millicores
+        mem_request = 256      # Memory request in Mi
+    }
     NR==1 {print $0} 
     NR>1 {
         cpu_num = substr($2, 1, length($2)-1)
         mem_num = substr($3, 1, length($3)-2)
         
-        # Calculate percentage of resource requests (assuming 500m CPU, 256Mi memory)
-        cpu_percent = (cpu_num / 500) * 100
-        mem_percent = (mem_num / 256) * 100
+        # Calculate percentage of resource requests
+        cpu_percent = (cpu_num / cpu_request) * 100
+        mem_percent = (mem_num / mem_request) * 100
         
         printf "%-35s %5s (%3.0f%%) %7s (%3.0f%%)\n", $1, $2, cpu_percent, $3, mem_percent
     }'

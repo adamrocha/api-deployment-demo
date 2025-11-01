@@ -6,18 +6,39 @@ echo ""
 
 echo "📊 Current Resource Utilization Per Pod:"
 echo "----------------------------------------"
-kubectl top pods -n api-deployment-demo -l component=api | awk '
-NR==1 {print $0} 
-NR>1 {
-    cpu_num = substr($2, 1, length($2)-1)
-    mem_num = substr($3, 1, length($3)-2)
-    
-    # Calculate percentage of resource requests (assuming 500m CPU, 256Mi memory)
-    cpu_percent = (cpu_num / 500) * 100
-    mem_percent = (mem_num / 256) * 100
-    
-    printf "%-35s %5s (%3.0f%%) %7s (%3.0f%%)\n", $1, $2, cpu_percent, $3, mem_percent
-}'
+
+# Check if metrics server is available
+if kubectl top pods -n api-deployment-demo -l component=api >/dev/null 2>&1; then
+    kubectl top pods -n api-deployment-demo -l component=api | awk '
+    BEGIN {
+        cpu_request = 500      # CPU request in millicores
+        mem_request = 256      # Memory request in Mi
+    }
+    NR==1 {print $0} 
+    NR>1 {
+        cpu_num = substr($2, 1, length($2)-1)
+        mem_num = substr($3, 1, length($3)-2)
+        
+        # Calculate percentage of resource requests
+        cpu_percent = (cpu_num / cpu_request) * 100
+        mem_percent = (mem_num / mem_request) * 100
+        
+        printf "%-35s %5s (%3.0f%%) %7s (%3.0f%%)\n", $1, $2, cpu_percent, $3, mem_percent
+    }'
+else
+    echo "⚠️  Metrics API not available"
+    echo ""
+    echo "💡 To enable metrics server in Kind cluster:"
+    echo "   1. Install metrics server:"
+    echo "      kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml"
+    echo ""
+    echo "   2. Patch for Kind compatibility:"
+    echo "      kubectl patch -n kube-system deployment metrics-server --type='json' \\"
+    echo "        -p='[{\"op\":\"add\",\"path\":\"/spec/template/spec/containers/0/args/-\",\"value\":\"--kubelet-insecure-tls\"}]'"
+    echo ""
+    echo "📊 Showing Pod Status Instead:"
+    kubectl get pods -n api-deployment-demo -l component=api -o wide
+fi
 
 echo ""
 echo "🎯 HPA Decision Logic:"

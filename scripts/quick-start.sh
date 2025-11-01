@@ -31,7 +31,7 @@ echo "4. Development - Staging with extra tools"
 echo "5. Just show me the commands"
 echo ""
 
-read -p "Enter your choice (1-5): " choice
+read -r -p "Enter your choice (1-5): " choice
 
 case $choice in
     1)

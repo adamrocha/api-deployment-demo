@@ -421,7 +421,7 @@ api-deployment-demo/
 │   ├── grafana-*.yaml                 # Grafana configuration files
 │   ├── prometheus-*.yaml              # Prometheus configuration files
 │   └── tls-secret.yaml                # TLS certificate secrets
-├── scripts/                           # Active utility and automation scripts
+├── scripts/                           # Active utility and automation scripts (archived scripts available in scripts/archived/ for reference)
 │   ├── generate-secrets.sh            # 🔐 Environment-based secret generation
 │   ├── get-grafana-password.sh        # 🔐 Secure password retrieval helper
 │   ├── validate-ssl-certificates.sh   # 🔒 Core SSL certificate generation

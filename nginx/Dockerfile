@@ -1,5 +1,5 @@
 FROM nginx:1.29.3-alpine
-  # checkov:skip=CKV_DOCKER_3: The nginx:alpine base image provides nginx user (UID 101) which is sufficient for security
+  # checkov:skip=CKV_DOCKER_3: The nginx:alpine base image provides nginx user (UID 1001) which is sufficient for security
 
 # Install dependencies for SSL and configuration
 RUN apk add --no-cache \

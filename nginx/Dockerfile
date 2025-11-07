@@ -35,7 +35,7 @@ RUN mkdir -p /var/www/static /etc/nginx/ssl /var/log/nginx && \
 # Note: nginx will start as root but drop privileges to nginx user for worker processes
 # This is the standard and secure way to run nginx
 
-# Generate self-signed SSL certificates for development (now as nginx user)
+# Generate self-signed SSL certificates for development (as root during build time)
 RUN /usr/local/bin/generate-ssl.sh && \
     chmod 644 /etc/nginx/ssl/*.crt && \
     chmod 600 /etc/nginx/ssl/*.key

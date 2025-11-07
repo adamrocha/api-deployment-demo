@@ -30,8 +30,7 @@ COPY index.html /usr/share/nginx/html/
 
 # Create directories and set up all permissions for nginx user
 RUN mkdir -p /var/www/static /etc/nginx/ssl /var/log/nginx && \
-    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/ssl /usr/share/nginx/html /var/www/static && \
-    chmod +x /usr/local/bin/generate-ssl.sh /usr/local/bin/health-check.sh
+    chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/ssl /usr/share/nginx/html /var/www/static
 
 # Note: nginx will start as root but drop privileges to nginx user for worker processes
 # This is the standard and secure way to run nginx

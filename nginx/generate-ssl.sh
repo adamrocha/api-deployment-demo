@@ -5,7 +5,9 @@
 
 set -e
 
-SSL_DIR="/etc/nginx/ssl"
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SSL_DIR="${SSL_DIR:-$SCRIPT_DIR/ssl}"
 CERT_FILE="$SSL_DIR/nginx-selfsigned.crt"
 KEY_FILE="$SSL_DIR/nginx-selfsigned.key"
 CSR_FILE="$SSL_DIR/nginx-selfsigned.csr"

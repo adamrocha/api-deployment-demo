@@ -17,7 +17,7 @@ set -euo pipefail
 
 # Configuration
 NAMESPACE=${1:-api-deployment-demo}
-SECRET_NAME=${2:-nginx-tls-secret}
+SECRET_NAME=${2:-nginx-ssl-certs}
 CERT_FILE="nginx/ssl/nginx-selfsigned.crt"
 KEY_FILE="nginx/ssl/nginx-selfsigned.key"
 OUTPUT_FILE="kubernetes/tls-secret.yaml"

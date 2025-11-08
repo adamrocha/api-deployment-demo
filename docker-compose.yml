@@ -80,6 +80,7 @@ services:
       - "30443:${HTTPS_PORT:-443}"
     volumes:
       - ./nginx/logs:/var/log/nginx
+      - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - api
     networks:

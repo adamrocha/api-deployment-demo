@@ -189,15 +189,8 @@ docker_volumes/
 # Kubernetes (SECURITY CRITICAL)
 # =======================================================================
 # Generated secrets and configurations (from .env files)
-kubernetes/secrets-*.yaml
-kubernetes/configmap-*.yaml
-kubernetes/tls-secret*.yaml
-kubernetes/monitoring-secrets.yaml
-!kubernetes/secrets-*.yaml.example
-
-# Secret directories and local configs
-kubernetes/secrets/
-kubernetes/*secrets*
+kubernetes/*secret*.yaml
+kubernetes/*configmap*.yaml
 
 # Kubernetes temporary and generated files
 kubernetes/*.tmp

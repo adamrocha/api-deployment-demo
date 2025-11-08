@@ -197,8 +197,7 @@ kubernetes/monitoring-secrets.yaml
 
 # Secret directories and local configs
 kubernetes/secrets/
-kubernetes/*-secrets-local.yaml
-kubernetes/monitoring-secrets-local.yaml
+kubernetes/*secrets*
 
 # Kubernetes temporary and generated files
 kubernetes/*.tmp
@@ -383,7 +382,7 @@ Thumbs.db
 # =======================================================================
 # Files with sensitive keywords in names
 *password*
-*secret*
+#*secret*
 *private*
 *confidential*
 *credential*

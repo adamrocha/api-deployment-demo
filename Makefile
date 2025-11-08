@@ -204,9 +204,7 @@ production: kind-cluster docker-push ## Start production environment (Kubernetes
 	@kubectl apply -f kubernetes/nginx-ingress-controller.yaml --validate=false
 	@kubectl apply -f kubernetes/hpa.yaml --validate=false
 	# @kubectl apply -f kubernetes/network-policy.yaml  # Temporarily disabled due to connectivity issues
-	@kubectl apply -f kubernetes/ingress.yaml --validate=false
 	@kubectl apply -f kubernetes/production-ingress.yaml --validate=false
-	# @kubectl apply -f kubernetes/tls-secrets.yaml --validate=false  # File doesn't exist, TLS optional for demo
 	@echo "⏳ Waiting for deployments to be ready..."
 	@echo "📦 Waiting for API deployment..."
 	@kubectl wait --for=condition=available --timeout=300s deployment/api-deployment -n api-deployment-demo || { echo "❌ API deployment timeout"; exit 1; }

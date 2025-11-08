@@ -53,9 +53,22 @@ spec:
         app: prometheus
     spec:
       serviceAccountName: prometheus
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534  # nobody user
+        runAsGroup: 65534  # nobody group
+        fsGroup: 65534
       containers:
       - name: prometheus
         image: prom/prometheus:v2.45.0
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534  # nobody user
+          capabilities:
+            drop:
+            - ALL
         ports:
         - containerPort: 9090
           name: prometheus

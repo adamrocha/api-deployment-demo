@@ -7,7 +7,7 @@
 .PHONY: monitoring monitoring-status monitoring-logs access-monitoring access-production access-staging
 .PHONY: clean clean-all clean-all-dry-run clean-staging clean-production clean-images clean-secrets
 .PHONY: traffic logs status validate quick-dev quick-staging quick-production
-.PHONY: test-automated promote validate-promotion
+.PHONY: test-automated promote validate-promotion generate-tls-secrets
 
 # Default target
 help: ## Show this help message
@@ -67,6 +67,11 @@ generate-secrets: ## Generate Kubernetes secrets from .env files (ENV=developmen
 	@./scripts/generate-secrets.sh $(ENV)
 	@echo "✅ Secrets generated for $(ENV) environment"
 
+generate-tls-secrets: ## Generate TLS secret YAML from SSL certificates (NAMESPACE=api-deployment-demo SECRET=nginx-ssl-certs)
+	@echo "🔐 Generating TLS secrets..."
+	@./scripts/generate-tls-secrets.sh $(NAMESPACE) $(SECRET)
+	@echo "✅ TLS secrets generated"
+
 apply-secrets: ## Generate and apply secrets to cluster (ENV=development|staging|production)
 	@echo "🔐 Generating and applying secrets for $(ENV) environment..."
 	@APPLY=true ./scripts/generate-secrets.sh $(ENV)
@@ -119,6 +124,7 @@ show-env-help: ## Show environment and secret management help
 	@echo ""
 	@echo "🛠️  Alternative Commands:"
 	@echo "  make generate-secrets ENV=development  # Use environment-specific files"
+	@echo "  make generate-tls-secrets              # Generate TLS secret YAML"
 	@echo "  make apply-secrets ENV=staging         # Generate and apply"
 	@echo "  make validate-env                      # Check for placeholder values"
 	@echo ""
@@ -179,16 +185,7 @@ production: kind-cluster docker-push ## Start production environment (Kubernetes
 	@echo "� Generating and applying secrets for production..."
 	@APPLY=true ./scripts/generate-secrets.sh production api-deployment-demo
 	@echo "🔒 Setting up SSL certificates before deployment..."
-	@bash scripts/validate-ssl-certificates.sh > /dev/null 2>&1 || echo "⚠️  SSL certificate generation skipped"
-	@if ! kubectl get secret nginx-ssl-certs -n api-deployment-demo >/dev/null 2>&1; then \
-		echo "🔐 Creating SSL secret..."; \
-		kubectl create secret tls nginx-ssl-certs -n api-deployment-demo \
-			--cert=nginx/ssl/nginx-selfsigned.crt \
-			--key=nginx/ssl/nginx-selfsigned.key >/dev/null 2>&1 && \
-		echo "✅ SSL secret created" || echo "⚠️  SSL secret creation failed"; \
-	else \
-		echo "✅ SSL secret already exists"; \
-	fi
+	@APPLY=true ./scripts/generate-tls-secrets.sh api-deployment-demo nginx-ssl-certs
 	@echo "�📦 Deploying core application resources..."
 	@kubectl apply -f kubernetes/namespace.yaml --validate=false
 	@kubectl apply -f kubernetes/configmaps.yaml --validate=false

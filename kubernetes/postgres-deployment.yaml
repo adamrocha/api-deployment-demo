@@ -19,9 +19,26 @@ spec:
         app: api-demo
         component: database
     spec:
+      securityContext:
+        runAsNonRoot: false  # PostgreSQL container needs root for initialization
+        fsGroup: 999  # postgres group for volume ownership
       containers:
       - name: postgres
         image: postgres:15-alpine
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # PostgreSQL needs to write to filesystem
+          # Run as root initially, postgres process will drop privileges internally
+          runAsUser: 0
+          capabilities:
+            drop:
+            - NET_RAW
+            add:
+            - CHOWN
+            - SETUID
+            - SETGID
+            - DAC_OVERRIDE
+            - FOWNER  # Required for PostgreSQL file operations
         ports:
         - containerPort: 5432
           name: postgres

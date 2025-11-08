@@ -36,9 +36,22 @@ spec:
       labels:
         app: grafana
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 472  # grafana user
+        runAsGroup: 472  # grafana group
+        fsGroup: 472
       containers:
       - name: grafana
         image: grafana/grafana:10.2.2
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false  # Grafana needs to write to filesystem
+          runAsNonRoot: true
+          runAsUser: 472  # grafana user
+          capabilities:
+            drop:
+            - ALL
         ports:
         - containerPort: 3000
           name: grafana

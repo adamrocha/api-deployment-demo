@@ -121,12 +121,22 @@ async def health_check():
         environment = "local"
         deployment_type = "development"
     
+    # Sanitize database URL to remove credentials
+    db_status = "connected"
+    if DATABASE_URL:
+        # Extract only the database name, hide all connection details
+        try:
+            db_name = DATABASE_URL.split('/')[-1].split('?')[0]
+            db_status = f"connected to {db_name}"
+        except:
+            db_status = "connected"
+    
     return {
         "status": "healthy", 
         "timestamp": datetime.utcnow(),
         "environment": environment,
         "deployment": deployment_type,
-        "database_url": DATABASE_URL.replace(DATABASE_URL.split('@')[0].split('//')[1], "***:***") if '@' in DATABASE_URL else "configured"
+        "database": db_status
     }
 
 @app.get("/metrics", response_class=PlainTextResponse)

@@ -215,11 +215,11 @@ fi
 echo -e "${YELLOW}6. Starting monitoring stack...${NC}"
 make monitoring
 
-echo -e "${YELLOW}6. Waiting for monitoring services...${NC}"
+echo -e "${YELLOW}7. Waiting for monitoring services...${NC}"
 wait_for_service "http://localhost:9090/-/healthy" "Prometheus" 120
 wait_for_service "http://localhost:3000/api/health" "Grafana" 120
 
-echo -e "${YELLOW}7. Testing monitoring functionality...${NC}"
+echo -e "${YELLOW}8. Testing monitoring functionality...${NC}"
 if test_monitoring_endpoints; then
     echo -e "${GREEN}✅ All monitoring endpoints working!${NC}"
 else
@@ -245,4 +245,5 @@ echo -e "${GREEN}🔒 HTTPS endpoints use self-signed certificates (browser secu
 echo -e "${YELLOW}9. Generating test traffic...${NC}"
 make traffic >/dev/null 2>&1 || true
 
+echo ""
 echo -e "${GREEN}🚀 Deployment test complete! All services are fully functional.${NC}"

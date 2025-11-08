@@ -186,6 +186,11 @@ production: kind-cluster docker-push ## Start production environment (Kubernetes
 	@APPLY=true ./scripts/generate-secrets.sh production api-deployment-demo
 	@echo "🔒 Setting up SSL certificates before deployment..."
 	@APPLY=true ./scripts/generate-tls-secrets.sh api-deployment-demo nginx-ssl-certs
+	@echo "🔒 Creating api-tls-secret for ingress controller..."
+	@kubectl create secret tls api-tls-secret \
+		--cert=nginx/ssl/nginx-selfsigned.crt \
+		--key=nginx/ssl/nginx-selfsigned.key \
+		-n api-deployment-demo --dry-run=client -o yaml | kubectl apply -f -
 	@echo "�📦 Deploying core application resources..."
 	@kubectl apply -f kubernetes/namespace.yaml --validate=false
 	@kubectl apply -f kubernetes/configmaps.yaml --validate=false

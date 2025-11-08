@@ -119,6 +119,24 @@ make production-status
 - **Certificate Report**: [`ssl-certificate-report.txt`](ssl-certificate-report.txt) - Generated certificate details
 - **SSL Configuration**: [`nginx/ssl-include.conf`](nginx/ssl-include.conf) - Nginx SSL settings
 
+### 🔧 Browser HTTPS Access
+
+When accessing `https://localhost` for the first time, you'll see a security warning because we use self-signed certificates. This is **expected and safe for development**:
+
+**Chrome/Edge:**
+1. Click "Advanced" or "Details"
+2. Click "Proceed to localhost (unsafe)"
+
+**Firefox:**
+1. Click "Advanced"
+2. Click "Accept the Risk and Continue"
+
+**Safari:**
+1. Click "Show Details"
+2. Click "visit this website"
+
+**Why this happens:** Self-signed certificates aren't verified by a trusted Certificate Authority. In production, use certificates from Let's Encrypt or your organization's CA.
+
 ## 🏗️ Architecture
 
 ```

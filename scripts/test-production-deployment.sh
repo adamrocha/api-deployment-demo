@@ -65,7 +65,29 @@ echo "🔧 Deploying namespace..."
 kubectl apply -f kubernetes/namespace.yaml
 
 echo "🔐 Deploying secrets and configuration..."
-# kubectl apply -f kubernetes/tls-secrets.yaml  # File doesn't exist, TLS optional for demo
+# Generate TLS secrets for ingress
+if [ -f "nginx/ssl/nginx-selfsigned.crt" ] && [ -f "nginx/ssl/nginx-selfsigned.key" ]; then
+    echo "🔒 Creating TLS secrets for ingress..."
+    kubectl create secret tls api-tls-secret \
+        --cert=nginx/ssl/nginx-selfsigned.crt \
+        --key=nginx/ssl/nginx-selfsigned.key \
+        -n $NAMESPACE --dry-run=client -o yaml | kubectl apply -f - || echo "⚠️  TLS secret already exists or failed"
+    kubectl create secret tls nginx-ssl-certs \
+        --cert=nginx/ssl/nginx-selfsigned.crt \
+        --key=nginx/ssl/nginx-selfsigned.key \
+        -n $NAMESPACE --dry-run=client -o yaml | kubectl apply -f - || echo "⚠️  TLS secret already exists or failed"
+else
+    echo "⚠️  SSL certificates not found, generating..."
+    cd nginx && ./generate-ssl.sh && cd ..
+    kubectl create secret tls api-tls-secret \
+        --cert=nginx/ssl/nginx-selfsigned.crt \
+        --key=nginx/ssl/nginx-selfsigned.key \
+        -n $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+    kubectl create secret tls nginx-ssl-certs \
+        --cert=nginx/ssl/nginx-selfsigned.crt \
+        --key=nginx/ssl/nginx-selfsigned.key \
+        -n $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+fi
 kubectl apply -f kubernetes/configmaps.yaml
 
 echo "💾 Deploying persistent storage..."

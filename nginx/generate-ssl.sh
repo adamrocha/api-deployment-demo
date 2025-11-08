@@ -80,24 +80,19 @@ add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; prelo
 EOF
 }
 
-echo "Generating private key..."
-openssl genrsa -out "$KEY_FILE" "$KEY_SIZE"
+echo "Generating self-signed certificate with private key..."
 
-echo "Setting private key permissions..."
-chmod 600 "$KEY_FILE"
-
-echo "Generating certificate signing request..."
-openssl req -new -key "$KEY_FILE" -out "$CSR_FILE" -subj "/C=$COUNTRY/ST=$STATE/L=$CITY/O=$ORGANIZATION/OU=$ORGANIZATIONAL_UNIT/CN=$COMMON_NAME/emailAddress=$EMAIL"
-
-echo "Generating self-signed certificate..."
-openssl x509 -req -in "$CSR_FILE" -signkey "$KEY_FILE" -out "$CERT_FILE" -days "$DAYS_VALID" \
-    -extensions v3_req -extfile <(cat << EOF
+# Create temporary config file
+TMP_CONFIG=$(mktemp)
+cat > "$TMP_CONFIG" << EOF
 [req]
-distinguished_name = req_distinguished_name
-req_extensions = v3_req
+default_bits = $KEY_SIZE
 prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = v3_req
 
-[req_distinguished_name]
+[dn]
 C = $COUNTRY
 ST = $STATE
 L = $CITY
@@ -107,18 +102,32 @@ CN = $COMMON_NAME
 emailAddress = $EMAIL
 
 [v3_req]
-keyUsage = keyEncipherment, dataEncipherment
-extendedKeyUsage = serverAuth
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
 subjectAltName = @alt_names
 
 [alt_names]
 DNS.1 = $COMMON_NAME
 DNS.2 = localhost
 DNS.3 = *.localhost
+DNS.4 = api-demo.local
+DNS.5 = *.api-demo.local
 IP.1 = 127.0.0.1
 IP.2 = ::1
 EOF
-)
+
+openssl req -x509 -nodes -days "$DAYS_VALID" -newkey rsa:"$KEY_SIZE" \
+    -keyout "$KEY_FILE" \
+    -out "$CERT_FILE" \
+    -config "$TMP_CONFIG" \
+    -extensions v3_req
+
+# Clean up temp config
+rm -f "$TMP_CONFIG"
+
+echo "Setting private key permissions..."
+chmod 600 "$KEY_FILE"
 
 echo "Generating Diffie-Hellman parameters (this may take a while)..."
 if [[ ! -f "$DHPARAM_FILE" ]]; then

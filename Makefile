@@ -8,6 +8,7 @@
 .PHONY: clean clean-all clean-all-dry-run clean-staging clean-production clean-images clean-secrets
 .PHONY: traffic logs status validate quick-dev quick-staging quick-production
 .PHONY: test-automated promote validate-promotion generate-tls-secrets
+.PHONY: start-port-forwarding stop-port-forwarding
 
 # Default target
 help: ## Show this help message
@@ -18,13 +19,15 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "💡 Examples:"
-	@echo "  make staging          # Start staging environment"
-	@echo "  make production       # Start production environment"
-	@echo "  make monitoring       # Add monitoring to production"
+	@echo "  make staging                  # Start staging environment"
+	@echo "  make production               # Start production environment"
+	@echo "  make monitoring               # Add monitoring (auto port-forward)"
+	@echo "  make start-port-forwarding    # Manually start port forwarding"
+	@echo "  make stop-port-forwarding     # Stop port forwarding"
 	@echo ""
 	@echo "🧹 Cleanup Options (in order of intensity):"
 	@echo "  make clean-staging    # Clean only staging (Docker Compose)"
-	@echo "  make clean-production # Clean only production (keep cluster)"
+	@echo "  make clean-production # Clean only production (stops port-forwarding)"
 	@echo "  make clean            # Clean applications (keep cluster & images)"
 	@echo "  make clean-all        # 💥 NUCLEAR: Delete everything (cluster, images, volumes)"
 	@echo ""
@@ -282,6 +285,7 @@ production-logs: ## Show production environment logs
 
 production-stop: ## Stop production environment (keep cluster)
 	@echo "🛑 Stopping production environment..."
+	@$(MAKE) stop-port-forwarding
 	@kubectl delete namespace api-deployment-demo --ignore-not-found=true
 	@echo "✅ Production environment stopped! (cluster preserved)"
 
@@ -320,7 +324,6 @@ monitoring: ## Add monitoring to production environment
 	@echo "🌐 Setting up monitoring access..."
 	@kubectl apply -f kubernetes/monitoring-ingress.yaml --validate=false
 	@kubectl apply -f kubernetes/monitoring-nodeport.yaml --validate=false
-	@kubectl apply -f kubernetes/monitoring-loadbalancer.yaml --validate=false
 	@echo "⚠️  Skipping ServiceMonitor resources (requires Prometheus Operator)"
 	@echo "⏳ Waiting for monitoring services..."
 	@echo "📊 Waiting for Prometheus deployment..."
@@ -339,6 +342,9 @@ monitoring: ## Add monitoring to production environment
 		done; \
 	done
 	@echo "✅ Monitoring stack deployed!"
+	@echo ""
+	@echo "🚀 Starting port forwarding for monitoring services..."
+	@$(MAKE) start-port-forwarding
 	@echo ""
 	@echo "🌐 Access points (Standard Ports - Production):"
 	@echo "  Prometheus: http://localhost:9090"
@@ -371,6 +377,28 @@ monitoring-dashboards: ## Open Grafana dashboards
 	@echo "Username: admin"
 	@echo "Password: [see .env GRAFANA_ADMIN_PASSWORD]"
 
+start-port-forwarding: ## Start port forwarding for monitoring services
+	@echo "🚀 Starting port forwarding..."
+	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
+	@sleep 1
+	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
+		echo "  Starting Grafana port forward (3000:3000)..."; \
+		kubectl port-forward -n monitoring svc/grafana 3000:3000 > /dev/null 2>&1 & \
+		echo "  Starting Prometheus port forward (9090:9090)..."; \
+		kubectl port-forward -n monitoring svc/prometheus 9090:9090 > /dev/null 2>&1 & \
+		sleep 2; \
+		echo "✅ Port forwarding started"; \
+		echo "  Grafana:    http://localhost:3000"; \
+		echo "  Prometheus: http://localhost:9090"; \
+	else \
+		echo "❌ Monitoring namespace not found. Run 'make monitoring' first."; \
+		exit 1; \
+	fi
+
+stop-port-forwarding: ## Stop all port forwarding for monitoring services
+	@echo "🛑 Stopping port forwarding..."
+	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null && echo "✅ Port forwarding stopped" || echo "ℹ️  No port forwarding processes found"
+
 # =============================================================================
 # Frontend Access Commands
 # =============================================================================
@@ -401,8 +429,8 @@ access-production: ## Access production frontend (standard ports)
 access-monitoring: ## Access monitoring dashboards (standard ports for production)
 	@echo "📊 Monitoring Access:"
 	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
-		echo "  Grafana:     http://localhost:3000 (admin/[see .env])"; \
-		echo "  Prometheus:  http://localhost:9090"; \
+		echo "🚀 Ensuring port forwarding is active..."; \
+		$(MAKE) start-port-forwarding; \
 		echo ""; \
 		echo "✅ Production monitoring access ready! Standard ports."; \
 		echo ""; \
@@ -520,6 +548,7 @@ clean-staging: ## Clean up only staging environment
 
 clean-production: ## Clean up only production environment
 	@echo "🧹 Cleaning up production environment..."
+	@$(MAKE) stop-port-forwarding
 	@kubectl delete namespace api-deployment-demo monitoring --ignore-not-found=true
 	@kind delete cluster --name api-demo-cluster 2>/dev/null || true
 	@echo "✅ Production cleanup complete!"

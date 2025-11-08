@@ -36,7 +36,7 @@ RUN mkdir -p /var/www/static /etc/nginx/ssl /var/log/nginx && \
 # This is the standard and secure way to run nginx
 
 # Generate self-signed SSL certificates for development (as root during build time)
-RUN /usr/local/bin/generate-ssl.sh && \
+RUN SSL_DIR=/etc/nginx/ssl /usr/local/bin/generate-ssl.sh && \
     chmod 644 /etc/nginx/ssl/*.crt && \
     chmod 600 /etc/nginx/ssl/*.key && \
     chown nginx:nginx /etc/nginx/ssl/*.key /etc/nginx/ssl/*.crt

@@ -144,7 +144,7 @@ show-env-help: ## Show environment and secret management help
 # =============================================================================
 
 staging: ## Start staging environment (Docker Compose)
-	@echo "🐳 Starting staging environment with Docker Compose..."
+	@echo "� Starting staging environment with Docker Compose..."
 	@docker compose up -d
 	@echo "✅ Staging environment started!"
 	@echo ""
@@ -286,7 +286,18 @@ production-logs: ## Show production environment logs
 production-stop: ## Stop production environment (keep cluster)
 	@echo "🛑 Stopping production environment..."
 	@$(MAKE) stop-port-forwarding
-	@kubectl delete namespace api-deployment-demo --ignore-not-found=true
+	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
+		echo "  Deleting api-deployment-demo namespace..."; \
+		kubectl delete namespace api-deployment-demo --ignore-not-found=true; \
+		echo "  ✅ api-deployment-demo namespace deleted"; \
+	else \
+		echo "  ℹ️  api-deployment-demo namespace not found (already stopped)"; \
+	fi
+	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
+		echo "  Deleting monitoring namespace..."; \
+		kubectl delete namespace monitoring --ignore-not-found=true; \
+		echo "  ✅ monitoring namespace deleted"; \
+	fi
 	@echo "✅ Production environment stopped! (cluster preserved)"
 
 # =============================================================================
@@ -564,6 +575,7 @@ clean-images: ## Remove all custom Docker images
 clean-all: ## Complete nuclear cleanup - delete everything (cluster, images, volumes, builds)
 	@echo "💥 NUCLEAR CLEANUP: Deleting absolutely everything..."
 	@echo "⚠️  This will remove:"
+	@echo "   • Staging environment (Docker Compose)"
 	@echo "   • Kind cluster (api-demo-cluster)"
 	@echo "   • All Docker images (including cached layers)"
 	@echo "   • All Docker volumes and build cache"
@@ -571,40 +583,46 @@ clean-all: ## Complete nuclear cleanup - delete everything (cluster, images, vol
 	@echo ""
 	@read -p "Are you sure? This cannot be undone! (y/N): " confirm && [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || (echo "❌ Aborted!" && exit 1)
 	@echo ""
-	@echo "🧹 Step 1: Cleaning application resources..."
+	@echo "🧹 Step 1: Stopping staging environment (Docker Compose)..."
+	@docker compose down -v --remove-orphans 2>/dev/null && echo "   ✅ Staging stopped and volumes removed" || echo "   ⚠️  No staging environment running"
+	@echo ""
+	@echo "🧹 Step 2: Cleaning application resources..."
 	@./scripts/cleanup-all.sh 2>/dev/null || true
 	@echo ""
-	@echo "🗑️  Step 2: Deleting Kind cluster..."
+	@echo "🗑️  Step 3: Deleting Kind cluster..."
 	@if kind get clusters 2>/dev/null | grep -q api-demo-cluster; then \
 		kind delete cluster --name api-demo-cluster && echo "   ✅ Kind cluster deleted successfully"; \
 	else \
 		echo "   ⚠️  Kind cluster api-demo-cluster not found (already deleted)"; \
 	fi
 	@echo ""
-	@echo "🐳 Step 3: Removing all project Docker images..."
+	@echo "🐳 Step 4: Removing all project Docker images..."
 	@if docker images | grep -q api-deployment-demo; then \
 		docker images | grep api-deployment-demo | awk '{print $$3}' | xargs -r docker rmi -f && echo "   ✅ Project Docker images removed"; \
 	else \
 		echo "   ⚠️  No project Docker images found"; \
 	fi
 	@echo ""
-	@echo "🧽 Step 4: Cleaning Docker system (images, containers, volumes, build cache)..."
+	@echo "🧽 Step 5: Cleaning Docker system (images, containers, volumes, build cache)..."
 	@docker system prune -af --volumes 2>/dev/null || true
 	@echo ""
-	@echo "🔥 Step 5: Removing Docker build cache..."
+	@echo "🔥 Step 6: Removing Docker build cache..."
 	@docker builder prune -af 2>/dev/null && echo "   ✅ Build cache cleared" || echo "   ⚠️  No build cache to clear"
 	@echo ""
-	@echo "🧹 Step 6: Stopping any remaining background processes..."
+	@echo "🧹 Step 7: Stopping any remaining background processes..."
 	@pkill -f "kubectl.*port-forward" 2>/dev/null || true
 	@pkill -f "docker compose" 2>/dev/null || true
 	@pkill -f "generate-traffic" 2>/dev/null || true
 	@echo ""
-	@echo "🔍 Step 7: Verification - checking what remains..."
+	@echo "🔍 Step 8: Verification - checking what remains..."
 	@echo "Kind clusters:"
 	@kind get clusters 2>/dev/null || echo "   (none)"
 	@echo ""
 	@echo "Project Docker images:"
 	@docker images | grep api-deployment-demo || echo "   (none)"
+	@echo ""
+	@echo "Docker volumes:"
+	@docker volume ls | grep api-deployment-demo || echo "   (none)"
 	@echo ""
 	@echo "💥 NUCLEAR CLEANUP COMPLETE!"
 	@echo "🆕 System is now completely clean for a fresh start."

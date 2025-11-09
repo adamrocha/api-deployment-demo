@@ -67,7 +67,8 @@ setup-env: ## Setup .env file from template (cp .env.example .env)
 
 generate-secrets: ## Generate Kubernetes secrets from .env files (ENV=development|staging|production)
 	@echo "🔐 Generating secrets for $(ENV) environment..."
-	@./scripts/generate-secrets.sh $(ENV)
+	@sed -i.bak 's/^ENVIRONMENT=.*/ENVIRONMENT=$(ENV)/' .env && rm -f .env.bak
+	@eval $$(./scripts/load-env-vars.sh) && ./scripts/generate-secrets.sh $(ENV)
 	@echo "✅ Secrets generated for $(ENV) environment"
 
 generate-tls-secrets: ## Generate TLS secret YAML from SSL certificates (NAMESPACE=api-deployment-demo SECRET=nginx-ssl-certs)
@@ -77,7 +78,8 @@ generate-tls-secrets: ## Generate TLS secret YAML from SSL certificates (NAMESPA
 
 apply-secrets: ## Generate and apply secrets to cluster (ENV=development|staging|production)
 	@echo "🔐 Generating and applying secrets for $(ENV) environment..."
-	@APPLY=true ./scripts/generate-secrets.sh $(ENV)
+	@sed -i.bak 's/^ENVIRONMENT=.*/ENVIRONMENT=$(ENV)/' .env && rm -f .env.bak
+	@eval $$(./scripts/load-env-vars.sh) && APPLY=true ./scripts/generate-secrets.sh $(ENV)
 	@echo "✅ Secrets applied to cluster for $(ENV) environment"
 
 validate-env: ## Validate .env files for missing or placeholder values
@@ -184,9 +186,10 @@ staging-stop: ## Stop staging environment
 
 production: kind-cluster docker-push ## Start production environment (Kubernetes)
 	@echo "🎯 Starting production environment on Kubernetes..."
+	@sed -i.bak 's/^ENVIRONMENT=.*/ENVIRONMENT=production/' .env && rm -f .env.bak
 	@kubectl create namespace api-deployment-demo --dry-run=client -o yaml | kubectl apply -f - --validate=false
 	@echo "� Generating and applying secrets for production..."
-	@APPLY=true ./scripts/generate-secrets.sh production api-deployment-demo
+	@eval $$(./scripts/load-env-vars.sh) && APPLY=true ./scripts/generate-secrets.sh production api-deployment-demo
 	@echo "🔒 Setting up SSL certificates before deployment..."
 	@APPLY=true ./scripts/generate-tls-secrets.sh api-deployment-demo nginx-ssl-certs
 	@echo "🔒 Creating api-tls-secret for ingress controller..."

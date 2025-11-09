@@ -128,7 +128,7 @@ async def health_check():
         try:
             db_name = DATABASE_URL.split('/')[-1].split('?')[0]
             db_status = f"connected to {db_name}"
-        except:
+        except Exception:
             db_status = "connected"
     
     return {

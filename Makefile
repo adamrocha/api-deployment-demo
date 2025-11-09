@@ -144,7 +144,7 @@ show-env-help: ## Show environment and secret management help
 # =============================================================================
 
 staging: ## Start staging environment (Docker Compose)
-	@echo "� Starting staging environment with Docker Compose..."
+	@echo "🐳 Starting staging environment with Docker Compose..."
 	@docker compose up -d
 	@echo "✅ Staging environment started!"
 	@echo ""

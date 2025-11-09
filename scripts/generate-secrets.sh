@@ -392,7 +392,6 @@ EOF
 # Apply secrets to cluster
 apply_secrets() {
     local secrets_file="$PROJECT_ROOT/kubernetes/secrets-$ENVIRONMENT.yaml"
-    local configmap_file="$PROJECT_ROOT/kubernetes/configmap-$ENVIRONMENT.yaml"
     
     if [[ "${APPLY:-false}" == "true" ]]; then
         log_info "Applying secrets to Kubernetes cluster"
@@ -401,9 +400,8 @@ apply_secrets() {
         kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
         kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
         
-        # Apply ConfigMap first
-        kubectl apply -f "$configmap_file"
-        log_success "Applied ConfigMap to cluster"
+        # Note: Using static configmaps.yaml instead of generated configmap
+        log_info "Using static ConfigMap from kubernetes/configmaps.yaml"
         
         # Apply secrets
         kubectl apply -f "$secrets_file"
@@ -415,7 +413,6 @@ apply_secrets() {
         kubectl get secrets -n monitoring -l "generated-by=generate-secrets.sh"
     else
         log_info "Files generated. To apply to cluster, run:"
-        log_info "  kubectl apply -f $configmap_file"
         log_info "  kubectl apply -f $secrets_file"
         log_info "Or run this script with APPLY=true"
     fi
@@ -478,7 +475,8 @@ main() {
     check_placeholders
     load_env
     generate_api_secrets
-    generate_configmap
+    # Note: ConfigMap generation skipped - using static kubernetes/configmaps.yaml instead
+    # generate_configmap
     apply_secrets
     
     echo ""

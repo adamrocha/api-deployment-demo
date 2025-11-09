@@ -45,66 +45,26 @@ data:
         keepalive 32;
     }
 
+    # HTTP server block - Redirect to HTTPS
     server {
         listen 80;
         server_name _;
-        
-        # Security headers
-        add_header X-Frame-Options "SAMEORIGIN" always;
-        add_header X-XSS-Protection "1; mode=block" always;
-        add_header X-Content-Type-Options "nosniff" always;
-        add_header Referrer-Policy "no-referrer-when-downgrade" always;
 
-        # Gzip compression
-        gzip on;
-        gzip_vary on;
-        gzip_min_length 1024;
-        gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
-
-        # Proxy settings
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-
-        # Serve static files from /usr/share/nginx/html
-        root /usr/share/nginx/html;
-        index index.html index.htm;
-
-        # Serve static frontend for root path
-        location / {
-            try_files $uri $uri/ /index.html;
+        # Health check endpoints allowed over HTTP for load balancers/monitoring
+        location /nginx-health {
+            access_log off;
+            return 200 "nginx healthy (redirecting to HTTPS)\n";
+            add_header Content-Type text/plain;
         }
 
-        # API routes - proxy to backend
-        location /api/ {
-            proxy_pass http://api_backend/;
-            proxy_read_timeout 60s;
-            proxy_connect_timeout 60s;
-            proxy_send_timeout 60s;
-        }
-
-        # Direct health check endpoints
         location /health {
             proxy_pass http://api_backend/health;
             access_log off;
         }
 
-        location /users {
-            proxy_pass http://api_backend/users;
-        }
-
-        # API documentation
-        location /docs {
-            proxy_pass http://api_backend/docs;
-        }
-
-        location /openapi.json {
-            proxy_pass http://api_backend/openapi.json;
+        # Redirect all other HTTP traffic to HTTPS
+        location / {
+            return 301 https://$host$request_uri;
         }
     }
 
@@ -114,7 +74,7 @@ data:
         http2 on;
         server_name _;
 
-        # SSL Certificate configuration
+        # SSL Certificate configuration (Kubernetes TLS secret format)
         ssl_certificate /etc/nginx/ssl/tls.crt;
         ssl_certificate_key /etc/nginx/ssl/tls.key;
 

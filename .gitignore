@@ -1,418 +1,81 @@
 # =======================================================================
-# API Deployment Demo - .gitignore
+# Environment Files (SECURITY CRITICAL)
 # =======================================================================
-# Comprehensive .gitignore for Python, Docker, Kubernetes, and security
-
-# =======================================================================
-# Environment Files and Configuration (SECURITY CRITICAL)
-# =======================================================================
-# Actual environment files with secrets (NEVER COMMIT)
 .env
-.env.development*
-.env.staging*
-.env.production*
-.env.backup*
-
-# Template files remain committed:
-# .env.example - Template with placeholders (safe to commit)
+.env.*
+!.env.example
+!.envrc
 
 # =======================================================================
-# Python
+# SSL/TLS Certificates (SECURITY CRITICAL)
 # =======================================================================
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py.cover
-.hypothesis/
-.pytest_cache/
-
-# Translations
-*.mo
-*.pot
-
-# Django
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask
-instance/
-.webassets-cache
-
-# Scrapy
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# Python Virtual Environments
-.venv/
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Dependency management
-#Pipfile.lock
-#uv.lock
-#poetry.lock
-#poetry.toml
-#pdm.lock
-#pdm.toml
-.pdm-python
-.pdm-build/
-.pixi/
-
-# PEP 582
-__pypackages__/
-
-# Celery
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath
-*.sage.py
-
-# Type checkers
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# Linting
-.ruff_cache/
-
-# PyPI configuration
-.pypirc
-
-# =======================================================================
-# SSL/TLS and Certificates (SECURITY CRITICAL)
-# =======================================================================
-# SSL certificates and private keys
 *.key
 *.crt
 *.pem
 *.p12
 *.pfx
-*.jks
-
-# SSL directories and generated certificates
-ssl/
-nginx/ssl/*.crt
-nginx/ssl/*.key
-nginx/ssl/*.pem
-nginx/ssl/dhparam.pem
-nginx/ssl/nginx-selfsigned.*
-/ssl/
-./ssl/
-
-# SSL validation reports (auto-generated)
-ssl-certificate-report.txt
-ssl-validation-report.txt
-*ssl*report*.txt
-*certificate*report*.txt
+nginx/ssl/
 
 # =======================================================================
-# Docker and Containers
+# Python
 # =======================================================================
-docker-compose.override.yml
-docker-compose.dev.yml
-docker-compose.local.yml
-docker-compose.*.local.yml
-.dockerignore
-
-# Docker volumes and data
-docker-data/
-volumes/
-docker_volumes/
-
-# =======================================================================
-# Kubernetes (SECURITY CRITICAL)
-# =======================================================================
-# Generated secrets and configurations (from .env files)
-kubernetes/*secret*.yaml
-kubernetes/*configmap*.yaml
-
-# Kubernetes temporary and generated files
-kubernetes/*.tmp
-kubernetes/temp/
-kubernetes/.tmp/
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # =======================================================================
 # Ansible (SECURITY CRITICAL)
 # =======================================================================
-# Retry files and host configs
 ansible/*.retry
-ansible/host_vars/*.yml
-ansible/group_vars/production.yml
-
-# Vault passwords and sensitive files
 ansible/.vault_pass*
 ansible/vault_pass*
-ansible/**/vault_pass*
-ansible/.ansible_vault_password*
-ansible/ansible-vault-password*
-
-# SSH keys and certificates
 ansible/**/*.pem
-ansible/**/*.key
-ansible/**/*.crt
-ansible/**/id_rsa*
-ansible/**/id_ed25519*
-ansible/.ssh/
-
-# Ansible cache and logs
-ansible/.ansible/
-ansible/ansible.log
-ansible/**/*.log
-ansible/tmp/
-ansible/.tmp/
-
-# Environment-specific configs
-ansible/inventories/production/
-ansible/production_*
-ansible/secrets/
 ansible/**/*secret*
 ansible/**/*password*
+ansible/.ansible/
+
+# =======================================================================
+# Kubernetes Secrets (SECURITY CRITICAL)
+# =======================================================================
+kubernetes/secrets-*.yaml
+kubernetes/configmap-*.yaml
+kubernetes/monitoring-secrets.yaml
+kubernetes/tls-secret.yaml
+!kubernetes/*-example.yaml
 
 # =======================================================================
 # Logs and Temporary Files
 # =======================================================================
-# Application logs
 logs/
 *.log
 nginx/logs/*.log
-/var/log/
-api.log
-nginx.log
-access.log
-error.log
-
-# Temporary files
 tmp/
-temp/
-.tmp/
 *.tmp
-*.temp
-
-# Backup files
 *.bak
-*.backup
-*.old
-backup/
-backups/
-
-# Process and runtime files
 *.pid
-*.socket
-*.sock
 
 # =======================================================================
-# Monitoring and Data
+# Monitoring and Databases
 # =======================================================================
-# Monitoring data directories
 prometheus/
 grafana/data/
-grafana/dashboards/generated/
 grafana.db
-
-# Database files and dumps
 *.db
-*.sqlite
-*.sqlite3
-*.sql
+*.sqlite*
 dumps/
-db_dumps/
-database_backup*
 
 # =======================================================================
-# API Keys, Tokens, and Authentication Files (SECURITY CRITICAL)
+# IDEs and OS
 # =======================================================================
-# API keys and tokens
-*api*key*
-*api*token*
-*access*token*
-*refresh*token*
-*.token
-auth.json
-credentials.json
-service-account*.json
-gcp-*.json
-aws-*.json
-azure-*.json
-
-# SSH and authentication
-id_rsa*
-id_ed25519*
-id_ecdsa*
-known_hosts
-authorized_keys
-.ssh/
-ssh_config
-
-# GPG keys
-*.gpg
-*.asc
-.gnupg/
-
-# =======================================================================
-# Development Tools and IDEs
-# =======================================================================
-# Visual Studio Code
-.vscode/settings.json
-# .vscode/
-
-# JetBrains IDEs
-.idea/
-# Uncomment if you want to ignore the entire .idea folder
-
-# Vim/Neovim
-*.swp
-*.swo
-*~
-
-# Eclipse
-.project
-.classpath
-
-# Cursor AI Editor
-.cursorignore
-.cursorindexingignore
-
-# Spyder
-.spyderproject
-.spyproject
-
-# Rope
-.ropeproject
-
-# mkdocs
-/site
-
-# Abstra
-.abstra/
-
-# Marimo
-marimo/_static/
-marimo/_lsp/
-__marimo__/
-
-# =======================================================================
-# Operating System Generated Files
-# =======================================================================
-# macOS
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-
-# Windows
-ehthumbs.db
-Thumbs.db
-
-# =======================================================================
-# Comprehensive Security Patterns (SECURITY CRITICAL)
-# =======================================================================
-# Files with sensitive keywords in names
-*password*
-#*secret*
-*private*
-*confidential*
-*credential*
-*token*
-*key*
-*auth*
-
-# Local development overrides
-local.*
-*.local
-dev.*
-development.*
-staging.*
-production.*
-
-# Configuration overrides
-config.local.*
-settings.local.*
-
-# =======================================================================
-# Additional Notes
-# =======================================================================
-# This .gitignore prioritizes security by preventing:
-# 1. Environment files with actual secrets (.env, .env.local, etc.)
-# 2. SSL certificates and private keys (*.key, *.pem, *.crt)
-# 3. Generated Kubernetes secrets (kubernetes/secrets-*.yaml)
-# 4. Ansible vault passwords and SSH keys
-# 5. Any files containing "secret", "password", "key", "token" in their names
-# 6. API keys, authentication tokens, and credential files
-# 7. SSL certificate reports and validation files
-# 8. Database files and dumps
-# 9. SSH keys and authentication files
-#
-# Safe to commit:
-# - .env.example (template with placeholders)
-# - kubernetes/secrets-*.yaml.example (example manifests)
-# - Documentation and configuration templates
-# - Files ending in .example, .template, .sample
-kubernetes/monitoring-secrets.yaml
-.env.backup*
+.idea/
+*.swp
+.vscode/settings.json

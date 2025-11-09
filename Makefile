@@ -8,6 +8,7 @@
 .PHONY: clean clean-all clean-all-dry-run clean-staging clean-production clean-images clean-secrets
 .PHONY: traffic logs status validate quick-dev quick-staging quick-production
 .PHONY: test-automated promote validate-promotion generate-tls-secrets
+.PHONY: start-port-forwarding stop-port-forwarding
 
 # Default target
 help: ## Show this help message
@@ -18,13 +19,15 @@ help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 	@echo ""
 	@echo "💡 Examples:"
-	@echo "  make staging          # Start staging environment"
-	@echo "  make production       # Start production environment"
-	@echo "  make monitoring       # Add monitoring to production"
+	@echo "  make staging                  # Start staging environment"
+	@echo "  make production               # Start production environment"
+	@echo "  make monitoring               # Add monitoring (auto port-forward)"
+	@echo "  make start-port-forwarding    # Manually start port forwarding"
+	@echo "  make stop-port-forwarding     # Stop port forwarding"
 	@echo ""
 	@echo "🧹 Cleanup Options (in order of intensity):"
 	@echo "  make clean-staging    # Clean only staging (Docker Compose)"
-	@echo "  make clean-production # Clean only production (keep cluster)"
+	@echo "  make clean-production # Clean only production (stops port-forwarding)"
 	@echo "  make clean            # Clean applications (keep cluster & images)"
 	@echo "  make clean-all        # 💥 NUCLEAR: Delete everything (cluster, images, volumes)"
 	@echo ""
@@ -282,7 +285,19 @@ production-logs: ## Show production environment logs
 
 production-stop: ## Stop production environment (keep cluster)
 	@echo "🛑 Stopping production environment..."
-	@kubectl delete namespace api-deployment-demo --ignore-not-found=true
+	@$(MAKE) stop-port-forwarding
+	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
+		echo "  Deleting api-deployment-demo namespace..."; \
+		kubectl delete namespace api-deployment-demo --ignore-not-found=true; \
+		echo "  ✅ api-deployment-demo namespace deleted"; \
+	else \
+		echo "  ℹ️  api-deployment-demo namespace not found (already stopped)"; \
+	fi
+	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
+		echo "  Deleting monitoring namespace..."; \
+		kubectl delete namespace monitoring --ignore-not-found=true; \
+		echo "  ✅ monitoring namespace deleted"; \
+	fi
 	@echo "✅ Production environment stopped! (cluster preserved)"
 
 # =============================================================================
@@ -320,7 +335,6 @@ monitoring: ## Add monitoring to production environment
 	@echo "🌐 Setting up monitoring access..."
 	@kubectl apply -f kubernetes/monitoring-ingress.yaml --validate=false
 	@kubectl apply -f kubernetes/monitoring-nodeport.yaml --validate=false
-	@kubectl apply -f kubernetes/monitoring-loadbalancer.yaml --validate=false
 	@echo "⚠️  Skipping ServiceMonitor resources (requires Prometheus Operator)"
 	@echo "⏳ Waiting for monitoring services..."
 	@echo "📊 Waiting for Prometheus deployment..."
@@ -339,6 +353,9 @@ monitoring: ## Add monitoring to production environment
 		done; \
 	done
 	@echo "✅ Monitoring stack deployed!"
+	@echo ""
+	@echo "🚀 Starting port forwarding for monitoring services..."
+	@$(MAKE) start-port-forwarding
 	@echo ""
 	@echo "🌐 Access points (Standard Ports - Production):"
 	@echo "  Prometheus: http://localhost:9090"
@@ -371,6 +388,28 @@ monitoring-dashboards: ## Open Grafana dashboards
 	@echo "Username: admin"
 	@echo "Password: [see .env GRAFANA_ADMIN_PASSWORD]"
 
+start-port-forwarding: ## Start port forwarding for monitoring services
+	@echo "🚀 Starting port forwarding..."
+	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
+	@sleep 1
+	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
+		echo "  Starting Grafana port forward (3000:3000)..."; \
+		kubectl port-forward -n monitoring svc/grafana 3000:3000 > /dev/null 2>&1 & \
+		echo "  Starting Prometheus port forward (9090:9090)..."; \
+		kubectl port-forward -n monitoring svc/prometheus 9090:9090 > /dev/null 2>&1 & \
+		sleep 2; \
+		echo "✅ Port forwarding started"; \
+		echo "  Grafana:    http://localhost:3000"; \
+		echo "  Prometheus: http://localhost:9090"; \
+	else \
+		echo "❌ Monitoring namespace not found. Run 'make monitoring' first."; \
+		exit 1; \
+	fi
+
+stop-port-forwarding: ## Stop all port forwarding for monitoring services
+	@echo "🛑 Stopping port forwarding..."
+	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null && echo "✅ Port forwarding stopped" || echo "ℹ️  No port forwarding processes found"
+
 # =============================================================================
 # Frontend Access Commands
 # =============================================================================
@@ -401,8 +440,8 @@ access-production: ## Access production frontend (standard ports)
 access-monitoring: ## Access monitoring dashboards (standard ports for production)
 	@echo "📊 Monitoring Access:"
 	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
-		echo "  Grafana:     http://localhost:3000 (admin/[see .env])"; \
-		echo "  Prometheus:  http://localhost:9090"; \
+		echo "🚀 Ensuring port forwarding is active..."; \
+		$(MAKE) start-port-forwarding; \
 		echo ""; \
 		echo "✅ Production monitoring access ready! Standard ports."; \
 		echo ""; \
@@ -520,6 +559,7 @@ clean-staging: ## Clean up only staging environment
 
 clean-production: ## Clean up only production environment
 	@echo "🧹 Cleaning up production environment..."
+	@$(MAKE) stop-port-forwarding
 	@kubectl delete namespace api-deployment-demo monitoring --ignore-not-found=true
 	@kind delete cluster --name api-demo-cluster 2>/dev/null || true
 	@echo "✅ Production cleanup complete!"
@@ -535,6 +575,7 @@ clean-images: ## Remove all custom Docker images
 clean-all: ## Complete nuclear cleanup - delete everything (cluster, images, volumes, builds)
 	@echo "💥 NUCLEAR CLEANUP: Deleting absolutely everything..."
 	@echo "⚠️  This will remove:"
+	@echo "   • Staging environment (Docker Compose)"
 	@echo "   • Kind cluster (api-demo-cluster)"
 	@echo "   • All Docker images (including cached layers)"
 	@echo "   • All Docker volumes and build cache"
@@ -542,40 +583,46 @@ clean-all: ## Complete nuclear cleanup - delete everything (cluster, images, vol
 	@echo ""
 	@read -p "Are you sure? This cannot be undone! (y/N): " confirm && [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || (echo "❌ Aborted!" && exit 1)
 	@echo ""
-	@echo "🧹 Step 1: Cleaning application resources..."
+	@echo "🧹 Step 1: Stopping staging environment (Docker Compose)..."
+	@docker compose down -v --remove-orphans 2>/dev/null && echo "   ✅ Staging stopped and volumes removed" || echo "   ⚠️  No staging environment running"
+	@echo ""
+	@echo "🧹 Step 2: Cleaning application resources..."
 	@./scripts/cleanup-all.sh 2>/dev/null || true
 	@echo ""
-	@echo "🗑️  Step 2: Deleting Kind cluster..."
+	@echo "🗑️  Step 3: Deleting Kind cluster..."
 	@if kind get clusters 2>/dev/null | grep -q api-demo-cluster; then \
 		kind delete cluster --name api-demo-cluster && echo "   ✅ Kind cluster deleted successfully"; \
 	else \
 		echo "   ⚠️  Kind cluster api-demo-cluster not found (already deleted)"; \
 	fi
 	@echo ""
-	@echo "🐳 Step 3: Removing all project Docker images..."
+	@echo "🐳 Step 4: Removing all project Docker images..."
 	@if docker images | grep -q api-deployment-demo; then \
 		docker images | grep api-deployment-demo | awk '{print $$3}' | xargs -r docker rmi -f && echo "   ✅ Project Docker images removed"; \
 	else \
 		echo "   ⚠️  No project Docker images found"; \
 	fi
 	@echo ""
-	@echo "🧽 Step 4: Cleaning Docker system (images, containers, volumes, build cache)..."
+	@echo "🧽 Step 5: Cleaning Docker system (images, containers, volumes, build cache)..."
 	@docker system prune -af --volumes 2>/dev/null || true
 	@echo ""
-	@echo "🔥 Step 5: Removing Docker build cache..."
+	@echo "🔥 Step 6: Removing Docker build cache..."
 	@docker builder prune -af 2>/dev/null && echo "   ✅ Build cache cleared" || echo "   ⚠️  No build cache to clear"
 	@echo ""
-	@echo "🧹 Step 6: Stopping any remaining background processes..."
+	@echo "🧹 Step 7: Stopping any remaining background processes..."
 	@pkill -f "kubectl.*port-forward" 2>/dev/null || true
 	@pkill -f "docker compose" 2>/dev/null || true
 	@pkill -f "generate-traffic" 2>/dev/null || true
 	@echo ""
-	@echo "🔍 Step 7: Verification - checking what remains..."
+	@echo "🔍 Step 8: Verification - checking what remains..."
 	@echo "Kind clusters:"
 	@kind get clusters 2>/dev/null || echo "   (none)"
 	@echo ""
 	@echo "Project Docker images:"
 	@docker images | grep api-deployment-demo || echo "   (none)"
+	@echo ""
+	@echo "Docker volumes:"
+	@docker volume ls | grep api-deployment-demo || echo "   (none)"
 	@echo ""
 	@echo "💥 NUCLEAR CLEANUP COMPLETE!"
 	@echo "🆕 System is now completely clean for a fresh start."

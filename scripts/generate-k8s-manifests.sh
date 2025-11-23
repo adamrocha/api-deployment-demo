@@ -90,7 +90,7 @@ else
     log_error ".env file not found at $PROJECT_ROOT/.env!"
     exit 1
 
-# Export variables for envsubst (only strings, no integers)
+# Export variables for envsubst (all environment variables are treated as strings)
 export K8S_NAMESPACE="${K8S_NAMESPACE:-api-deployment-demo}"
 export DB_NAME="${DB_NAME:-api_production}"
 export DB_USER="${DB_USER:-postgres}"

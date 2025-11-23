@@ -14,6 +14,13 @@ set -euo pipefail
 # Default values
 ENVIRONMENT="${1:-production}"
 
+# Validate environment
+if [[ "$ENVIRONMENT" != "staging" && "$ENVIRONMENT" != "production" ]]; then
+    log_error "Invalid environment: $ENVIRONMENT"
+    log_error "Valid options: staging, production"
+    exit 1
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 # If OUTPUT_DIR is provided and is absolute, use it; if relative, prefix with PROJECT_ROOT

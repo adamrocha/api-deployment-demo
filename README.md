@@ -52,8 +52,8 @@ All services are available on both staging and production environments:
 |---------|------------------------|--------------------------|
 | **API** | http://localhost/api | http://localhost:30800/api |
 | **Nginx** | http://localhost | http://localhost:30080 |
-| **Grafana** | http://localhost:3000 | http://localhost:3001 |
-| **Prometheus** | http://localhost:9090 | http://localhost:9091 |
+| **Grafana** | http://localhost:3000 | N/A |
+| **Prometheus** | http://localhost:9090 | N/A |
 
 **Default Credentials:**
 - Grafana: `admin` / `admin` (change on first login)

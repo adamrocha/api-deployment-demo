@@ -39,7 +39,7 @@ make quick-staging    # Deploy to Docker Compose staging
 
 ### Option 3: Production Only
 ```bash
-make deploy-production # Deploy directly to Kubernetes
+make production       # Deploy directly to Kubernetes
 ```
 
 ---

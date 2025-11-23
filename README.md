@@ -283,7 +283,6 @@ docker-compose up api
 # View logs
 docker-compose logs -f api
 ```
-
 ---
 
 ## Architecture Overview
@@ -319,10 +318,6 @@ Internet → Nginx (SSL termination) → API → PostgreSQL
             Grafana (visualization)
 ```
 
-### Detailed Design Decisions
-
-For in-depth architectural decisions, design patterns, and trade-offs, see [ARCHITECTURE.md](./ARCHITECTURE.md).
-
 ---
 
 ## Cleanup & Management
@@ -334,7 +329,6 @@ For in-depth architectural decisions, design patterns, and trade-offs, see [ARCH
 | `make clean-staging` | Staging only | Clean Docker Compose environment |
 | `make clean-production` | Production only | Clean Kubernetes resources |
 | `make clean-all` | Everything | Full cleanup (staging + production) |
-| `make clean-volumes` | Data volumes | Remove all persistent data |
 
 ### Safe Cleanup Workflow
 ```bash
@@ -343,9 +337,6 @@ make clean-staging
 
 # 2. Stop production environment
 make clean-production
-
-# 3. Remove volumes (WARNING: deletes data)
-make clean-volumes
 
 # Or do everything at once
 make clean-all

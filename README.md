@@ -34,12 +34,12 @@ make test-automated    # Complete staging → production pipeline
 
 ### Option 2: Staging Only
 ```bash
-make quick-staging    # Deploy to Docker Compose staging
+make staging           # Deploy to Docker Compose staging
 ```
 
 ### Option 3: Production Only
 ```bash
-make production       # Deploy directly to Kubernetes
+make production        # Deploy directly to Kubernetes
 ```
 
 ---
@@ -49,11 +49,11 @@ make production       # Deploy directly to Kubernetes
 All services are available on both staging and production environments:
 
 | Service | Production (Kubernetes) | Staging (Docker Compose) |
-|---------|------------------------|--------------------------|
+|---------|------------------------|--------------------------||
 | **API** | http://localhost/api | http://localhost:30800/api |
 | **Nginx** | http://localhost | http://localhost:30080 |
-| **Grafana** | http://localhost:3000 | N/A |
-| **Prometheus** | http://localhost:9090 | N/A |
+| **Grafana** | http://localhost:3000 | *(not available in staging)* |
+| **Prometheus** | http://localhost:9090 | *(not available in staging)* |
 
 **Default Credentials:**
 - Grafana: `admin` / `admin` (change on first login)
@@ -71,22 +71,21 @@ make test-automated SKIP_TESTS=true  # Skip validation tests
 ### Manual Deployments
 ```bash
 # Staging environment (Docker Compose)
-make deploy-staging          # Deploy to staging
-make test-staging            # Run validation tests
-make logs-staging            # View logs
+make staging                 # Deploy to staging
+make staging-status          # Check status
+make staging-logs            # View logs
 
 # Production environment (Kubernetes)
-make deploy-production       # Deploy to production
-make test-production         # Run validation tests
-make logs-production         # View logs
-make status-production       # Check pod status
+make production              # Deploy to production
+make production-status       # Check status
+make production-logs         # View logs
 ```
 
 ### Kubernetes Management
 ```bash
-make k8s-dashboard          # Open Kubernetes dashboard
-kubectl get pods -n production  # View production pods
-kubectl logs -f <pod-name> -n production  # Stream logs
+kubectl get pods -n api-deployment-demo  # View production pods
+kubectl logs -f <pod-name> -n api-deployment-demo  # Stream logs
+kubectl get all -n api-deployment-demo   # View all resources
 ```
 
 ---
@@ -94,23 +93,25 @@ kubectl logs -f <pod-name> -n production  # Stream logs
 ## Configuration & Secrets
 
 ### Environment Variables
-All configuration is managed through a single `.env` file with prefixed variables:
+All configuration is managed through `.env` file:
 
 ```bash
-# Staging (STG_) - Docker Compose on high ports
-STG_API_PORT=8001
-STG_NGINX_PORT=8001
-STG_GRAFANA_PORT=3001
-
-# Production (PROD_) - Kubernetes on standard ports
-PROD_API_PORT=80
-PROD_NGINX_PORT=80
-PROD_GRAFANA_PORT=3000
-
 # Database configuration
-DB_NAME=mydatabase
+DB_NAME=api_staging
 DB_USER=postgres
-DB_HOST=postgres-service
+DB_PASSWORD=your_secure_password
+DB_HOST=postgres
+DB_PORT=5432
+
+# API configuration
+API_ENV=staging
+DEBUG=false
+SECRET_KEY=your_secret_key
+API_WORKERS=4
+
+# SSL/TLS Configuration
+SSL_ENABLED=true
+SSL_SELF_SIGNED=true
 ```
 
 ### Secret Management
@@ -139,8 +140,8 @@ Secrets are stored in:
 
 **Option 1: Self-Signed Certificates (Development)**
 ```bash
-cd nginx/ssl
-./generate-certs.sh
+cd nginx
+./generate-ssl.sh
 # Follow prompts for certificate details
 ```
 
@@ -167,12 +168,13 @@ SSL_KEY_PATH=/etc/nginx/ssl/server.key
 
 ### Verify SSL
 ```bash
-# Check certificate validity
-make validate-ssl
-
 # Test HTTPS manually
 curl -k https://localhost/api/health
+curl -k https://localhost:30443/api/health  # Staging
 openssl s_client -connect localhost:443 -servername localhost
+
+# Check certificate details
+openssl x509 -in nginx/ssl/nginx-selfsigned.crt -text -noout
 ```
 
 ### SSL Troubleshooting
@@ -225,13 +227,13 @@ Production environment automatically scales based on CPU usage:
 
 ```bash
 # Check autoscaling status
-kubectl get hpa -n production
+kubectl get hpa -n api-deployment-demo
 
 # View scaling events
-kubectl describe hpa api-hpa -n production
+kubectl describe hpa api-hpa -n api-deployment-demo
 
-# Trigger autoscaling (load test)
-make load-test
+# Trigger autoscaling (generate traffic)
+make traffic
 ```
 
 **Autoscaling configuration:**
@@ -258,18 +260,16 @@ docker-compose up -d postgres
 
 ### Testing
 ```bash
-# Run all tests
-make test
+# Run automated deployment test (full pipeline)
+make test-automated
 
-# Test staging environment
-make test-staging
+# Generate test traffic
+make traffic
 
-# Test production environment
-make test-production
-
-# Load testing
-make load-test              # Standard load test
-make load-test DURATION=300 # 5-minute load test
+# Check environment status
+make status                  # Active environment
+make staging-status          # Staging specifically
+make production-status       # Production specifically
 ```
 
 ### Docker Development
@@ -390,11 +390,11 @@ STG_API_PORT=8002
 ```bash
 # Check database status
 docker ps | grep postgres
-kubectl get pods -n production | grep postgres
+kubectl get pods -n api-deployment-demo | grep postgres
 
 # View database logs
 docker logs <postgres-container>
-kubectl logs <postgres-pod> -n production
+kubectl logs <postgres-pod> -n api-deployment-demo
 
 # Verify connection settings in .env
 DB_HOST=postgres-service
@@ -407,14 +407,14 @@ DB_PORT=5432
 **Solution**:
 ```bash
 # Check pod status
-kubectl describe pod <pod-name> -n production
+kubectl describe pod <pod-name> -n api-deployment-demo
 
 # View pod logs
-kubectl logs <pod-name> -n production
+kubectl logs <pod-name> -n api-deployment-demo
 
 # Common fixes:
 # - Check image name/tag in deployment.yaml
-# - Verify secrets are created: kubectl get secrets -n production
+# - Verify secrets are created: kubectl get secrets -n api-deployment-demo
 # - Check resource limits aren't too restrictive
 ```
 
@@ -450,27 +450,27 @@ sudo certbot renew
 # Test connection to Prometheus
 
 # Restart monitoring stack
-kubectl rollout restart deployment prometheus -n production
-kubectl rollout restart deployment grafana -n production
+kubectl rollout restart deployment prometheus -n monitoring
+kubectl rollout restart deployment grafana -n monitoring
 ```
 
 ### Debug Commands
 
 ```bash
 # Staging (Docker Compose)
-docker-compose ps                    # Service status
-docker-compose logs -f api           # Follow API logs
-docker-compose exec api /bin/bash   # Shell into container
+docker compose ps                    # Service status
+docker compose logs -f api           # Follow API logs
+docker compose exec api /bin/bash    # Shell into container
 
 # Production (Kubernetes)
-kubectl get all -n production        # All resources
-kubectl describe pod <name> -n production  # Detailed pod info
-kubectl exec -it <pod> -n production -- /bin/bash  # Shell into pod
-kubectl get events -n production --sort-by='.lastTimestamp'  # Recent events
+kubectl get all -n api-deployment-demo        # All resources
+kubectl describe pod <name> -n api-deployment-demo  # Detailed pod info
+kubectl exec -it <pod> -n api-deployment-demo -- /bin/bash  # Shell into pod
+kubectl get events -n api-deployment-demo --sort-by='.lastTimestamp'  # Recent events
 
 # Monitoring
-curl http://localhost:8001/api/health  # Health check (staging)
-curl http://localhost/api/health       # Health check (production)
+curl http://localhost:30800/health     # Health check (staging)
+curl http://localhost/health           # Health check (production)
 ```
 
 ### Getting Help
@@ -482,10 +482,10 @@ curl http://localhost/api/health       # Health check (production)
 5. **Secrets**: Confirm all required secrets are generated
 
 For persistent issues, include the following in bug reports:
-- Output of `make status-production` or `docker-compose ps`
+- Output of `make production-status` or `docker compose ps`
 - Relevant logs from failing service
 - `.env` configuration (remove sensitive values)
-- Kubernetes events (`kubectl get events -n production`)
+- Kubernetes events (`kubectl get events -n api-deployment-demo`)
 
 ---
 

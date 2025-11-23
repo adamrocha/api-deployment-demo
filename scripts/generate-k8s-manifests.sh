@@ -13,9 +13,19 @@ set -euo pipefail
 
 # Default values
 ENVIRONMENT="${1:-production}"
-OUTPUT_DIR="${2:-kubernetes/generated}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+# If OUTPUT_DIR is provided and is absolute, use it; if relative, prefix with PROJECT_ROOT
+if [[ -n "${2:-}" ]]; then
+    if [[ "${2}" = /* ]]; then
+        OUTPUT_DIR="${2}"
+    else
+        OUTPUT_DIR="$PROJECT_ROOT/${2}"
+    fi
+else
+    OUTPUT_DIR="$PROJECT_ROOT/kubernetes/generated"
+fi
 MANIFESTS_DIR="$PROJECT_ROOT/kubernetes"
 
 # Colors for output

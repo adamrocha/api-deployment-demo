@@ -52,7 +52,17 @@ echo ""
 log_info "Loading environment variables for $ENVIRONMENT"
 
 # Set ENVIRONMENT in .env temporarily
-sed -i.bak "s/^ENVIRONMENT=.*/ENVIRONMENT=$ENVIRONMENT/" "$PROJECT_ROOT/.env" && rm -f "$PROJECT_ROOT/.env.bak"
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    # Update ENVIRONMENT if present, else append it
+    if grep -q '^ENVIRONMENT=' "$PROJECT_ROOT/.env"; then
+        sed -i.bak "s/^ENVIRONMENT=.*/ENVIRONMENT=$ENVIRONMENT/" "$PROJECT_ROOT/.env" && rm -f "$PROJECT_ROOT/.env.bak"
+    else
+        echo "ENVIRONMENT=$ENVIRONMENT" >> "$PROJECT_ROOT/.env"
+    fi
+else
+    log_error ".env file not found at $PROJECT_ROOT/.env!"
+    exit 1
+fi
 
 # Use load-env-vars.sh to get unprefixed variables
 if [[ -f "$SCRIPT_DIR/load-env-vars.sh" ]]; then

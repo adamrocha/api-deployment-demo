@@ -34,7 +34,7 @@ make test-automated    # Complete staging → production pipeline
 
 ### Option 2: Staging Only
 ```bash
-make deploy-staging    # Deploy to Docker Compose staging
+make quick-staging    # Deploy to Docker Compose staging
 ```
 
 ### Option 3: Production Only

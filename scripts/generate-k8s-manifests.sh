@@ -64,14 +64,14 @@ else
     exit 1
 fi
 
-# Use load-env-vars.sh to get unprefixed variables
-if [[ -f "$SCRIPT_DIR/load-env-vars.sh" ]]; then
-    # shellcheck source=/dev/null
-    eval "$($SCRIPT_DIR/load-env-vars.sh)"
+# Source environment variables directly from .env
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    set -a
+    source "$PROJECT_ROOT/.env"
+    set +a
 else
-    log_error "load-env-vars.sh not found!"
+    log_error ".env file not found at $PROJECT_ROOT/.env!"
     exit 1
-fi
 
 # Export variables for envsubst (only strings, no integers)
 export K8S_NAMESPACE="${K8S_NAMESPACE:-api-deployment-demo}"

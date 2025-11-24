@@ -37,6 +37,8 @@ make test-automated    # Complete staging → production pipeline
 make staging           # Deploy to Docker Compose staging
 ```
 
+**Staging Access:** https://localhost:30443 (HTTPS required, self-signed cert)
+
 ### Option 3: Production Only
 ```bash
 make production        # Deploy directly to Kubernetes
@@ -51,9 +53,12 @@ All services are available on both staging and production environments:
 | Service | Production (Kubernetes) | Staging (Docker Compose) |
 |---------|------------------------|--------------------------||
 | **API** | http://localhost/api | http://localhost:30800/api |
-| **Nginx** | http://localhost | http://localhost:30080 |
+| **Nginx (HTTP)** | http://localhost | http://localhost:30080 → redirects to HTTPS |
+| **Nginx (HTTPS)** | https://localhost | https://localhost:30443 |
 | **Grafana** | http://localhost:3000 | *(not available in staging)* |
 | **Prometheus** | http://localhost:9090 | *(not available in staging)* |
+
+**Note:** Staging uses self-signed SSL certificates. Use `curl -k` or accept browser security warnings.
 
 **Default Credentials:**
 - Grafana: `admin` / `admin` (change on first login)
@@ -460,8 +465,9 @@ kubectl exec -it <pod> -n api-deployment-demo -- /bin/bash  # Shell into pod
 kubectl get events -n api-deployment-demo --sort-by='.lastTimestamp'  # Recent events
 
 # Monitoring
-curl http://localhost:30800/health     # Health check (staging)
-curl http://localhost/health           # Health check (production)
+curl http://localhost:30800/health           # API health check (staging)
+curl -k https://localhost:30443/health       # Nginx health check (staging HTTPS)
+curl http://localhost/health                 # Health check (production)
 ```
 
 ### Getting Help

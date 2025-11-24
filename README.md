@@ -51,7 +51,7 @@ make production        # Deploy directly to Kubernetes
 All services are available on both staging and production environments:
 
 | Service | Production (Kubernetes) | Staging (Docker Compose) |
-|---------|------------------------|--------------------------||
+|---------|------------------------|--------------------------|
 | **API** | http://localhost/api | http://localhost:30800/api |
 | **Nginx (HTTP)** | http://localhost | http://localhost:30080 → redirects to HTTPS |
 | **Nginx (HTTPS)** | https://localhost | https://localhost:30443 |

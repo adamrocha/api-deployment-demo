@@ -466,7 +466,7 @@ kubectl get events -n api-deployment-demo --sort-by='.lastTimestamp'  # Recent e
 
 # Monitoring
 curl http://localhost:30800/health           # API health check (staging)
-curl -k https://localhost:30443/health       # Nginx health check (staging HTTPS)
+curl -k https://localhost:30443/health       # API health check via Nginx (staging HTTPS)
 curl http://localhost/health                 # Health check (production)
 ```
 

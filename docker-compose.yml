@@ -81,6 +81,7 @@ services:
     volumes:
       - ./nginx/logs:/var/log/nginx
       - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/index.html:/usr/share/nginx/html/index.html:ro
     depends_on:
       - api
     networks:

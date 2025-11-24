@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>API Deployment Demo - Production Ready</title>
+    <title>API Deployment Demo</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
@@ -145,8 +145,8 @@
     <div class="container">
         <h1>🚀 API Deployment Demo</h1>
         <div class="environment" id="environment">
-            <strong>Environment:</strong> <span id="env-name">Production Ready</span> | 
-            <strong>Deployment:</strong> <span id="deployment-type">Kubernetes</span>
+            <strong>Environment:</strong> <span id="env-name">Loading...</span> | 
+            <strong>Deployment:</strong> <span id="deployment-type">Detecting...</span>
         </div>
         <div class="status" id="status">
             <span class="loading">⚡</span> Checking application status...
@@ -256,26 +256,47 @@
         function detectEnvironment() {
             const hostname = window.location.hostname;
             const port = window.location.port;
+            const protocol = window.location.protocol;
             let env = 'Production';
-            let deployment = 'Unknown';
+            let deployment = 'Kubernetes';
+            let bgGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
             
-            if (hostname === 'localhost' && port === '8080') {
-                env = 'Kubernetes (Kind)';
-                deployment = 'Local Testing';
-            } else if (hostname === 'localhost' && (port === '' || port === '80')) {
-                env = 'Docker Compose';
-                deployment = 'Task 1';
-            } else if (hostname.includes('staging')) {
+            // Detect staging environment (Docker Compose on high ports)
+            if ((port === '30080' || port === '30443' || port === '30800') && hostname === 'localhost') {
+                env = 'Staging';
+                deployment = 'Docker Compose';
+                bgGradient = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+            } 
+            // Detect local Kubernetes
+            else if (hostname === 'localhost' && port === '8080') {
+                env = 'Production (Local)';
+                deployment = 'Kubernetes (Kind)';
+            } 
+            // Detect production Kubernetes
+            else if (hostname === 'localhost' && (port === '' || port === '80' || port === '443')) {
+                env = 'Production';
+                deployment = 'Kubernetes';
+            } 
+            // Detect by hostname patterns
+            else if (hostname.includes('staging')) {
                 env = 'Staging';
                 deployment = 'Kubernetes';
+                bgGradient = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
             } else if (hostname.includes('api-demo')) {
                 env = 'Production';
                 deployment = 'Kubernetes';
             }
             
+            // Update UI
             document.getElementById('env-name').textContent = env;
             document.getElementById('deployment-type').textContent = deployment;
             document.getElementById('current-env').textContent = `${env} (${deployment})`;
+            document.title = `API Deployment Demo - ${env}`;
+            
+            // Update background for staging
+            if (env === 'Staging') {
+                document.body.style.background = bgGradient;
+            }
         }
         
         // API Base URL detection

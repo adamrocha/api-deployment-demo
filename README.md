@@ -52,9 +52,10 @@ All services are available on both staging and production environments:
 
 | Service | Production (Kubernetes) | Staging (Docker Compose) |
 |---------|------------------------|--------------------------|
-| **API** | http://localhost/api | http://localhost:30800/api |
-| **Nginx (HTTP)** | http://localhost | http://localhost:30080 → redirects to HTTPS |
-| **Nginx (HTTPS)** | https://localhost | https://localhost:30443 |
+| **Web (HTTPS)** | https://localhost | https://localhost:30443 |
+| **Web (HTTP)** | http://localhost | http://localhost:30080 (redirects to HTTPS) |
+| **API** | https://localhost/api<br>http://localhost/api | https://localhost:30443/api |
+| **API Direct** | http://localhost:8000 | http://localhost:30800 |
 | **Grafana** | http://localhost:3000 | *(not available in staging)* |
 | **Prometheus** | http://localhost:9090 | *(not available in staging)* |
 

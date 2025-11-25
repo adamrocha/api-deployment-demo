@@ -148,10 +148,15 @@ staging: ## Start staging environment (Docker Compose)
 	@docker compose up -d
 	@echo "✅ Staging environment started!"
 	@echo ""
-	@echo "🌐 Access points (High Ports - Staging):"
-	@echo "  API:      http://localhost:30800"
-	@echo "  Nginx:    http://localhost:30080"
-	@echo "  Database: localhost:35432"
+	@echo "🌐 Access points (Staging - HTTPS Required):"
+	@echo "  Web (HTTPS):  https://localhost:30443"
+	@echo "  API (HTTPS):  https://localhost:30443/api/health"
+	@echo "  API Direct:   http://localhost:30800 (bypasses nginx)"
+	@echo "  API Docs:     http://localhost:30800/docs"
+	@echo "  Database:     localhost:35432"
+	@echo ""
+	@echo "⚠️  Note: HTTP (port 30080) redirects to HTTPS (port 30443)"
+	@echo "💡 Use 'curl -k' or accept browser warnings for self-signed cert"
 	@echo ""
 	@echo "📊 Check status: make staging-status"
 
@@ -415,11 +420,22 @@ stop-port-forwarding: ## Stop all port forwarding for monitoring services
 # =============================================================================
 
 access-staging: ## Set up staging frontend access
-	@echo "🌐 Staging Frontend Access (High Ports):"
-	@echo "  Web Frontend: http://localhost:30080"
-	@echo "  API Direct:   http://localhost:30800"
+	@echo "🌐 Staging Frontend Access (HTTPS Required):"
+	@echo "  Web (HTTPS):  https://localhost:30443"
+	@echo "  API (HTTPS):  https://localhost:30443/api/health"
+	@echo "  API Direct:   http://localhost:30800 (bypasses nginx)"
 	@echo "  API Docs:     http://localhost:30800/docs"
 	@echo "  Health:       http://localhost:30800/health"
+	@echo ""
+	@echo "⚠️  Note: HTTP port 30080 redirects to HTTPS port 30443"
+	@echo "💡 Use 'curl -k https://...' for self-signed certificates"
+	@echo ""
+	@echo "🧪 Quick test:"
+	@if docker compose ps | grep -q Up; then \
+		curl -k -s https://localhost:30443/health 2>/dev/null && echo "✅ Staging API responding" || echo "❌ Staging API not ready yet"; \
+	else \
+		echo "ℹ️  Staging not running. Start with 'make staging'"; \
+	fi
 
 access-production: ## Access production frontend (standard ports)
 	@echo "🎯 Production Frontend Access (Standard Ports):"
@@ -467,8 +483,9 @@ access-all: ## Access all services via NodePort (no port-forwarding needed)
 	fi
 	@if docker compose ps | grep -q Up; then \
 		echo "🐳 Staging services:"; \
-		echo "  Web Frontend: http://localhost:30080"; \
+		echo "  Web (HTTPS):  https://localhost:30443"; \
 		echo "  API Direct:   http://localhost:30800"; \
+		echo "  Note: HTTP port 30080 redirects to HTTPS"; \
 	fi
 	@echo ""
 	@echo "✅ All access points ready! Production uses standard ports."

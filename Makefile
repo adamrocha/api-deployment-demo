@@ -614,8 +614,8 @@ clean-all: ## Complete nuclear cleanup - delete everything (cluster, images, vol
 	fi
 	@echo ""
 	@echo "🐳 Step 4: Removing all project Docker images..."
-	@if docker images | grep -q api-deployment-demo; then \
-		docker images | grep api-deployment-demo | awk '{print $$3}' | xargs -r docker rmi -f && echo "   ✅ Project Docker images removed"; \
+	@if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^api-deployment-demo:"; then \
+		docker images --format "{{.Repository}}:{{.Tag}}" | grep "^api-deployment-demo:" | xargs -r docker rmi -f && echo "   ✅ Project Docker images removed"; \
 	else \
 		echo "   ⚠️  No project Docker images found"; \
 	fi

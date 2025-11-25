@@ -262,7 +262,7 @@
             let bgGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
             
             // Detect staging environment (Docker Compose on high ports)
-            if ((port === '30080' || port === '30443' || port === '30800') && hostname === 'localhost') {
+            if ((port === '30443' || port === '30800') && hostname === 'localhost') {
                 env = 'Staging';
                 deployment = 'Docker Compose';
                 bgGradient = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';

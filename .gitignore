@@ -37,9 +37,6 @@ htmlcov/
 ansible/*.retry
 ansible/.vault_pass*
 ansible/vault_pass*
-ansible/**/*.pem
-ansible/**/*secret*
-ansible/**/*password*
 ansible/.ansible/
 
 # =======================================================================
@@ -49,7 +46,6 @@ kubernetes/secrets-*.yaml
 kubernetes/configmap-*.yaml
 kubernetes/monitoring-secrets.yaml
 kubernetes/tls-secret.yaml
-!kubernetes/*-example.yaml
 
 # =======================================================================
 # Logs and Temporary Files

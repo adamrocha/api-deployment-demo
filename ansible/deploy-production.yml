@@ -9,7 +9,7 @@
   vars:
     project_dir: "{{ playbook_dir | dirname }}"
     cluster_name: api-demo-cluster
-    namespace: api-deployment-demo
+    app_namespace: api-deployment-demo
     kind_config: "{{ project_dir }}/kind-config.yaml"
     kubernetes_manifests: "{{ project_dir }}/kubernetes"
     
@@ -19,7 +19,7 @@
         msg:
           - "🎯 Starting production environment on Kubernetes..."
           - "Cluster: {{ cluster_name }}"
-          - "Namespace: {{ namespace }}"
+          - "Namespace: {{ app_namespace }}"
       
     - name: Check if Kind is installed
       command: kind version
@@ -78,17 +78,17 @@
           apiVersion: v1
           kind: Namespace
           metadata:
-            name: "{{ namespace }}"
+            name: "{{ app_namespace }}"
             
     - name: Generate and apply secrets
-      shell: APPLY=true {{ project_dir }}/scripts/generate-secrets.sh production {{ namespace }}
+      shell: APPLY=true {{ project_dir }}/scripts/generate-secrets.sh production {{ app_namespace }}
       args:
         chdir: "{{ project_dir }}"
       environment:
         APPLY: "true"
         
     - name: Generate and apply TLS secrets
-      shell: APPLY=true {{ project_dir }}/scripts/generate-tls-secrets.sh {{ namespace }} nginx-ssl-certs
+      shell: APPLY=true {{ project_dir }}/scripts/generate-tls-secrets.sh {{ app_namespace }} nginx-ssl-certs
       args:
         chdir: "{{ project_dir }}"
       environment:
@@ -103,7 +103,7 @@
           type: kubernetes.io/tls
           metadata:
             name: api-tls-secret
-            namespace: "{{ namespace }}"
+            namespace: "{{ app_namespace }}"
           data:
             tls.crt: "{{ lookup('file', project_dir + '/nginx/ssl/nginx-selfsigned.crt') | b64encode }}"
             tls.key: "{{ lookup('file', project_dir + '/nginx/ssl/nginx-selfsigned.key') | b64encode }}"
@@ -112,7 +112,7 @@
       kubernetes.core.k8s:
         state: present
         src: "{{ item }}"
-        namespace: "{{ namespace }}"
+        namespace: "{{ app_namespace }}"
       loop:
         - "{{ kubernetes_manifests }}/namespace.yaml"
         - "{{ kubernetes_manifests }}/configmaps.yaml"
@@ -132,7 +132,7 @@
       kubernetes.core.k8s_info:
         kind: Deployment
         name: api-deployment
-        namespace: "{{ namespace }}"
+        namespace: "{{ app_namespace }}"
         wait: yes
         wait_condition:
           type: Available
@@ -143,7 +143,7 @@
       kubernetes.core.k8s_info:
         kind: Deployment
         name: nginx-deployment
-        namespace: "{{ namespace }}"
+        namespace: "{{ app_namespace }}"
         wait: yes
         wait_condition:
           type: Available
@@ -154,7 +154,7 @@
       kubernetes.core.k8s_info:
         kind: StatefulSet
         name: api-demo-postgres
-        namespace: "{{ namespace }}"
+        namespace: "{{ app_namespace }}"
         wait: yes
         wait_timeout: 300
         
@@ -162,7 +162,7 @@
       shell: |
         for svc in api-service nginx-service; do
           for i in {1..30}; do
-            if kubectl get endpoints $svc -n {{ namespace }} -o jsonpath="{.subsets[*].addresses[*].ip}" 2>/dev/null | grep -q .; then
+            if kubectl get endpoints $svc -n {{ app_namespace }} -o jsonpath="{.subsets[*].addresses[*].ip}" 2>/dev/null | grep -q .; then
               echo "$svc endpoints ready"
               break
             fi
@@ -195,4 +195,4 @@
           - "  Health Check: http://localhost/health"
           - "  HTTPS Health: https://localhost/health (use -k with curl)"
           - ""
-          - "📊 Check status: kubectl get pods -n {{ namespace }}"
+          - "📊 Check status: kubectl get pods -n {{ app_namespace }}"

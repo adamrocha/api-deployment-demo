@@ -30,6 +30,38 @@
       changed_when: false
       failed_when: compose_version.rc != 0
       
+    - name: Check if .env file exists
+      stat:
+        path: "{{ project_dir }}/.env"
+      register: env_file
+      
+    - name: Fail if .env file is missing
+      fail:
+        msg: "❌ .env file not found. Copy .env.example to .env and configure it: cp .env.example .env"
+      when: not env_file.stat.exists
+      
+    - name: Read .env file to check for empty DB_PASSWORD
+      shell: grep "^DB_PASSWORD=" "{{ project_dir }}/.env" | cut -d'=' -f2
+      register: db_password_check
+      changed_when: false
+      failed_when: false
+      
+    - name: Warn if DB_PASSWORD is empty
+      fail:
+        msg: "❌ DB_PASSWORD is empty in .env file. Set a password: sed -i '' 's/^DB_PASSWORD=$/DB_PASSWORD=staging_password/' .env"
+      when: db_password_check.stdout == ""
+      
+    - name: Check if SSL certificates exist
+      stat:
+        path: "{{ project_dir }}/nginx/ssl/nginx-selfsigned.crt"
+      register: ssl_cert
+      
+    - name: Generate SSL certificates if missing
+      command: "{{ project_dir }}/nginx/generate-ssl.sh"
+      args:
+        chdir: "{{ project_dir }}/nginx"
+      when: not ssl_cert.stat.exists
+      
     - name: Start Docker Compose services
       community.docker.docker_compose_v2:
         project_src: "{{ project_dir }}"
@@ -67,15 +99,16 @@
         msg:
           - "✅ Staging environment started!"
           - ""
-          - "🌐 Access points (Staging - HTTPS Required):"
+          - "🌐 Access points (Staging):"
           - "  Web (HTTPS):  https://localhost:30443"
           - "  API (HTTPS):  https://localhost:30443/api/health"
-          - "  API Direct:   http://localhost:30800"
+          - "  API Direct:   http://localhost:30800/health"
           - "  API Docs:     http://localhost:30800/docs"
           - "  Database:     localhost:35432"
           - ""
-          - "⚠️  Note: HTTP (port 30080) redirects to HTTPS (port 30443)"
-          - "💡 Use 'curl -k' or accept browser warnings for self-signed cert"
+          - "⚠️  Important: Always use HTTPS (port 30443) for web access"
+          - "💡 HTTP port 30080 redirects but requires manual port change in browser"
+          - "🔒 Accept browser warnings for self-signed cert or use 'curl -k'"
           - ""
           - "API Health: {{ api_health.json }}"
       

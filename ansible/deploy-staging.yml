@@ -35,21 +35,19 @@
         path: "{{ project_dir }}/.env"
       register: env_file
       
-    - name: Fail if .env file is missing
-      fail:
-        msg: "❌ .env file not found. Copy .env.example to .env and configure it: cp .env.example .env"
+    - name: Create .env from example if missing
+      copy:
+        src: "{{ project_dir }}/.env.example"
+        dest: "{{ project_dir }}/.env"
+        remote_src: yes
       when: not env_file.stat.exists
       
-    - name: Read .env file to check for empty DB_PASSWORD
-      shell: grep "^DB_PASSWORD=" "{{ project_dir }}/.env" | cut -d'=' -f2
-      register: db_password_check
-      changed_when: false
-      failed_when: false
-      
-    - name: Warn if DB_PASSWORD is empty
-      fail:
-        msg: "❌ DB_PASSWORD is empty in .env file. Set a password: sed -i '' 's/^DB_PASSWORD=$/DB_PASSWORD=staging_password/' .env"
-      when: db_password_check.stdout == ""
+    - name: Set DB_PASSWORD if empty
+      lineinfile:
+        path: "{{ project_dir }}/.env"
+        regexp: '^DB_PASSWORD=$'
+        line: 'DB_PASSWORD=staging_password'
+        backrefs: no
       
     - name: Check if SSL certificates exist
       stat:

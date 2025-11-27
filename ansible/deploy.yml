@@ -1,0 +1,216 @@
+---
+# Main orchestration playbook - runs complete deployment workflows
+# Replaces: make test-automated, make quick-production, make quick-staging
+- name: API Deployment Demo - Main Orchestrator
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars:
+    project_dir: "{{ playbook_dir | dirname }}"
+    deployment_mode: "{{ mode | default('staging') }}"  # staging, production, full-pipeline
+    skip_cleanup: "{{ no_cleanup | default(false) }}"
+    
+  tasks:
+    - name: Display orchestration information
+      debug:
+        msg:
+          - "🚀 API Deployment Demo Orchestrator"
+          - "==========================================="
+          - "Mode: {{ deployment_mode }}"
+          - "Skip cleanup: {{ skip_cleanup }}"
+          - ""
+      
+    # Full automated pipeline (staging -> production)
+    - name: Run full deployment pipeline
+      block:
+        - name: Clean up existing environments
+          command: ansible-playbook {{ playbook_dir }}/cleanup.yml -e level=all
+          args:
+            chdir: "{{ playbook_dir }}"
+          when: not skip_cleanup
+          
+        - name: Deploy to staging
+          command: ansible-playbook {{ playbook_dir }}/deploy-staging.yml
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: staging_deploy
+          
+        - name: Wait for staging to stabilize
+          pause:
+            seconds: 15
+            prompt: "Staging deployed. Waiting for services to stabilize..."
+            
+        - name: Validate staging deployment
+          uri:
+            url: http://localhost:30800/health
+            method: GET
+            return_content: yes
+          register: staging_validation
+          retries: 5
+          delay: 5
+          
+        - name: Display staging validation
+          debug:
+            msg:
+              - "✅ Staging validation passed"
+              - "Response: {{ staging_validation.json }}"
+              
+        - name: Deploy to production
+          command: ansible-playbook {{ playbook_dir }}/deploy-production.yml
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: production_deploy
+          
+        - name: Deploy monitoring stack
+          command: ansible-playbook {{ playbook_dir }}/deploy-monitoring.yml
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: monitoring_deploy
+          
+        - name: Validate production deployment
+          uri:
+            url: http://localhost/health
+            method: GET
+            return_content: yes
+          register: production_validation
+          retries: 10
+          delay: 5
+          
+        - name: Display production validation
+          debug:
+            msg:
+              - "✅ Production validation passed"
+              - "Response: {{ production_validation.json }}"
+              
+        - name: Display full pipeline summary
+          debug:
+            msg:
+              - ""
+              - "🎉 FULL PIPELINE DEPLOYMENT COMPLETE!"
+              - "========================================"
+              - ""
+              - "📦 STAGING (Docker Compose):"
+              - "  Web:     https://localhost:30443"
+              - "  API:     http://localhost:30800"
+              - "  Status:  {{ staging_validation.json.status }}"
+              - ""
+              - "🚀 PRODUCTION (Kubernetes):"
+              - "  Web:     http://localhost"
+              - "  API:     http://localhost:8000"
+              - "  Status:  {{ production_validation.json.status }}"
+              - ""
+              - "📊 MONITORING:"
+              - "  Grafana:    http://localhost:3000"
+              - "  Prometheus: http://localhost:9090"
+              - ""
+              - "✅ All environments deployed successfully!"
+              
+      when: deployment_mode == 'full-pipeline'
+      
+    # Quick staging deployment
+    - name: Deploy staging only
+      block:
+        - name: Clean up staging
+          command: ansible-playbook {{ playbook_dir }}/cleanup.yml -e level=staging
+          args:
+            chdir: "{{ playbook_dir }}"
+          when: not skip_cleanup
+          
+        - name: Deploy to staging
+          command: ansible-playbook {{ playbook_dir }}/deploy-staging.yml
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: staging_only_deploy
+          
+        - name: Validate staging
+          uri:
+            url: http://localhost:30800/health
+            method: GET
+            return_content: yes
+          register: staging_only_validation
+          retries: 5
+          delay: 5
+          
+        - name: Display staging deployment summary
+          debug:
+            msg:
+              - ""
+              - "✅ STAGING DEPLOYMENT COMPLETE!"
+              - "========================================"
+              - ""
+              - "📦 Access Points:"
+              - "  Web (HTTPS):  https://localhost:30443"
+              - "  API Direct:   http://localhost:30800"
+              - "  API Docs:     http://localhost:30800/docs"
+              - "  Database:     localhost:35432"
+              - ""
+              - "Status: {{ staging_only_validation.json.status }}"
+              - "Environment: {{ staging_only_validation.json.environment }}"
+              
+      when: deployment_mode == 'staging'
+      
+    # Quick production deployment
+    - name: Deploy production only
+      block:
+        - name: Clean up production
+          command: ansible-playbook {{ playbook_dir }}/cleanup.yml -e level=production
+          args:
+            chdir: "{{ playbook_dir }}"
+          when: not skip_cleanup
+          
+        - name: Deploy to production
+          command: ansible-playbook {{ playbook_dir }}/deploy-production.yml
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: production_only_deploy
+          
+        - name: Validate production
+          uri:
+            url: http://localhost/health
+            method: GET
+            return_content: yes
+          register: production_only_validation
+          retries: 10
+          delay: 5
+          
+        - name: Display production deployment summary
+          debug:
+            msg:
+              - ""
+              - "✅ PRODUCTION DEPLOYMENT COMPLETE!"
+              - "========================================"
+              - ""
+              - "🚀 Access Points:"
+              - "  Web Frontend: http://localhost"
+              - "  API Direct:   http://localhost:8000"
+              - "  API Docs:     http://localhost:8000/docs"
+              - ""
+              - "Status: {{ production_only_validation.json.status }}"
+              - "Environment: {{ production_only_validation.json.environment }}"
+              - ""
+              - "💡 Add monitoring: ansible-playbook ansible/deploy-monitoring.yml"
+              
+      when: deployment_mode == 'production'
+      
+    # Monitoring only
+    - name: Deploy monitoring only
+      block:
+        - name: Deploy monitoring stack
+          command: ansible-playbook {{ playbook_dir }}/deploy-monitoring.yml
+          args:
+            chdir: "{{ playbook_dir }}"
+          register: monitoring_only_deploy
+          
+        - name: Display monitoring deployment summary
+          debug:
+            msg:
+              - ""
+              - "✅ MONITORING DEPLOYMENT COMPLETE!"
+              - "========================================"
+              - ""
+              - "📊 Access Points:"
+              - "  Grafana:    http://localhost:3000 (admin/[see .env])"
+              - "  Prometheus: http://localhost:9090"
+              
+      when: deployment_mode == 'monitoring'

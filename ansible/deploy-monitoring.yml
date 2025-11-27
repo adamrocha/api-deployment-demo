@@ -1,0 +1,154 @@
+---
+# Deploy Monitoring Stack (Prometheus & Grafana)
+# Replaces: make monitoring
+- name: Deploy Monitoring Stack
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars:
+    project_dir: "{{ playbook_dir | dirname }}"
+    namespace: monitoring
+    app_namespace: api-deployment-demo
+    kubernetes_manifests: "{{ project_dir }}/kubernetes"
+    
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "📊 Deploying monitoring stack..."
+          - "Namespace: {{ namespace }}"
+      
+    - name: Create monitoring namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ namespace }}"
+            
+    - name: Apply Prometheus RBAC configuration
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ kubernetes_manifests }}/prometheus-rbac-update.yaml"
+        
+    - name: Check for secrets file
+      stat:
+        path: "{{ kubernetes_manifests }}/secrets-production.yaml"
+      register: secrets_file
+      
+    - name: Apply monitoring secrets
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ kubernetes_manifests }}/secrets-production.yaml"
+        namespace: "{{ namespace }}"
+      when: secrets_file.stat.exists
+      
+    - name: Generate secrets if not found
+      shell: "{{ project_dir }}/scripts/generate-secrets.sh production"
+      args:
+        chdir: "{{ project_dir }}"
+      when: not secrets_file.stat.exists
+      
+    - name: Apply generated secrets
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ kubernetes_manifests }}/secrets-production.yaml"
+        namespace: "{{ namespace }}"
+      when: not secrets_file.stat.exists
+      
+    - name: Deploy Prometheus
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ kubernetes_manifests }}/prometheus-deployment.yaml"
+        namespace: "{{ namespace }}"
+        
+    - name: Deploy Grafana configuration
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ item }}"
+        namespace: "{{ namespace }}"
+      loop:
+        - "{{ kubernetes_manifests }}/grafana-datasource-configmap.yaml"
+        - "{{ kubernetes_manifests }}/grafana-providers-configmap.yaml"
+        - "{{ kubernetes_manifests }}/grafana-dashboard-configmap.yaml"
+        - "{{ kubernetes_manifests }}/grafana-deployment.yaml"
+        - "{{ kubernetes_manifests }}/grafana-simple-dashboard.yaml"
+        
+    - name: Deploy monitoring ingress
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ item }}"
+        namespace: "{{ namespace }}"
+      loop:
+        - "{{ kubernetes_manifests }}/monitoring-ingress.yaml"
+        - "{{ kubernetes_manifests }}/monitoring-nodeport.yaml"
+        
+    - name: Wait for Prometheus deployment
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: prometheus
+        namespace: "{{ namespace }}"
+        wait: yes
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+        
+    - name: Wait for Grafana deployment
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: grafana
+        namespace: "{{ namespace }}"
+        wait: yes
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+        
+    - name: Wait for monitoring service endpoints
+      shell: |
+        for svc in prometheus grafana; do
+          for i in {1..30}; do
+            if kubectl get endpoints $svc -n {{ namespace }} -o jsonpath="{.subsets[*].addresses[*].ip}" 2>/dev/null | grep -q .; then
+              echo "$svc endpoints ready"
+              break
+            fi
+            sleep 2
+          done
+        done
+      register: endpoints_wait
+      
+    - name: Start port forwarding for Grafana
+      shell: |
+        pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
+        sleep 1
+        kubectl port-forward -n {{ namespace }} svc/grafana 3000:3000 > /dev/null 2>&1 &
+        kubectl port-forward -n {{ namespace }} svc/prometheus 9090:9090 > /dev/null 2>&1 &
+        sleep 2
+      register: port_forward
+      
+    - name: Test Grafana health
+      uri:
+        url: http://localhost:3000/api/health
+        method: GET
+        timeout: 3
+      register: grafana_health
+      retries: 10
+      delay: 3
+      until: grafana_health.status == 200
+      ignore_errors: yes
+      
+    - name: Display deployment results
+      debug:
+        msg:
+          - "✅ Monitoring stack deployed!"
+          - ""
+          - "🌐 Access points (Standard Ports - Production):"
+          - "  Prometheus: http://localhost:9090"
+          - "  Grafana:    http://localhost:3000 (admin/[see .env])"
+          - ""
+          - "📊 Grafana Status: {{ 'Ready' if grafana_health.status == 200 else 'Starting...' }}"
+          - ""
+          - "💡 To stop port forwarding: pkill -f 'kubectl.*port-forward.*monitoring'"

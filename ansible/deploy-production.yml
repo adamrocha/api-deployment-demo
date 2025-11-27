@@ -1,0 +1,198 @@
+---
+# Deploy Production Environment on Kubernetes (Kind)
+# Replaces: make production
+- name: Deploy Production Environment (Kubernetes)
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars:
+    project_dir: "{{ playbook_dir | dirname }}"
+    cluster_name: api-demo-cluster
+    namespace: api-deployment-demo
+    kind_config: "{{ project_dir }}/kind-config.yaml"
+    kubernetes_manifests: "{{ project_dir }}/kubernetes"
+    
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "🎯 Starting production environment on Kubernetes..."
+          - "Cluster: {{ cluster_name }}"
+          - "Namespace: {{ namespace }}"
+      
+    - name: Check if Kind is installed
+      command: kind version
+      register: kind_version
+      changed_when: false
+      failed_when: kind_version.rc != 0
+      
+    - name: Check if kubectl is installed
+      command: kubectl version --client
+      register: kubectl_version
+      changed_when: false
+      failed_when: kubectl_version.rc != 0
+      
+    - name: Check if Kind cluster exists
+      command: kind get clusters
+      register: existing_clusters
+      changed_when: false
+      failed_when: false
+      
+    - name: Create Kind cluster if not exists
+      command: kind create cluster --name {{ cluster_name }} --config {{ kind_config }}
+      when: cluster_name not in existing_clusters.stdout
+      register: cluster_created
+      
+    - name: Display cluster creation result
+      debug:
+        msg: "✅ Kind cluster created!"
+      when: cluster_created.changed
+      
+    - name: Display cluster exists message
+      debug:
+        msg: "✅ Kind cluster already exists!"
+      when: not cluster_created.changed
+      
+    - name: Build Docker images
+      command: docker build -t {{ item.name }}:{{ item.tag }} {{ item.context }}
+      loop:
+        - { name: 'api-deployment-demo-api', tag: 'latest', context: '{{ project_dir }}/api' }
+        - { name: 'api-deployment-demo', tag: 'v1.7', context: '{{ project_dir }}/api' }
+        - { name: 'api-deployment-demo-nginx', tag: 'latest', context: '{{ project_dir }}/nginx' }
+      args:
+        chdir: "{{ project_dir }}"
+      register: build_result
+      
+    - name: Load images to Kind cluster
+      command: kind load docker-image {{ item }} --name {{ cluster_name }}
+      loop:
+        - api-deployment-demo:v1.7
+        - api-deployment-demo-api:latest
+        - api-deployment-demo-nginx:latest
+      
+    - name: Create namespace
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: "{{ namespace }}"
+            
+    - name: Generate and apply secrets
+      shell: APPLY=true {{ project_dir }}/scripts/generate-secrets.sh production {{ namespace }}
+      args:
+        chdir: "{{ project_dir }}"
+      environment:
+        APPLY: "true"
+        
+    - name: Generate and apply TLS secrets
+      shell: APPLY=true {{ project_dir }}/scripts/generate-tls-secrets.sh {{ namespace }} nginx-ssl-certs
+      args:
+        chdir: "{{ project_dir }}"
+      environment:
+        APPLY: "true"
+        
+    - name: Create api-tls-secret for ingress controller
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Secret
+          type: kubernetes.io/tls
+          metadata:
+            name: api-tls-secret
+            namespace: "{{ namespace }}"
+          data:
+            tls.crt: "{{ lookup('file', project_dir + '/nginx/ssl/nginx-selfsigned.crt') | b64encode }}"
+            tls.key: "{{ lookup('file', project_dir + '/nginx/ssl/nginx-selfsigned.key') | b64encode }}"
+            
+    - name: Apply Kubernetes manifests
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ item }}"
+        namespace: "{{ namespace }}"
+      loop:
+        - "{{ kubernetes_manifests }}/namespace.yaml"
+        - "{{ kubernetes_manifests }}/configmaps.yaml"
+        - "{{ kubernetes_manifests }}/persistent-volumes.yaml"
+        - "{{ kubernetes_manifests }}/postgres-deployment.yaml"
+        - "{{ kubernetes_manifests }}/postgres-init-configmap.yaml"
+        - "{{ kubernetes_manifests }}/api-deployment.yaml"
+        - "{{ kubernetes_manifests }}/nginx-deployment.yaml"
+        - "{{ kubernetes_manifests }}/nginx-html-configmap.yaml"
+        - "{{ kubernetes_manifests }}/nodeport-services.yaml"
+        - "{{ kubernetes_manifests }}/nginx-ingress-controller.yaml"
+        - "{{ kubernetes_manifests }}/hpa.yaml"
+        - "{{ kubernetes_manifests }}/production-ingress.yaml"
+      ignore_errors: yes
+      
+    - name: Wait for API deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: api-deployment
+        namespace: "{{ namespace }}"
+        wait: yes
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+        
+    - name: Wait for Nginx deployment to be ready
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: nginx-deployment
+        namespace: "{{ namespace }}"
+        wait: yes
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 300
+        
+    - name: Wait for PostgreSQL StatefulSet to be ready
+      kubernetes.core.k8s_info:
+        kind: StatefulSet
+        name: api-demo-postgres
+        namespace: "{{ namespace }}"
+        wait: yes
+        wait_timeout: 300
+        
+    - name: Wait for services to have endpoints
+      shell: |
+        for svc in api-service nginx-service; do
+          for i in {1..30}; do
+            if kubectl get endpoints $svc -n {{ namespace }} -o jsonpath="{.subsets[*].addresses[*].ip}" 2>/dev/null | grep -q .; then
+              echo "$svc endpoints ready"
+              break
+            fi
+            sleep 2
+          done
+        done
+      register: endpoints_wait
+      
+    - name: Test service health
+      uri:
+        url: http://localhost/health
+        method: GET
+        timeout: 3
+      register: health_check
+      retries: 20
+      delay: 3
+      until: health_check.status == 200
+      ignore_errors: yes
+      
+    - name: Display deployment results
+      debug:
+        msg:
+          - "✅ Production environment started!"
+          - ""
+          - "🌐 Access points (Standard Ports - Production):"
+          - "  Web Frontend: http://localhost"
+          - "  HTTPS Access: https://localhost (self-signed cert)"
+          - "  API Direct:   http://localhost:8000"
+          - "  API Docs:     http://localhost:8000/docs"
+          - "  Health Check: http://localhost/health"
+          - "  HTTPS Health: https://localhost/health (use -k with curl)"
+          - ""
+          - "📊 Check status: kubectl get pods -n {{ namespace }}"

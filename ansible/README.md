@@ -27,6 +27,7 @@ ansible-galaxy collection install community.docker kubernetes.core
 ```
 
 **Requirements:**
+
 - Ansible 2.9+
 - Docker & Docker Compose v2
 - kubectl and kind (for production deployments)
@@ -52,8 +53,9 @@ ansible-playbook ansible/deploy-staging.yml
 ```
 
 **Access:**
-- Web (HTTPS): https://localhost:30443
-- API Direct: http://localhost:30800/health
+
+- Web (HTTPS): <https://localhost:30443>
+- API Direct: <http://localhost:30800/health>
 - Database: localhost:35432
 
 ⚠️ **Important:** Always use HTTPS (port 30443) for web access. Accept browser warnings for self-signed certificates.
@@ -65,8 +67,9 @@ ansible-playbook ansible/deploy-production.yml
 ```
 
 **Access:**
-- Web: http://localhost
-- API: http://localhost:8000
+
+- Web: <http://localhost>
+- API: <http://localhost:8000>
 - Kubernetes Dashboard: `kubectl proxy`
 
 ### Deploy Monitoring Stack
@@ -76,8 +79,9 @@ ansible-playbook ansible/deploy-monitoring.yml
 ```
 
 **Access:**
-- Grafana: http://localhost:3000 (admin/admin)
-- Prometheus: http://localhost:9090
+
+- Grafana: <http://localhost:3000> (admin/admin)
+- Prometheus: <http://localhost:9090>
 
 ### Full Deployment Pipeline
 
@@ -206,7 +210,7 @@ ansible-playbook ansible/deploy.yml -e mode=production -e no_cleanup=true
 
 Deploy without cleaning up existing resources first.
 
-## Secrets Management
+## Secrets Management (Detailed)
 
 ### Generate Secrets
 
@@ -504,6 +508,7 @@ ansible-playbook ansible/deploy-production.yml
 ## Support
 
 For issues or questions:
+
 - Review playbook documentation in this directory
 - Check the main project README
 - Run verbose mode (`-vvv`) to debug issues

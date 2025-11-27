@@ -1,0 +1,91 @@
+---
+# Deploy Staging Environment with Docker Compose
+# Replaces: make staging
+- name: Deploy Staging Environment (Docker Compose)
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars:
+    project_dir: "{{ playbook_dir | dirname }}"
+    compose_file: "{{ project_dir }}/docker-compose.yml"
+    environment: staging
+    
+  tasks:
+    - name: Display deployment information
+      debug:
+        msg:
+          - "🐳 Starting staging environment with Docker Compose..."
+          - "Project directory: {{ project_dir }}"
+      
+    - name: Ensure Docker is installed
+      command: docker --version
+      register: docker_version
+      changed_when: false
+      failed_when: docker_version.rc != 0
+      
+    - name: Ensure Docker Compose is installed
+      command: docker compose version
+      register: compose_version
+      changed_when: false
+      failed_when: compose_version.rc != 0
+      
+    - name: Start Docker Compose services
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        state: present
+        remove_orphans: true
+      register: compose_result
+      
+    - name: Wait for services to be healthy
+      pause:
+        seconds: 10
+        
+    - name: Check API health
+      uri:
+        url: http://localhost:30800/health
+        method: GET
+        return_content: yes
+      register: api_health
+      retries: 10
+      delay: 5
+      until: api_health.status == 200
+      
+    - name: Check Nginx health
+      uri:
+        url: https://localhost:30443/health
+        method: GET
+        validate_certs: no
+        return_content: yes
+      register: nginx_health
+      retries: 10
+      delay: 3
+      until: nginx_health.status == 200
+      
+    - name: Display deployment results
+      debug:
+        msg:
+          - "✅ Staging environment started!"
+          - ""
+          - "🌐 Access points (Staging - HTTPS Required):"
+          - "  Web (HTTPS):  https://localhost:30443"
+          - "  API (HTTPS):  https://localhost:30443/api/health"
+          - "  API Direct:   http://localhost:30800"
+          - "  API Docs:     http://localhost:30800/docs"
+          - "  Database:     localhost:35432"
+          - ""
+          - "⚠️  Note: HTTP (port 30080) redirects to HTTPS (port 30443)"
+          - "💡 Use 'curl -k' or accept browser warnings for self-signed cert"
+          - ""
+          - "API Health: {{ api_health.json }}"
+      
+    - name: Show container status
+      command: docker compose ps
+      args:
+        chdir: "{{ project_dir }}"
+      register: container_status
+      changed_when: false
+      
+    - name: Display container status
+      debug:
+        msg: "{{ container_status.stdout_lines }}"

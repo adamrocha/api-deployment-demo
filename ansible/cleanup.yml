@@ -1,0 +1,184 @@
+---
+# Clean up all environments and resources
+# Replaces: make clean-all, make clean-staging, make clean-production
+- name: Cleanup Environments
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  
+  vars:
+    project_dir: "{{ playbook_dir | dirname }}"
+    cluster_name: api-demo-cluster
+    app_namespace: api-deployment-demo
+    monitoring_namespace: monitoring
+    cleanup_level: "{{ level | default('all') }}"  # all, staging, production, monitoring
+    
+  tasks:
+    - name: Display cleanup information
+      debug:
+        msg:
+          - "🧹 Starting cleanup..."
+          - "Level: {{ cleanup_level }}"
+      
+    # Staging Cleanup
+    - name: Stop Docker Compose staging environment
+      community.docker.docker_compose_v2:
+        project_src: "{{ project_dir }}"
+        state: absent
+        remove_orphans: true
+        remove_volumes: true
+      when: cleanup_level in ['all', 'staging']
+      register: staging_cleanup
+      
+    - name: Display staging cleanup result
+      debug:
+        msg: "✅ Staging environment stopped and volumes removed"
+      when: staging_cleanup.changed and cleanup_level in ['all', 'staging']
+      
+    # Production Cleanup  
+    - name: Stop port forwarding
+      shell: pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
+      when: cleanup_level in ['all', 'production', 'monitoring']
+      ignore_errors: yes
+      
+    - name: Check if Kind cluster exists for namespace cleanup
+      command: kind get clusters
+      register: clusters_check
+      changed_when: false
+      failed_when: false
+      when: cleanup_level in ['all', 'production', 'monitoring']
+      
+    - name: Check if kubectl context is valid
+      command: kubectl cluster-info
+      register: kubectl_check
+      changed_when: false
+      failed_when: false
+      when: 
+        - cleanup_level in ['all', 'production', 'monitoring']
+        - clusters_check.stdout is defined
+        - cluster_name in clusters_check.stdout
+      
+    - name: Display no cluster message
+      debug:
+        msg: "ℹ️  No Kubernetes cluster found - skipping namespace cleanup"
+      when:
+        - cleanup_level in ['all', 'production', 'monitoring']
+        - kubectl_check.rc is not defined or kubectl_check.rc != 0
+      
+    - name: Delete monitoring namespace
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ monitoring_namespace }}"
+      when: 
+        - cleanup_level in ['all', 'monitoring']
+        - kubectl_check.rc is defined
+        - kubectl_check.rc == 0
+      ignore_errors: yes
+      
+    - name: Delete application namespace
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ app_namespace }}"
+      when: 
+        - cleanup_level in ['all', 'production']
+        - kubectl_check.rc is defined
+        - kubectl_check.rc == 0
+      ignore_errors: yes
+      
+    - name: Wait for namespaces to be deleted
+      pause:
+        seconds: 10
+      when: 
+        - cleanup_level in ['all', 'production', 'monitoring']
+        - kubectl_check.rc is defined
+        - kubectl_check.rc == 0
+      
+    # Complete Cleanup (nuclear option)
+    - name: Check if Kind cluster exists
+      command: kind get clusters
+      register: existing_clusters
+      changed_when: false
+      failed_when: false
+      when: cleanup_level == 'all'
+      
+    - name: Delete Kind cluster
+      command: kind delete cluster --name {{ cluster_name }}
+      when: 
+        - cleanup_level == 'all'
+        - cluster_name in existing_clusters.stdout
+      register: cluster_deleted
+      
+    - name: Display cluster deletion result
+      debug:
+        msg: "✅ Kind cluster deleted successfully"
+      when: cluster_deleted.changed
+      
+    - name: Remove project Docker images
+      shell: |
+        docker images --format {% raw %}"{{ .Repository }}:{{ .Tag }}"{% endraw %} | grep api-deployment-demo | xargs -r docker rmi -f
+      when: cleanup_level == 'all'
+      ignore_errors: yes
+      
+    - name: Remove base images used by project
+      shell: |
+        docker rmi -f postgres:15-alpine python:3.11-slim nginx:alpine 2>/dev/null || true
+      when: cleanup_level == 'all'
+      ignore_errors: yes
+      
+    - name: Prune Docker system
+      community.docker.docker_prune:
+        containers: yes
+        images: yes
+        networks: yes
+        volumes: yes
+        builder_cache: yes
+      when: cleanup_level == 'all'
+      
+    - name: Stop background processes
+      shell: |
+        pkill -f "kubectl.*port-forward" 2>/dev/null || true
+        pkill -f "docker compose" 2>/dev/null || true
+        pkill -f "generate-traffic" 2>/dev/null || true
+      when: cleanup_level == 'all'
+      ignore_errors: yes
+      
+    # Verification
+    - name: Check remaining Kind clusters
+      command: kind get clusters
+      register: remaining_clusters
+      changed_when: false
+      failed_when: false
+      when: cleanup_level == 'all'
+      
+    - name: Check remaining Docker images
+      shell: docker images --format {% raw %}"{{ .Repository }}:{{ .Tag }}"{% endraw %} | grep api-deployment-demo || echo "none"
+      register: remaining_images
+      changed_when: false
+      when: cleanup_level == 'all'
+      
+    - name: Check remaining Docker volumes
+      shell: docker volume ls --format {% raw %}"{{ .Name }}"{% endraw %} | grep api-deployment-demo || echo "none"
+      register: remaining_volumes
+      changed_when: false
+      when: cleanup_level == 'all'
+      
+    - name: Display cleanup summary
+      debug:
+        msg:
+          - "✅ Cleanup complete!"
+          - ""
+          - "Cleanup level: {{ cleanup_level }}"
+      
+    - name: Display detailed cleanup summary
+      debug:
+        msg:
+          - "Remaining clusters: {{ remaining_clusters.stdout_lines | default(['none']) }}"
+          - "Remaining images: {{ remaining_images.stdout_lines | default(['none']) }}"
+          - "Remaining volumes: {{ remaining_volumes.stdout_lines | default(['none']) }}"
+          - ""
+          - "🚀 Ready for fresh deployment!"
+      when: cleanup_level == 'all'

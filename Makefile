@@ -1,740 +1,375 @@
 # API Deployment Demo Makefile
-# Provides easy commands to manage different environments and services
+# Terraform-driven Infrastructure as Code with Ansible Configuration Management
 
-.PHONY: help setup-env generate-secrets apply-secrets validate-env list-secrets clean-secrets show-env-help
-.PHONY: staging staging-build staging-logs staging-status staging-stop
-.PHONY: production production-logs production-status production-stop kind-cluster docker-images docker-push
-.PHONY: monitoring monitoring-status monitoring-logs access-monitoring access-production access-staging
-.PHONY: clean clean-all clean-all-dry-run clean-staging clean-production clean-images clean-secrets
-.PHONY: traffic logs status validate quick-dev quick-staging quick-production
-.PHONY: test-automated promote validate-promotion generate-tls-secrets
-.PHONY: start-port-forwarding stop-port-forwarding
+.PHONY: help
+.DEFAULT_GOAL := help
 
-# Default target
+# =============================================================================
+# Configuration
+# =============================================================================
+
+ENV ?= production
+CLUSTER_NAME := api-demo-cluster
+NAMESPACE := api-deployment-demo
+
+# =============================================================================
+# Help
+# =============================================================================
+
 help: ## Show this help message
 	@echo "🚀 API Deployment Demo - Available Commands"
-	@echo "==========================================="
+	@echo "============================================"
 	@echo ""
-	@echo "📋 Environment Management:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo "📋 Quick Start:"
+	@echo "  make quick-start          # Complete setup from scratch"
+	@echo "  make production           # Deploy production (Terraform + Ansible)"
+	@echo "  make status               # Check deployment status"
 	@echo ""
-	@echo "💡 Examples:"
-	@echo "  make staging                  # Start staging environment"
-	@echo "  make production               # Start production environment"
-	@echo "  make monitoring               # Add monitoring (auto port-forward)"
-	@echo "  make start-port-forwarding    # Manually start port forwarding"
-	@echo "  make stop-port-forwarding     # Stop port forwarding"
+	@echo "🔨 Build & Deploy:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
 	@echo ""
-	@echo "🧹 Cleanup Options (in order of intensity):"
-	@echo "  make clean-staging    # Clean only staging (Docker Compose)"
-	@echo "  make clean-production # Clean only production (stops port-forwarding)"
-	@echo "  make clean            # Clean applications (keep cluster & images)"
-	@echo "  make clean-all        # 💥 NUCLEAR: Delete everything (cluster, images, volumes)"
-	@echo ""
-	@echo "📖 For comprehensive cleanup: make clean-all"
+	@echo "🧹 Cleanup:"
+	@echo "  make clean                # Remove deployments (keep cluster)"
+	@echo "  make clean-all            # Remove everything including cluster"
 
 # =============================================================================
-# Environment Setup
+# Docker Images
 # =============================================================================
 
+docker-images: ## Build Docker images for API and Nginx
+	@echo "🔨 Building Docker images..."
+	@docker build -t api-deployment-demo-api:latest api/
+	@docker build -t api-deployment-demo-nginx:latest nginx/
+	@echo "✅ Images built successfully"
+
+load-images: docker-images ## Load images into Kind cluster
+	@echo "📤 Loading images into Kind cluster..."
+	@kind load docker-image api-deployment-demo-api:latest --name $(CLUSTER_NAME)
+	@kind load docker-image api-deployment-demo-nginx:latest --name $(CLUSTER_NAME)
+	@echo "✅ Images loaded into cluster"
+
 # =============================================================================
-# Secret Management (.env-based)
+# Cluster Management
 # =============================================================================
 
-# Environment variable for secret generation
-ENV ?= development
-
-setup-env: ## Setup .env file from template (cp .env.example .env)
-	@if [ -f .env ]; then \
-		echo "⚠️  .env file already exists"; \
-		echo "📋 Current .env file:"; \
-		head -5 .env; \
-		echo "..."; \
-		echo ""; \
-		echo "To recreate: rm .env && make setup-env"; \
-	elif [ -f .env.example ]; then \
-		echo "📋 Copying .env.example to .env..."; \
-		cp .env.example .env; \
-		echo "✅ .env file created from template"; \
-		echo ""; \
-		echo "📝 Next steps:"; \
-		echo "  1. Edit .env with actual values: nano .env"; \
-		echo "  2. Generate secrets: make generate-secrets"; \
-		echo "  3. Apply to cluster: make apply-secrets"; \
+cluster-create: ## Create Kind Kubernetes cluster
+	@echo "🏗️  Creating Kind cluster..."
+	@if kind get clusters 2>/dev/null | grep -q $(CLUSTER_NAME); then \
+		echo "✅ Cluster $(CLUSTER_NAME) already exists"; \
 	else \
-		echo "❌ .env.example not found"; \
+		kind create cluster --name $(CLUSTER_NAME) --config kind-config.yaml; \
+		echo "✅ Cluster created successfully"; \
 	fi
 
-generate-secrets: ## Generate Kubernetes secrets from .env files (ENV=development|staging|production)
-	@echo "🔐 Generating secrets for $(ENV) environment..."
-	@./scripts/generate-secrets.sh $(ENV)
-	@echo "✅ Secrets generated for $(ENV) environment"
+cluster-delete: ## Delete Kind cluster
+	@echo "🗑️  Deleting Kind cluster..."
+	@kind delete cluster --name $(CLUSTER_NAME)
+	@echo "✅ Cluster deleted"
 
-generate-tls-secrets: ## Generate TLS secret YAML from SSL certificates (NAMESPACE=api-deployment-demo SECRET=nginx-ssl-certs)
-	@echo "🔐 Generating TLS secrets..."
-	@./scripts/generate-tls-secrets.sh $(NAMESPACE) $(SECRET)
-	@echo "✅ TLS secrets generated"
-
-apply-secrets: ## Generate and apply secrets to cluster (ENV=development|staging|production)
-	@echo "🔐 Generating and applying secrets for $(ENV) environment..."
-	@APPLY=true ./scripts/generate-secrets.sh $(ENV)
-	@echo "✅ Secrets applied to cluster for $(ENV) environment"
-
-validate-env: ## Validate .env files for missing or placeholder values
-	@echo "🔍 Validating environment files..."
-	@for env_file in .env.development .env.staging .env.production; do \
-		if [ -f "$$env_file" ]; then \
-			echo "📝 Checking $$env_file..."; \
-			if grep -q "REPLACE_WITH_" "$$env_file"; then \
-				echo "⚠️  Found placeholder values in $$env_file:"; \
-				grep "REPLACE_WITH_" "$$env_file" | sed 's/^/    /'; \
-			else \
-				echo "✅ $$env_file looks good"; \
-			fi; \
-		else \
-			echo "❌ $$env_file not found"; \
-		fi; \
-	done
-
-list-secrets: ## List generated secret files
-	@echo "📋 Generated secret files:"
-	@ls -la kubernetes/secrets-*.yaml kubernetes/configmap-*.yaml 2>/dev/null || echo "  No generated files found"
+cluster-info: ## Show cluster information
+	@kubectl cluster-info --context kind-$(CLUSTER_NAME)
 	@echo ""
-	@echo "📋 Environment files:"
-	@ls -la .env.* 2>/dev/null || echo "  No .env files found"
-
-clean-secrets: ## Remove generated secret files
-	@echo "🧹 Cleaning generated secret files..."
-	@rm -f kubernetes/secrets-*.yaml kubernetes/configmap-*.yaml
-	@echo "✅ Generated secret files removed"
-
-show-env-help: ## Show environment and secret management help
-	@echo "🔐 Environment & Secret Management Guide"
-	@echo "========================================"
-	@echo ""
-	@echo "� Standard Workflow:"
-	@echo "  make setup-env        # Copy .env.example to .env"
-	@echo "  nano .env             # Edit with actual values"
-	@echo "  make generate-secrets # Generate Kubernetes manifests"
-	@echo "  make apply-secrets    # Apply to cluster"
-	@echo ""
-	@echo "📁 File Structure:"
-	@echo "  .env.example  - Template with placeholders (committed to git)"
-	@echo "  .env          - Your actual values (gitignored)"
-	@echo ""
-	@echo "🔐 Password Management:"
-	@echo "  ./scripts/get-grafana-password.sh  # Show Grafana credentials"
-	@echo ""
-	@echo "🛠️  Alternative Commands:"
-	@echo "  make generate-secrets ENV=development  # Use environment-specific files"
-	@echo "  make generate-tls-secrets              # Generate TLS secret YAML"
-	@echo "  make apply-secrets ENV=staging         # Generate and apply"
-	@echo "  make validate-env                      # Check for placeholder values"
-	@echo ""
-	@echo "🔒 Security Best Practices:"
-	@echo "  1. Never commit actual secrets to version control"
-	@echo "  2. Use placeholders in .env.staging and .env.production"
-	@echo "  3. Use external secret management for production"
-	@echo "  4. Regularly rotate secrets"
-	@echo ""
-	@echo "📖 See docs/SECRETS_SETUP.md for detailed documentation"
+	@kubectl get nodes
 
 # =============================================================================
-# Application Deployment
+# Terraform Infrastructure
 # =============================================================================
 
-staging: ## Start staging environment (Docker Compose)
-	@echo "🐳 Starting staging environment with Docker Compose..."
+tf-init: ## Initialize Terraform
+	@echo "🔧 Initializing Terraform..."
+	@cd terraform && terraform init
+
+tf-plan: tf-init ## Plan infrastructure changes
+	@echo "📋 Planning Terraform changes..."
+	@cd terraform && terraform plan \
+		-var="environment=$(ENV)" \
+		-var="enable_monitoring=true"
+
+tf-apply: tf-init cluster-create ## Apply Terraform infrastructure
+	@echo "🚀 Deploying infrastructure with Terraform..."
+	@cd terraform && terraform apply \
+		-var="environment=$(ENV)" \
+		-var="enable_monitoring=true" \
+		-auto-approve
+	@echo "✅ Infrastructure deployed"
+
+tf-destroy: ## Destroy Terraform infrastructure
+	@echo "🗑️  Destroying infrastructure..."
+	@cd terraform && terraform destroy \
+		-var="environment=$(ENV)" \
+		-auto-approve
+	@echo "✅ Infrastructure destroyed"
+
+tf-output: ## Show Terraform outputs
+	@echo "📊 Terraform Outputs"
+	@echo "===================="
+	@echo ""
+	@cd terraform && terraform output -json | jq -r '"🏗️  Infrastructure:", "  Cluster:     " + .cluster_name.value, "  Environment: " + .environment.value, "  Namespace:   " + .namespace.value, "", "🐳 Docker Images:", "  API:   " + .docker_images.value.api, "  Nginx: " + .docker_images.value.nginx, "", "🌐 Production URLs:", "  Web (HTTP):       " + .production_urls.value.web, "  Web (HTTPS):      " + .production_urls.value.web_https, "  API Direct:       " + .production_urls.value.api, "  API via Nginx:    " + .production_urls.value.api_via_nginx, "  API Docs:         " + .production_urls.value.api_docs, "", "📊 Monitoring:", "  Prometheus: " + .production_urls.value.prometheus, "  Grafana:    " + .production_urls.value.grafana'
+
+tf-clean: ## Clean Terraform state files
+	@echo "🧹 Cleaning Terraform state..."
+	@rm -rf terraform/.terraform terraform/.terraform.lock.hcl
+	@rm -f terraform/terraform.tfstate terraform/terraform.tfstate.backup
+	@echo "✅ Terraform state cleaned"
+
+# =============================================================================
+# Ansible Configuration Management
+# =============================================================================
+
+ansible-config: ## Configure Kubernetes resources with Ansible
+	@echo "🔧 Configuring Kubernetes with Ansible..."
+	@cd ansible && ansible-playbook kubernetes.yml \
+		-e "environment=$(ENV)" \
+		--tags config
+	@echo "✅ Configuration applied"
+
+ansible-tune: ## Tune and optimize deployments
+	@echo "⚡ Optimizing deployments with Ansible..."
+	@cd ansible && ansible-playbook kubernetes.yml \
+		-e "environment=$(ENV)" \
+		--tags tuning
+	@echo "✅ Optimization complete"
+
+ansible-all: ## Run all Ansible playbooks
+	@echo "🚀 Running complete Ansible configuration..."
+	@cd ansible && ansible-playbook kubernetes.yml \
+		-e "environment=$(ENV)"
+	@echo "✅ Ansible configuration complete"
+
+ansible-validate: ## Validate Ansible configuration
+	@cd ansible && ./validate-ansible.sh
+
+# =============================================================================
+# Integrated Deployment Workflows
+# =============================================================================
+
+production: docker-images tf-apply ansible-config ## Deploy production environment (full workflow)
+	@echo ""
+	@echo "✅ Production deployment complete!"
+	@$(MAKE) show-urls
+
+staging: ## Deploy staging environment (Docker Compose)
+	@echo "🐳 Starting staging with Docker Compose..."
 	@docker compose up -d
-	@echo "✅ Staging environment started!"
+	@echo "✅ Staging started"
 	@echo ""
-	@echo "🌐 Access points (Staging - HTTPS Required):"
-	@echo "  Web (HTTPS):  https://localhost:30443"
-	@echo "  API (HTTPS):  https://localhost:30443/api/health"
-	@echo "  API Direct:   http://localhost:30800 (bypasses nginx)"
-	@echo "  API Docs:     http://localhost:30800/docs"
-	@echo "  Database:     localhost:35432"
-	@echo ""
-	@echo "⚠️  Note: HTTP (port 30080) redirects to HTTPS (port 30443)"
-	@echo "💡 Use 'curl -k' or accept browser warnings for self-signed cert"
-	@echo ""
-	@echo "📊 Check status: make staging-status"
+	@echo "🌐 Staging URLs:"
+	@echo "  HTTPS: https://localhost:30443"
+	@echo "  API:   http://localhost:30800"
 
-staging-build: ## Build and start staging environment
-	@echo "🔨 Building and starting staging environment..."
-	@docker compose build --no-cache
-	@docker compose up -d
-	@echo "✅ Staging environment built and started!"
-
-staging-logs: ## Show staging environment logs
-	@echo "📝 Staging environment logs:"
-	@docker compose logs -f
-
-staging-status: ## Check staging environment status
-	@echo "📊 Staging environment status:"
-	@docker compose ps
-	@echo ""
-	@echo "🌡️ Health checks:"
-	@curl -s http://localhost:30800/health 2>/dev/null || echo "❌ API not responding"
-	@curl -s http://localhost:30080 2>/dev/null > /dev/null && echo "✅ Nginx responding" || echo "❌ Nginx not responding"
-
-staging-stop: ## Stop staging environment
-	@echo "🛑 Stopping staging environment..."
-	@docker compose down
-	@echo "✅ Staging environment stopped!"
+quick-start: production ## Complete setup from scratch
+	@echo "🎉 Environment ready!"
 
 # =============================================================================
-# Production Environment (Kubernetes)
+# Monitoring & Observability
 # =============================================================================
 
-production: kind-cluster docker-push ## Start production environment (Kubernetes)
-	@echo "🎯 Starting production environment on Kubernetes..."
-	@kubectl create namespace api-deployment-demo --dry-run=client -o yaml | kubectl apply -f - --validate=false
-	@echo "� Generating and applying secrets for production..."
-	@APPLY=true ./scripts/generate-secrets.sh production api-deployment-demo
-	@echo "🔒 Setting up SSL certificates before deployment..."
-	@APPLY=true ./scripts/generate-tls-secrets.sh api-deployment-demo nginx-ssl-certs
-	@echo "🔒 Creating api-tls-secret for ingress controller..."
-	@kubectl create secret tls api-tls-secret \
-		--cert=nginx/ssl/nginx-selfsigned.crt \
-		--key=nginx/ssl/nginx-selfsigned.key \
-		-n api-deployment-demo --dry-run=client -o yaml | kubectl apply -f -
-	@echo "�📦 Deploying core application resources..."
-	@kubectl apply -f kubernetes/namespace.yaml --validate=false
-	@kubectl apply -f kubernetes/configmaps.yaml --validate=false
-	@kubectl apply -f kubernetes/persistent-volumes.yaml --validate=false
-	@kubectl apply -f kubernetes/postgres-deployment.yaml --validate=false
-	@kubectl apply -f kubernetes/postgres-init-configmap.yaml --validate=false
-	@kubectl apply -f kubernetes/api-deployment.yaml --validate=false
-	@kubectl apply -f kubernetes/nginx-deployment.yaml --validate=false
-	@kubectl apply -f kubernetes/nginx-html-configmap.yaml --validate=false
-	@kubectl apply -f kubernetes/nodeport-services.yaml --validate=false
-	@kubectl apply -f kubernetes/nginx-ingress-controller.yaml --validate=false
-	@kubectl apply -f kubernetes/hpa.yaml --validate=false
-	# @kubectl apply -f kubernetes/network-policy.yaml  # Temporarily disabled due to connectivity issues
-	@kubectl apply -f kubernetes/production-ingress.yaml --validate=false
-	@echo "⏳ Waiting for deployments to be ready..."
-	@echo "📦 Waiting for API deployment..."
-	@kubectl wait --for=condition=available --timeout=300s deployment/api-deployment -n api-deployment-demo || { echo "❌ API deployment timeout"; exit 1; }
-	@echo "🌐 Waiting for Nginx deployment..."
-	@kubectl wait --for=condition=available --timeout=300s deployment/nginx-deployment -n api-deployment-demo || { echo "❌ Nginx deployment timeout"; exit 1; }
-	@echo "🗄️ Waiting for PostgreSQL StatefulSet..."
-	@kubectl wait --for=jsonpath='{.status.readyReplicas}'=1 --timeout=300s statefulset/api-demo-postgres -n api-deployment-demo || { echo "❌ PostgreSQL timeout"; exit 1; }
-	@echo "🔗 Waiting for services to have endpoints..."
-	@for svc in api-service nginx-service; do \
-		echo "  Checking $$svc endpoints..."; \
-		for i in {1..30}; do \
-			if kubectl get endpoints $$svc -n api-deployment-demo -o jsonpath="{.subsets[*].addresses[*].ip}" 2>/dev/null | grep -q .; then \
-				echo "    ✅ $$svc endpoints ready"; break; \
-			fi; \
-			if [ $$i -eq 30 ]; then echo "❌ $$svc endpoints timeout"; exit 1; fi; \
-			sleep 2; \
-		done; \
-	done
-	@echo "🩺 Testing service health with retry..."
-	@for i in {1..20}; do \
-		if curl -s --max-time 3 http://localhost/health >/dev/null 2>&1; then \
-			echo "✅ Health check successful"; break; \
-		fi; \
-		if [ $$i -eq 20 ]; then echo "⚠️ Health check timeout - service may still be starting"; break; fi; \
-		echo "  Retrying health check... ($$i/20)"; sleep 3; \
-	done
-	@echo "✅ Production environment started!"
-	@echo ""
-	@echo "🌐 Access points (Standard Ports - Production):"
-	@echo "  Web Frontend: http://localhost"
-	@echo "  HTTPS Access: https://localhost (self-signed cert)"
-	@echo "  API Direct:   http://localhost:8000"
-	@echo "  API Docs:     http://localhost:8000/docs"
-	@echo "  Health Check: http://localhost/health"
-	@echo "  HTTPS Health: https://localhost/health (use -k with curl)"
-	@echo ""
-	@echo "📊 Check status: make production-status"
-
-kind-cluster: ## Create kind cluster for production
-	@echo "🏗️ Creating kind cluster..."
-	@if ! kind get clusters | grep -q api-demo-cluster; then \
-		kind create cluster --name api-demo-cluster --config kind-config.yaml; \
-		echo "✅ Kind cluster created!"; \
-	else \
-		echo "✅ Kind cluster already exists!"; \
-	fi
-
-production-status: ## Check production environment status
-	@echo "📊 Production environment status:"
-	@kubectl get pods -n api-deployment-demo
-	@echo ""
-	@kubectl get services -n api-deployment-demo
-	@echo ""
-	@echo "🌡️ Health check:"
-	@if curl -s --max-time 5 http://localhost/health >/dev/null 2>&1; then \
-		echo "✅ HTTP API responding (http://localhost)"; \
-		curl -s http://localhost/health | jq -r '"Status: " + .status + " | Environment: " + .environment' 2>/dev/null || curl -s http://localhost/health; \
-	else \
-		echo "❌ HTTP API not responding"; \
-	fi
-	@echo ""
-	@echo "🔒 HTTPS Health check:"
-	@if curl -k -s --max-time 5 https://localhost/health >/dev/null 2>&1; then \
-		echo "✅ HTTPS API responding (https://localhost)"; \
-		curl -k -s https://localhost/health | jq -r '"HTTPS Status: " + .status + " | Environment: " + .environment' 2>/dev/null || curl -k -s https://localhost/health; \
-	else \
-		echo "❌ HTTPS API not responding"; \
-		echo "💡 Checking if services are ready..."; \
-		kubectl get endpoints -n api-deployment-demo; \
-	fi
-
-production-logs: ## Show production environment logs
-	@echo "📝 Production environment logs:"
-	@kubectl logs -n api-deployment-demo -l app=api-demo --tail=50 -f --max-log-requests=10
-
-production-stop: ## Stop production environment (keep cluster)
-	@echo "🛑 Stopping production environment..."
-	@$(MAKE) stop-port-forwarding
-	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
-		echo "  Deleting api-deployment-demo namespace..."; \
-		kubectl delete namespace api-deployment-demo --ignore-not-found=true; \
-		echo "  ✅ api-deployment-demo namespace deleted"; \
-	else \
-		echo "  ℹ️  api-deployment-demo namespace not found (already stopped)"; \
-	fi
-	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
-		echo "  Deleting monitoring namespace..."; \
-		kubectl delete namespace monitoring --ignore-not-found=true; \
-		echo "  ✅ monitoring namespace deleted"; \
-	fi
-	@echo "✅ Production environment stopped! (cluster preserved)"
-
-# =============================================================================
-# Monitoring Stack
-# =============================================================================
-
-monitoring: ## Add monitoring to production environment
-	@echo "📊 Deploying monitoring stack..."
-	@kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - --validate=false
-	@echo "🔧 Setting up RBAC for monitoring..."
-	@kubectl apply -f kubernetes/prometheus-rbac-update.yaml --validate=false
-	@echo "🔐 Setting up monitoring secrets..."
-	@if [ -f kubernetes/secrets-production.yaml ]; then \
-		echo "📝 Using generated secrets from .env files..."; \
-		kubectl apply -f kubernetes/secrets-production.yaml --validate=false; \
-	elif [ -f kubernetes/monitoring-secrets-local.yaml ]; then \
-		echo "📝 Using local secrets file..."; \
-		kubectl apply -f kubernetes/monitoring-secrets-local.yaml --validate=false; \
-	elif [ -f kubernetes/monitoring-secrets-sealed.yaml ]; then \
-		echo "🔒 Using sealed secrets..."; \
-		kubectl apply -f kubernetes/monitoring-secrets-sealed.yaml --validate=false; \
-	else \
-		echo "⚠️  No secrets found. Generating from .env.production..."; \
-		./scripts/generate-secrets.sh production; \
-		kubectl apply -f kubernetes/secrets-production.yaml --validate=false; \
-	fi
-	@echo "� Deploying Prometheus..."
-	@kubectl apply -f kubernetes/prometheus-deployment.yaml --validate=false
-	@echo "📊 Deploying Grafana configuration..."
-	@kubectl apply -f kubernetes/grafana-datasource-configmap.yaml --validate=false
-	@kubectl apply -f kubernetes/grafana-providers-configmap.yaml --validate=false
-	@kubectl apply -f kubernetes/grafana-dashboard-configmap.yaml --validate=false
-	@kubectl apply -f kubernetes/grafana-deployment.yaml --validate=false
-	@kubectl apply -f kubernetes/grafana-simple-dashboard.yaml --validate=false
-	@echo "🌐 Setting up monitoring access..."
-	@kubectl apply -f kubernetes/monitoring-ingress.yaml --validate=false
-	@kubectl apply -f kubernetes/monitoring-nodeport.yaml --validate=false
-	@echo "⚠️  Skipping ServiceMonitor resources (requires Prometheus Operator)"
-	@echo "⏳ Waiting for monitoring services..."
-	@echo "📊 Waiting for Prometheus deployment..."
-	@kubectl wait --for=condition=available --timeout=300s deployment/prometheus -n monitoring || { echo "❌ Prometheus deployment timeout"; exit 1; }
-	@echo "📈 Waiting for Grafana deployment..."
-	@kubectl wait --for=condition=available --timeout=300s deployment/grafana -n monitoring || { echo "❌ Grafana deployment timeout"; exit 1; }
-	@echo "🔗 Waiting for monitoring endpoints..."
-	@for svc in prometheus grafana; do \
-		echo "  Checking $$svc endpoints..."; \
-		for i in {1..30}; do \
-			if kubectl get endpoints $$svc -n monitoring -o jsonpath="{.subsets[*].addresses[*].ip}" 2>/dev/null | grep -q .; then \
-				echo "    ✅ $$svc endpoints ready"; break; \
-			fi; \
-			if [ $$i -eq 30 ]; then echo "❌ $$svc endpoints timeout"; exit 1; fi; \
-			sleep 2; \
-		done; \
-	done
-	@echo "✅ Monitoring stack deployed!"
-	@echo ""
-	@echo "🚀 Starting port forwarding for monitoring services..."
-	@$(MAKE) start-port-forwarding
-	@echo ""
-	@echo "🌐 Access points (Standard Ports - Production):"
-	@echo "  Prometheus: http://localhost:9090"
-	@echo "  Grafana:    http://localhost:3000 (admin/[see .env])"
-	@echo ""
-	@echo "📊 Quick test:"
-	@for i in {1..10}; do \
-		if curl -s --max-time 3 http://localhost:3000/api/health >/dev/null 2>&1; then \
-			echo "✅ Grafana ready"; break; \
-		fi; \
-		if [ $$i -eq 10 ]; then echo "⚠️ Grafana still starting"; break; fi; \
-		echo "  Waiting for Grafana... ($$i/10)"; sleep 3; \
-	done
-
-monitoring-status: ## Check monitoring stack status
-	@echo "📊 Monitoring stack status:"
-	@kubectl get pods -n monitoring
-	@echo ""
-	@kubectl get services -n monitoring
-
-monitoring-logs: ## Show monitoring logs
-	@echo "📝 Monitoring logs:"
-	@kubectl logs -n monitoring -l app=grafana --tail=20
-	@echo ""
-	@kubectl logs -n monitoring -l app=prometheus --tail=20
-
-monitoring-dashboards: ## Open Grafana dashboards
-	@echo "🎨 Opening Grafana dashboards..."
-	@echo "Grafana: http://grafana.local:8080"
-	@echo "Username: admin"
-	@echo "Password: [see .env GRAFANA_ADMIN_PASSWORD]"
-
-start-port-forwarding: ## Start port forwarding for monitoring services
+monitoring-forward: ## Start port forwarding for monitoring
 	@echo "🚀 Starting port forwarding..."
 	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
 	@sleep 1
-	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
-		echo "  Starting Grafana port forward (3000:3000)..."; \
-		kubectl port-forward -n monitoring svc/grafana 3000:3000 > /dev/null 2>&1 & \
-		echo "  Starting Prometheus port forward (9090:9090)..."; \
-		kubectl port-forward -n monitoring svc/prometheus 9090:9090 > /dev/null 2>&1 & \
-		sleep 2; \
-		echo "✅ Port forwarding started"; \
-		echo "  Grafana:    http://localhost:3000"; \
-		echo "  Prometheus: http://localhost:9090"; \
-	else \
-		echo "❌ Monitoring namespace not found. Run 'make monitoring' first."; \
-		exit 1; \
-	fi
-
-stop-port-forwarding: ## Stop all port forwarding for monitoring services
-	@echo "🛑 Stopping port forwarding..."
-	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null && echo "✅ Port forwarding stopped" || echo "ℹ️  No port forwarding processes found"
-
-# =============================================================================
-# Frontend Access Commands
-# =============================================================================
-
-access-staging: ## Set up staging frontend access
-	@echo "🌐 Staging Frontend Access (HTTPS Required):"
-	@echo "  Web (HTTPS):  https://localhost:30443"
-	@echo "  API (HTTPS):  https://localhost:30443/api/health"
-	@echo "  API Direct:   http://localhost:30800 (bypasses nginx)"
-	@echo "  API Docs:     http://localhost:30800/docs"
-	@echo "  Health:       http://localhost:30800/health"
-	@echo ""
-	@echo "⚠️  Note: HTTP port 30080 redirects to HTTPS port 30443"
-	@echo "💡 Use 'curl -k https://...' for self-signed certificates"
-	@echo ""
-	@echo "🧪 Quick test:"
-	@if docker compose ps | grep -q Up; then \
-		curl -k -s https://localhost:30443/health 2>/dev/null && echo "✅ Staging API responding" || echo "❌ Staging API not ready yet"; \
-	else \
-		echo "ℹ️  Staging not running. Start with 'make staging'"; \
-	fi
-
-access-production: ## Access production frontend (standard ports)
-	@echo "🎯 Production Frontend Access (Standard Ports):"
-	@echo "  Web Frontend: http://localhost"
-	@echo "  API Direct:   http://localhost:8000"
-	@echo "  API Docs:     http://localhost:8000/docs"
-	@echo "  Health Check: http://localhost/health"
-	@echo ""
-	@echo "✅ Access ready! Production uses standard ports."
-	@echo ""
-	@echo "🧪 Quick test:"
-	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
-		curl -s --max-time 3 http://localhost:8000/health 2>/dev/null && echo "✅ API responding" || echo "❌ API not ready yet"; \
-	else \
-		echo "ℹ️  Production not running. Start with 'make production'"; \
-	fi
-
-access-monitoring: ## Access monitoring dashboards (standard ports for production)
-	@echo "📊 Monitoring Access:"
-	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
-		echo "🚀 Ensuring port forwarding is active..."; \
-		$(MAKE) start-port-forwarding; \
-		echo ""; \
-		echo "✅ Production monitoring access ready! Standard ports."; \
-		echo ""; \
-		echo "🧪 Quick test:"; \
-		curl -s --max-time 3 http://localhost:3000/api/health 2>/dev/null && echo "✅ Grafana responding" || echo "❌ Grafana not ready yet"; \
-	else \
-		echo "❌ Monitoring not deployed. Run 'make monitoring' first."; \
-	fi
-
-access-all: ## Access all services via NodePort (no port-forwarding needed)
-	@echo "🚀 All Services Access (Standard Ports):"
-	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
-		echo "🎯 Production services:"; \
-		echo "  Web Frontend: http://localhost"; \
-		echo "  API Direct:   http://localhost:8000"; \
-		echo "  API Docs:     http://localhost:8000/docs"; \
-		echo "  Health Check: http://localhost/health"; \
-	fi
-	@if kubectl get namespace monitoring >/dev/null 2>&1; then \
-		echo "📊 Monitoring services:"; \
-		echo "  Grafana:     http://localhost:3000 (admin/[see .env])"; \
-		echo "  Prometheus:  http://localhost:9090"; \
-	fi
-	@if docker compose ps | grep -q Up; then \
-		echo "🐳 Staging services:"; \
-		echo "  Web (HTTPS):  https://localhost:30443"; \
-		echo "  API Direct:   http://localhost:30800"; \
-		echo "  Note: HTTP port 30080 redirects to HTTPS"; \
-	fi
-	@echo ""
-	@echo "✅ All access points ready! Production uses standard ports."
-
-stop-forwarding: ## (Legacy) Port forwarding no longer used - services use standard ports
-	@echo "ℹ️  Port forwarding is no longer used."
-	@echo "🚀 Services are accessible via standard ports:"
-	@echo "  Production Web: http://localhost (nginx) http://localhost:8000 (api)"
-	@echo "  Production Monitoring: http://localhost:3000 (grafana) http://localhost:9090 (prometheus)"
-	@echo "  Staging Web: http://localhost:30080 (nginx) http://localhost:30800 (api)"
-	@pkill -f "kubectl port-forward" 2>/dev/null || true
-	@echo "✅ Any remaining port-forwards stopped."
-
-# =============================================================================
-# Docker Image Management
-# =============================================================================
-
-docker-images: ## Build all Docker images
-	@echo "🔨 Building Docker images..."
-	@cd api && docker build -t api-deployment-demo:latest -t api-deployment-demo:v1.7 -t api-deployment-demo-api:latest .
-	@cd nginx && docker build -t api-deployment-demo-nginx:latest .
-	@echo "✅ Docker images built!"
-
-docker-push: docker-images ## Build and push to kind cluster
-	@echo "📤 Loading images to kind cluster..."
-	@kind load docker-image api-deployment-demo:v1.7 --name api-demo-cluster
-	@kind load docker-image api-deployment-demo-api:latest --name api-demo-cluster
-	@kind load docker-image api-deployment-demo-nginx:latest --name api-demo-cluster
-	@echo "✅ Images loaded to kind cluster!"
-
-# =============================================================================
-# Utility Commands
-# =============================================================================
-
-traffic: ## Generate test traffic (requires running environment)
-	@echo "🚦 Generating test traffic..."
-	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
-		echo "Generating traffic for production environment..."; \
-		./scripts/generate-traffic.sh; \
-	elif docker compose ps | grep -q Up; then \
-		echo "Generating traffic for staging environment..."; \
-		for i in {1..20}; do \
-			curl -s http://localhost:30800/users >/dev/null; \
-			curl -s http://localhost:30800/products >/dev/null; \
-			curl -s http://localhost:30800/ >/dev/null; \
-			sleep 1; \
-		done; \
-		echo "✅ Traffic generated!"; \
-	else \
-		echo "❌ No environment is running. Start with 'make staging' or 'make production'"; \
-	fi
-
-setup-hosts: ## (Legacy) /etc/hosts no longer needed - standard port access available
-	@echo "ℹ️  /etc/hosts configuration is no longer required!"
-	@echo "📊 Production services are accessible directly via standard ports:"
-	@echo "  Grafana:    http://localhost:3000 (admin/[see .env])"
+	@kubectl port-forward -n monitoring svc/grafana 3000:3000 > /dev/null 2>&1 &
+	@kubectl port-forward -n monitoring svc/prometheus 9090:9090 > /dev/null 2>&1 &
+	@echo "✅ Port forwarding active"
+	@echo "  Grafana:    http://localhost:3000"
 	@echo "  Prometheus: http://localhost:9090"
-	@echo "  Web:        http://localhost"
-	@echo "  API:        http://localhost:8000"
+
+monitoring-stop: ## Stop port forwarding
+	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
+	@echo "✅ Port forwarding stopped"
+
+logs-api: ## Show API logs (follow mode)
+	@kubectl logs -n $(NAMESPACE) -l app=api-demo -l '!component' --tail=50 -f
+
+logs-api-once: ## Show API logs (no follow)
+	@kubectl logs -n $(NAMESPACE) -l app=api-demo -l '!component' --tail=50
+
+logs-nginx: ## Show Nginx logs (follow mode)
+	@kubectl logs -n $(NAMESPACE) -l app=api-demo,component=nginx --tail=50 -f
+
+logs-nginx-once: ## Show Nginx logs (no follow)
+	@kubectl logs -n $(NAMESPACE) -l app=api-demo,component=nginx --tail=50
+
+logs-monitoring: ## Show monitoring logs
+	@echo "📊 Grafana logs:"
+	@kubectl logs -n monitoring -l app=grafana --tail=20
 	@echo ""
-	@echo "💡 No additional configuration needed!"
+	@echo "📊 Prometheus logs:"
+	@kubectl logs -n monitoring -l app=prometheus --tail=20
+
+# =============================================================================
+# Status & Health Checks
+# =============================================================================
+
+status: ## Show deployment status
+	@echo "📊 Deployment Status"
+	@echo "===================="
+	@echo ""
+	@if kind get clusters 2>/dev/null | grep -q $(CLUSTER_NAME); then \
+		echo "🏗️  Cluster: ✅ Running"; \
+		echo ""; \
+		echo "📦 Application Pods:"; \
+		kubectl get pods -n $(NAMESPACE) 2>/dev/null || echo "  No pods found"; \
+		echo ""; \
+		echo "📊 Monitoring Pods:"; \
+		kubectl get pods -n monitoring 2>/dev/null || echo "  No pods found"; \
+		echo ""; \
+		echo "🌐 Services:"; \
+		kubectl get svc -n $(NAMESPACE) 2>/dev/null || echo "  No services found"; \
+	else \
+		echo "❌ Cluster not running"; \
+	fi
+
+health: ## Check application health
+	@echo "🏥 Health Checks"
+	@echo "================"
+	@echo ""
+	@printf "API Health:     "
+	@if curl -sf http://localhost:8000/health >/dev/null 2>&1; then echo "✅ OK"; else echo "❌ Not responding"; fi
+	@printf "Web Frontend:   "
+	@if curl -sfk https://localhost:443 >/dev/null 2>&1; then echo "✅ OK"; else echo "❌ Not responding"; fi
+	@printf "Grafana:        "
+	@if curl -sf http://localhost:3000/api/health >/dev/null 2>&1; then echo "✅ OK"; else echo "⚠️  Not forwarded (run: make monitoring-forward)"; fi
+	@printf "Prometheus:     "
+	@if curl -sf http://localhost:9090/-/healthy >/dev/null 2>&1; then echo "✅ OK"; else echo "⚠️  Not forwarded (run: make monitoring-forward)"; fi
+
+show-urls: ## Display access URLs
+	@echo ""
+	@echo "🌐 Access URLs"
+	@echo "=============="
+	@echo "Production:"
+	@echo "  Web:        https://localhost (or http://localhost)"
+	@echo "  API:        http://localhost:8000"
+	@echo "  API Health: http://localhost:8000/health"
+	@echo "  API Docs:   http://localhost:8000/docs"
+	@echo ""
+	@echo "Monitoring (requires port-forward):"
+	@echo "  Grafana:    http://localhost:3000 (admin/admin)"
+	@echo "  Prometheus: http://localhost:9090"
+	@echo ""
+	@echo "💡 Run 'make monitoring-forward' to enable monitoring access"
+
+# =============================================================================
+# Testing & Validation
+# =============================================================================
+
+test: ## Run all tests
+	@echo "🧪 Running tests..."
+	@./scripts/test-automated-deployment.sh
+
+test-load: ## Run load test
+	@echo "🚦 Running load test..."
+	@./scripts/load-test.sh
+
+test-traffic: ## Generate test traffic
+	@echo "🚦 Generating traffic..."
+	@./scripts/generate-traffic.sh
 
 validate: ## Validate all configurations
 	@echo "✅ Validating configurations..."
-	@echo "📋 Checking Docker Compose..."
-	@docker compose config >/dev/null && echo "✅ Docker Compose: Valid" || echo "❌ Docker Compose: Invalid"
-	@echo "📋 Checking Kubernetes manifests..."
-	@kubectl apply --dry-run=client --validate=false -f kubernetes/ >/dev/null 2>&1 && echo "✅ Kubernetes: Valid" || echo "✅ Kubernetes: Valid (syntax check only)"
-	@echo "📋 Checking scripts..."
-	@for script in scripts/*.sh; do \
-		bash -n "$$script" && echo "✅ $$script: Valid" || echo "❌ $$script: Invalid"; \
-	done
+	@docker compose config >/dev/null && echo "✅ Docker Compose valid"
+	@cd ansible && ./validate-ansible.sh
+	@for script in scripts/*.sh; do bash -n "$$script" && echo "✅ $$script valid"; done
 
 # =============================================================================
-# Cleanup Commands
+# Secrets Management
 # =============================================================================
 
-clean: ## Clean up everything (containers, images, clusters)
-	@echo "🧹 Cleaning up everything..."
-	@./scripts/cleanup-all.sh
-	@echo "✅ Cleanup complete!"
+secrets-generate: ## Generate Kubernetes secrets
+	@echo "🔐 Generating secrets..."
+	@./scripts/generate-secrets.sh $(ENV)
 
-clean-staging: ## Clean up only staging environment
-	@echo "🧹 Cleaning up staging environment..."
-	@docker compose down -v --remove-orphans
-	@docker rmi api-deployment-demo-api:latest api-deployment-demo-nginx:latest 2>/dev/null || true
-	@echo "✅ Staging cleanup complete!"
+secrets-apply: ## Apply secrets to cluster
+	@echo "🔐 Applying secrets..."
+	@APPLY=true ./scripts/generate-secrets.sh $(ENV)
 
-clean-production: ## Clean up only production environment
-	@echo "🧹 Cleaning up production environment..."
-	@$(MAKE) stop-port-forwarding
-	@kubectl delete namespace api-deployment-demo monitoring --ignore-not-found=true
-	@kind delete cluster --name api-demo-cluster 2>/dev/null || true
-	@echo "✅ Production cleanup complete!"
+secrets-tls: ## Generate TLS secrets
+	@./scripts/generate-tls-secrets.sh $(NAMESPACE) nginx-ssl-certs
 
-clean-images: ## Remove all custom Docker images
-	@echo "🧹 Cleaning up Docker images..."
-	@echo "Removing api-deployment-demo images..."
-	@docker images --format "{{.Repository}}:{{.Tag}}" | grep "^api-deployment-demo:" | xargs -r docker rmi 2>/dev/null || true
-	@echo "Removing any orphaned images..."
-	@docker image prune -f >/dev/null 2>&1 || true
-	@echo "✅ Image cleanup complete!"
+# =============================================================================
+# Cleanup
+# =============================================================================
 
-clean-all: ## Complete nuclear cleanup - delete everything (cluster, images, volumes, builds)
-	@echo "💥 NUCLEAR CLEANUP: Deleting absolutely everything..."
+clean: ## Clean deployments (keep cluster and images)
+	@echo "🧹 Cleaning deployments..."
+	@kubectl delete namespace $(NAMESPACE) --ignore-not-found=true
+	@kubectl delete namespace monitoring --ignore-not-found=true
+	@$(MAKE) monitoring-stop
+	@echo "✅ Deployments cleaned"
+
+clean-staging: ## Clean staging environment
+	@echo "🧹 Cleaning staging..."
+	@docker compose down -v
+	@echo "✅ Staging cleaned"
+
+clean-all: ## Nuclear cleanup - remove everything
+	@echo "💥 Complete cleanup..."
 	@echo "⚠️  This will remove:"
-	@echo "   • Staging environment (Docker Compose)"
-	@echo "   • Kind cluster (api-demo-cluster)"
-	@echo "   • All Docker images (including cached layers)"
-	@echo "   • All Docker volumes and build cache"
-	@echo "   • All application namespaces and resources"
+	@echo "   • All deployments and namespaces"
+	@echo "   • Kind cluster"
+	@echo "   • Docker images"
+	@echo "   • Terraform state"
 	@echo ""
-	@read -p "Are you sure? This cannot be undone! (y/N): " confirm && [ "$$confirm" = "y" ] || [ "$$confirm" = "Y" ] || (echo "❌ Aborted!" && exit 1)
+	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
 	@echo ""
-	@echo "🧹 Step 1: Stopping staging environment (Docker Compose)..."
-	@docker compose down -v --remove-orphans 2>/dev/null && echo "   ✅ Staging stopped and volumes removed" || echo "   ⚠️  No staging environment running"
-	@echo ""
-	@echo "🧹 Step 2: Cleaning application resources..."
-	@./scripts/cleanup-all.sh 2>/dev/null || true
-	@echo ""
-	@echo "🗑️  Step 3: Deleting Kind cluster..."
-	@if kind get clusters 2>/dev/null | grep -q api-demo-cluster; then \
-		kind delete cluster --name api-demo-cluster && echo "   ✅ Kind cluster deleted successfully"; \
-	else \
-		echo "   ⚠️  Kind cluster api-demo-cluster not found (already deleted)"; \
-	fi
-	@echo ""
-	@echo "🐳 Step 4: Removing all project Docker images..."
-	@if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^api-deployment-demo:"; then \
-		docker images --format "{{.Repository}}:{{.Tag}}" | grep "^api-deployment-demo:" | xargs -r docker rmi -f && echo "   ✅ Project Docker images removed"; \
-	else \
-		echo "   ⚠️  No project Docker images found"; \
-	fi
-	@echo ""
-	@echo "🧽 Step 5: Cleaning Docker system (images, containers, volumes, build cache)..."
-	@docker system prune -af --volumes 2>/dev/null || true
-	@echo ""
-	@echo "🔥 Step 6: Removing Docker build cache..."
-	@docker builder prune -af 2>/dev/null && echo "   ✅ Build cache cleared" || echo "   ⚠️  No build cache to clear"
-	@echo ""
-	@echo "🧹 Step 7: Stopping any remaining background processes..."
+	@echo "🧹 Stopping services..."
+	@docker compose down -v 2>/dev/null || true
+	@$(MAKE) monitoring-stop
+	@echo "🗑️  Deleting cluster..."
+	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
+	@echo "🐳 Removing Docker images..."
+	@docker images --format "{{.Repository}}:{{.Tag}}" | grep "^api-deployment-demo" | xargs -r docker rmi -f 2>/dev/null || true
+	@echo "🗑️  Removing dangling images..."
+	@docker image prune -f 2>/dev/null || true
+	@$(MAKE) tf-clean
 	@pkill -f "kubectl.*port-forward" 2>/dev/null || true
-	@pkill -f "docker compose" 2>/dev/null || true
-	@pkill -f "generate-traffic" 2>/dev/null || true
-	@echo ""
-	@echo "🔍 Step 8: Verification - checking what remains..."
-	@echo "Kind clusters:"
-	@kind get clusters 2>/dev/null || echo "   (none)"
-	@echo ""
-	@echo "Project Docker images:"
-	@docker images | grep api-deployment-demo || echo "   (none)"
-	@echo ""
-	@echo "Docker volumes:"
-	@docker volume ls | grep api-deployment-demo || echo "   (none)"
-	@echo ""
-	@echo "💥 NUCLEAR CLEANUP COMPLETE!"
-	@echo "🆕 System is now completely clean for a fresh start."
-	@echo ""
-	@echo "🚀 Ready for fresh deployment with:"
-	@echo "   make quick-production    # Full production deployment"
-	@echo "   make test-automated      # Automated deployment test"
-
-clean-all-dry-run: ## Show what clean-all would delete (safe preview)
-	@echo "🔍 CLEAN-ALL DRY RUN: What would be deleted..."
-	@echo ""
-	@echo "📊 Current Kind clusters:"
-	@kind get clusters 2>/dev/null || echo "   (none)"
-	@echo ""
-	@echo "🐳 Current project Docker images:"
-	@docker images | grep api-deployment-demo || echo "   (none)"
-	@echo ""
-	@echo "📦 Current Kubernetes namespaces:"
-	@kubectl get namespaces 2>/dev/null | grep -E "(api-deployment-demo|monitoring)" || echo "   (none)"
-	@echo ""
-	@echo "💾 Docker system usage:"
-	@docker system df 2>/dev/null || echo "   (Docker not available)"
-	@echo ""
-	@echo "⚠️  'make clean-all' would DELETE ALL of the above!"
-	@echo "💡 Run 'make clean-all' to actually perform the cleanup."
+	@echo "✅ Complete cleanup finished"
 
 # =============================================================================
-# Development Commands
+# Development Shortcuts
 # =============================================================================
 
-dev: ## Start development environment (staging + monitoring)
-	@echo "🛠️ Starting development environment..."
-	@make staging
-	@sleep 10
-	@echo "📊 Setting up local monitoring..."
-	@echo "✅ Development environment ready!"
+dev: staging ## Start development environment
+	@echo "✅ Development environment ready"
 
-logs: ## Show logs for active environment
-	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
-		make production-logs; \
-	elif docker compose ps | grep -q Up; then \
-		make staging-logs; \
-	else \
-		echo "❌ No environment is running"; \
-	fi
+restart: ## Restart all deployments
+	@echo "🔄 Restarting deployments..."
+	@kubectl rollout restart deployment -n $(NAMESPACE)
+	@kubectl rollout restart deployment -n monitoring
+	@echo "✅ Restarts initiated"
 
-status: ## Show status for active environment
-	@if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then \
-		make production-status; \
-		if kubectl get namespace monitoring >/dev/null 2>&1; then \
-			echo ""; \
-			make monitoring-status; \
-		fi; \
-	elif docker compose ps | grep -q Up; then \
-		make staging-status; \
-	else \
-		echo "❌ No environment is running"; \
-		echo "💡 Start with: make staging OR make production"; \
-	fi
+scale-api: ## Scale API deployment (REPLICAS=3)
+	@kubectl scale deployment/api-deployment -n $(NAMESPACE) --replicas=$(or $(REPLICAS),3)
+	@echo "✅ API scaled to $(or $(REPLICAS),3) replicas"
+
+scale-nginx: ## Scale Nginx deployment (REPLICAS=2)
+	@kubectl scale deployment/nginx-deployment -n $(NAMESPACE) --replicas=$(or $(REPLICAS),2)
+	@echo "✅ Nginx scaled to $(or $(REPLICAS),2) replicas"
+
+pods: ## List all pods
+	@kubectl get pods -A
+
+events: ## Show recent cluster events
+	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' | tail -20
+
+describe-api: ## Describe API deployment
+	@kubectl describe deployment api-deployment -n $(NAMESPACE)
+
+describe-nginx: ## Describe Nginx deployment
+	@kubectl describe deployment nginx-deployment -n $(NAMESPACE)
 
 # =============================================================================
-# Quick Start Commands
+# CI/CD Workflows
 # =============================================================================
 
-quick-staging: ## Quick start staging (build + run)
-	@make docker-images
-	@make staging
+ci-build: docker-images ## CI: Build images
+	@echo "✅ Build complete"
 
-quick-production: ## Quick start production (cluster + deploy + monitoring)
-	@make production
-	@make monitoring
-	@echo ""
-	@echo "🎉 Production environment fully ready!"
-	@echo "🌐 All services accessible via standard ports (no configuration needed)"
+ci-deploy: production ## CI: Deploy to production
+	@echo "✅ Deployment complete"
 
-quick-dev: ## Quick start full development environment
-	@make quick-staging
-	@echo ""
-	@echo "🎉 Development environment ready!"
-	@echo "🌐 Staging API: http://localhost:30800"
-	@echo "🌐 Staging Web: http://localhost:30080"
+ci-test: test ## CI: Run tests
+	@echo "✅ Tests complete"
 
-test-automated: ## Run comprehensive automated deployment test
-	@echo "🧪 Running automated deployment test..."
-	@./scripts/test-automated-deployment.sh
-
-promote: ## Promote code from staging to production with validation
-	@echo "🚀 Promoting from staging to production..."
-	@./scripts/promote-to-production.sh
-
-validate-promotion: ## Validate that promotion is ready (staging tests pass)
-	@echo "🔍 Validating staging environment for promotion..."
-	@if ! curl -s http://localhost:30800/health > /dev/null 2>&1; then \
-		echo "❌ Staging environment is not running"; \
-		echo "💡 Start staging first: make staging"; \
-		exit 1; \
-	fi
-	@echo "✅ Staging validation passed - ready for promotion"
+ci-pipeline: ci-build ci-test ci-deploy ## CI: Full pipeline
+	@echo "✅ CI/CD pipeline complete"

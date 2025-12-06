@@ -1,0 +1,98 @@
+---
+# Kubernetes Configuration Management Playbook
+# This playbook handles configuration and tuning of Kubernetes deployments
+# after infrastructure provisioning by Terraform
+
+- name: Configure and Tune Kubernetes Deployments
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  
+  vars:
+    k8s_namespace: api-deployment-demo
+    k8s_context: kind-api-demo-cluster
+    deploy_environment: "{{ environment | default('production') }}"
+    
+  pre_tasks:
+    - name: Verify kubectl is available
+      command: kubectl version --client
+      changed_when: false
+      register: kubectl_version
+      
+    - name: Display kubectl version
+      debug:
+        msg: "Using {{ kubectl_version.stdout_lines[0] }}"
+    
+    - name: Check cluster connectivity
+      command: kubectl cluster-info
+      changed_when: false
+      register: cluster_info
+      
+    - name: Verify namespace exists
+      command: kubectl get namespace {{ k8s_namespace }}
+      changed_when: false
+      failed_when: false
+      register: namespace_check
+      
+    - name: Fail if namespace doesn't exist
+      fail:
+        msg: "Namespace {{ k8s_namespace }} does not exist. Run terraform apply first."
+      when: namespace_check.rc != 0
+
+  roles:
+    - role: kubernetes-config
+      tags: [config, configuration]
+      
+    - role: kubernetes-tuning
+      tags: [tuning, optimization, performance]
+
+  post_tasks:
+    - name: Get all pods status
+      command: kubectl get pods -n {{ k8s_namespace }} -o wide
+      register: pods_status
+      changed_when: false
+      
+    - name: Display pods status
+      debug:
+        msg: "{{ pods_status.stdout_lines }}"
+        
+    - name: Get all services
+      command: kubectl get svc -n {{ k8s_namespace }}
+      register: services_status
+      changed_when: false
+      
+    - name: Display services
+      debug:
+        msg: "{{ services_status.stdout_lines }}"
+        
+    - name: Verify API health
+      uri:
+        url: "http://localhost:8000/health"
+        method: GET
+        timeout: 10
+      register: api_health
+      retries: 3
+      delay: 5
+      failed_when: false
+      
+    - name: Display API health status
+      debug:
+        msg: "API Health: {{ api_health.json | default('Could not reach API') }}"
+      when: api_health.status is defined
+      
+    - name: Summary
+      debug:
+        msg:
+          - "=========================================="
+          - "Kubernetes Configuration Complete"
+          - "=========================================="
+          - "Namespace: {{ k8s_namespace }}"
+          - "Context: {{ k8s_context }}"
+          - "Environment: {{ deploy_environment }}"
+          - "=========================================="
+          - "Access URLs:"
+          - "  Web:        https://localhost:443"
+          - "  API:        http://localhost:8000"
+          - "  Grafana:    http://localhost:3000"
+          - "  Prometheus: http://localhost:9090"
+          - "=========================================="

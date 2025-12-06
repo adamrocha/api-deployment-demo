@@ -79,3 +79,37 @@ dumps/
 .idea/
 *.swp
 .vscode/settings.json
+
+# =======================================================================
+# Terraform
+# =======================================================================
+# Local .terraform directories
+**/.terraform/*
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files (likely contain sensitive data)
+*.tfvars
+*.tfvars.json
+
+# Ignore override files (usually used to override resources locally)
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Include tfplan files to ignore the plan output of: terraform plan -out=tfplan
+*tfplan*
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Terraform lock file (optional - some teams commit this)
+.terraform.lock.hcl

@@ -1,0 +1,39 @@
+# Example Terraform variables
+# Copy this file to terraform.tfvars and customize
+
+project_name = "api-deployment-demo"
+environment  = "staging"  # or "production"
+
+# Cluster configuration
+cluster_name    = "api-demo-cluster"
+kubeconfig_path = "~/.kube/config"
+
+# Security (use secure values in production!)
+db_password = "staging_password"
+secret_key  = "change-me-in-production"
+
+# Staging ports
+staging_ports = {
+  http  = 30080
+  https = 30443
+  api   = 30800
+  db    = 35432
+}
+
+# Production configuration
+replicas          = 2
+enable_monitoring = true
+
+# Docker images
+docker_images = {
+  api = {
+    name    = "api-deployment-demo-api"
+    context = "../api"
+    tag     = "latest"
+  }
+  nginx = {
+    name    = "api-deployment-demo-nginx"
+    context = "../nginx"
+    tag     = "latest"
+  }
+}

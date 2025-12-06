@@ -315,9 +315,9 @@ kubectl rollout restart deployment <name> -n production
 
 ### Documentation
 
-- 📚 **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - Command cheat sheet
-- 🔄 **[CI-CD-WORKFLOWS.md](CI-CD-WORKFLOWS.md)** - Pipeline details
-- 🏗️ **[DEPLOYMENT-METHODS.md](DEPLOYMENT-METHODS.md)** - Method comparison
+- 📚 **[QUICK-REFERENCE.md](docs/QUICK-REFERENCE.md)** - Command cheat sheet
+- 🔄 **[CI-CD-WORKFLOWS.md](docs/CI-CD-WORKFLOWS.md)** - Pipeline details
+- 🏗️ **[DEPLOYMENT-METHODS.md](docs/DEPLOYMENT-METHODS.md)** - Method comparison
 
 ### External Links
 

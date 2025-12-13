@@ -16,13 +16,13 @@ output "staging_urls" {
 output "production_urls" {
   description = "Production environment access URLs"
   value = var.environment == "production" ? {
-    web        = "http://localhost:80 (redirects to HTTPS)"
-    web_https  = "https://localhost:443"
-    api        = "http://localhost:8000/health"
-    api_docs   = "http://localhost:8000/docs"
+    web           = "http://localhost:80 (redirects to HTTPS)"
+    web_https     = "https://localhost:443"
+    api           = "http://localhost:8000/health"
+    api_docs      = "http://localhost:8000/docs"
     api_via_nginx = "https://localhost:443/api/health"
-    grafana    = var.enable_monitoring ? "http://localhost:3000" : null
-    prometheus = var.enable_monitoring ? "http://localhost:9090" : null
+    grafana       = var.enable_monitoring ? "http://localhost:3000" : null
+    prometheus    = var.enable_monitoring ? "http://localhost:9090" : null
   } : null
 }
 
@@ -33,7 +33,7 @@ output "cluster_name" {
 
 output "namespace" {
   description = "Kubernetes namespace"
-  value       = var.environment == "production" ? kubernetes_namespace.app[0].metadata[0].name : null
+  value       = var.environment == "production" ? kubernetes_namespace_v1.app[0].metadata[0].name : null
 }
 
 output "docker_images" {

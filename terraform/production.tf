@@ -235,8 +235,15 @@ resource "kubernetes_service_v1" "postgres" {
     }
 
     port {
+      name        = "postgres"
       port        = 5432
       target_port = 5432
+    }
+
+    port {
+      name        = "metrics"
+      port        = 9187
+      target_port = 9187
     }
 
     type = "ClusterIP"
@@ -244,6 +251,37 @@ resource "kubernetes_service_v1" "postgres" {
 
   timeouts {
     create = "3m"
+  }
+
+  depends_on = [kubernetes_deployment_v1.postgres]
+}
+
+# PostgreSQL Metrics Service (for prometheus scraping)
+resource "kubernetes_service_v1" "postgres_metrics" {
+  count = var.environment == "production" ? 1 : 0
+
+  metadata {
+    name      = "postgres-metrics"
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
+    
+    labels = {
+      app       = "api-demo"
+      component = "database"
+    }
+  }
+
+  spec {
+    selector = {
+      app = "postgres"
+    }
+
+    port {
+      name        = "metrics"
+      port        = 9187
+      target_port = 9187
+    }
+
+    type = "ClusterIP"
   }
 
   depends_on = [kubernetes_deployment_v1.postgres]
@@ -578,7 +616,7 @@ resource "kubernetes_deployment_v1" "nginx" {
           image = "nginx/nginx-prometheus-exporter:latest"
 
           args = [
-            "-nginx.scrape-uri=http://localhost:80/stub_status"
+            "--nginx.scrape-uri=http://localhost:80/stub_status"
           ]
 
           port {

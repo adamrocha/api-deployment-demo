@@ -1,0 +1,110 @@
+{
+  "title": "Database Performance",
+  "tags": ["database", "postgres"],
+  "timezone": "browser",
+  "schemaVersion": 16,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 99,
+      "title": "⚠️ PostgreSQL Metrics Unavailable",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**postgres_exporter** not installed. To enable PostgreSQL monitoring:\n\n1. Add postgres_exporter as a sidecar to the postgres deployment\n2. Configure it to scrape PostgreSQL metrics\n3. Update Prometheus scrape config to include postgres_exporter\n\nShowing **database connection metrics** from API pods below:"
+      }
+    },
+    {
+      "id": 1,
+      "title": "Database Connections (from API)",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "sum(database_connections_active{job=\"api\"})",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 80,
+                "color": "yellow"
+              },
+              {
+                "value": 100,
+                "color": "red"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Database Connections Over Time",
+      "type": "graph",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "database_connections_active{job=\"api\"}",
+          "legendFormat": "{{pod}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "xaxis": {
+        "show": true,
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "show": true,
+          "format": "short",
+          "label": "Connections"
+        },
+        {
+          "show": true,
+          "format": "short"
+        }
+      ]
+    }
+  ]
+}

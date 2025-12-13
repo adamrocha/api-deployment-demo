@@ -1,0 +1,99 @@
+{
+  "title": "Nginx Traffic & Performance",
+  "tags": ["nginx", "web"],
+  "timezone": "browser",
+  "schemaVersion": 16,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 99,
+      "title": "⚠️ Nginx Metrics Unavailable",
+      "type": "text",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 4
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**nginx-prometheus-exporter** not installed. To enable Nginx monitoring:\n\n1. Add nginx-prometheus-exporter as a sidecar to nginx deployment\n2. Configure nginx stub_status module\n3. Update Prometheus scrape config to include nginx-exporter\n\nShowing **HTTP request metrics** from API pods below:"
+      }
+    },
+    {
+      "id": 1,
+      "title": "HTTP Request Rate",
+      "type": "graph",
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job=\"api\"}[1m])",
+          "legendFormat": "{{method}} {{endpoint}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "xaxis": {
+        "show": true,
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "show": true,
+          "format": "reqps",
+          "label": "Requests/sec"
+        },
+        {
+          "show": true,
+          "format": "short"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "HTTP Status Codes",
+      "type": "graph",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job=\"api\"}[1m])",
+          "legendFormat": "{{status_code}}",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "xaxis": {
+        "show": true,
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "show": true,
+          "format": "reqps",
+          "label": "Requests/sec"
+        },
+        {
+          "show": true,
+          "format": "short"
+        }
+      ]
+    }
+  ]
+}

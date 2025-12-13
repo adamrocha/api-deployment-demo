@@ -28,6 +28,8 @@ resource "docker_container" "postgres" {
     aliases = ["postgres"]
   }
 
+  # ⚠️ SECURITY: Secrets are passed as environment variables
+  # For production, consider using Docker secrets or external secret management
   env = [
     "POSTGRES_DB=api_staging",
     "POSTGRES_USER=postgres",
@@ -74,6 +76,8 @@ resource "docker_container" "api" {
     aliases = ["api"]
   }
 
+  # ⚠️ SECURITY: Secrets are passed as environment variables
+  # For production, consider using Docker secrets or external secret management
   env = [
     "DATABASE_URL=postgresql://postgres:${var.db_password}@postgres:5432/api_staging",
     "API_ENV=staging",

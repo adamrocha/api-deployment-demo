@@ -31,6 +31,16 @@ resource "kubernetes_secret" "database" {
   }
 
   type = "Opaque"
+  
+  # Mark as immutable for security - prevents accidental modifications
+  immutable = true
+  
+  lifecycle {
+    # Prevent accidental deletion of secrets
+    prevent_destroy = false  # Set to true in production
+    # Ignore changes to annotations that might be added by external tools
+    ignore_changes = [metadata[0].annotations]
+  }
 }
 
 # Kubernetes Secret for API
@@ -47,6 +57,16 @@ resource "kubernetes_secret" "api" {
   }
 
   type = "Opaque"
+  
+  # Mark as immutable for security - prevents accidental modifications
+  immutable = true
+  
+  lifecycle {
+    # Prevent accidental deletion of secrets
+    prevent_destroy = false  # Set to true in production
+    # Ignore changes to annotations that might be added by external tools
+    ignore_changes = [metadata[0].annotations]
+  }
 }
 
 # PostgreSQL Deployment
@@ -137,6 +157,64 @@ resource "kubernetes_deployment" "postgres" {
             period_seconds        = 10
           }
         }
+
+        # PostgreSQL Exporter Sidecar
+        container {
+          name  = "postgres-exporter"
+          image = "prometheuscommunity/postgres-exporter:latest"
+
+          env {
+            name = "POSTGRES_USER"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.database[0].metadata[0].name
+                key  = "db-user"
+              }
+            }
+          }
+
+          env {
+            name = "POSTGRES_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.database[0].metadata[0].name
+                key  = "db-password"
+              }
+            }
+          }
+
+          env {
+            name = "POSTGRES_DB"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.database[0].metadata[0].name
+                key  = "db-name"
+              }
+            }
+          }
+
+          env {
+            name  = "DATA_SOURCE_NAME"
+            # Construct DSN using secret references instead of hardcoded values
+            value = "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:5432/$(POSTGRES_DB)?sslmode=disable"
+          }
+
+          port {
+            container_port = 9187
+            name           = "metrics"
+          }
+
+          resources {
+            requests = {
+              memory = "64Mi"
+              cpu    = "50m"
+            }
+            limits = {
+              memory = "128Mi"
+              cpu    = "100m"
+            }
+          }
+        }
       }
     }
   }
@@ -180,7 +258,8 @@ resource "kubernetes_deployment" "api" {
     namespace = kubernetes_namespace.app[0].metadata[0].name
 
     labels = {
-      app = "api-demo"
+      app       = "api-demo"
+      component = "api"
     }
   }
 
@@ -189,14 +268,16 @@ resource "kubernetes_deployment" "api" {
 
     selector {
       match_labels = {
-        app = "api-demo"
+        app       = "api-demo"
+        component = "api"
       }
     }
 
     template {
       metadata {
         labels = {
-          app = "api-demo"
+          app       = "api-demo"
+          component = "api"
         }
       }
 
@@ -313,7 +394,8 @@ resource "kubernetes_service" "api" {
 
   spec {
     selector = {
-      app = "api-demo"
+      app       = "api-demo"
+      component = "api"
     }
 
     port {
@@ -342,7 +424,8 @@ resource "kubernetes_service" "api_alias" {
 
   spec {
     selector = {
-      app = "api-demo"
+      app       = "api-demo"
+      component = "api"
     }
 
     port {
@@ -485,6 +568,32 @@ resource "kubernetes_deployment" "nginx" {
             capabilities {
               drop = ["NET_RAW"]
               add  = ["CHOWN", "SETUID", "SETGID", "DAC_OVERRIDE", "FOWNER", "NET_BIND_SERVICE"]
+            }
+          }
+        }
+
+        # Nginx Prometheus Exporter Sidecar
+        container {
+          name  = "nginx-exporter"
+          image = "nginx/nginx-prometheus-exporter:latest"
+
+          args = [
+            "-nginx.scrape-uri=http://localhost:80/stub_status"
+          ]
+
+          port {
+            container_port = 9113
+            name           = "metrics"
+          }
+
+          resources {
+            requests = {
+              memory = "32Mi"
+              cpu    = "50m"
+            }
+            limits = {
+              memory = "64Mi"
+              cpu    = "100m"
             }
           }
         }

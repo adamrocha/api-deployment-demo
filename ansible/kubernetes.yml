@@ -22,6 +22,7 @@
     - name: Display kubectl version
       debug:
         msg: "Using {{ kubectl_version.stdout_lines[0] }}"
+      when: kubectl_version.stdout_lines | length > 0
     
     - name: Check cluster connectivity
       command: kubectl cluster-info

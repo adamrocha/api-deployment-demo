@@ -2,7 +2,7 @@
 
 ## Three-Layer Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │               MAKE (Orchestration)               │
 │  Simple commands for complex workflows           │
@@ -56,31 +56,34 @@
 
 ```bash
 # Full deployment (recommended)
-make deploy-production-full
+make deploy
 
 # Or step by step
-make tf-production          # Terraform provisions
-make ansible-k8s-all        # Ansible configures
+make apply              # Terraform provisions
+make config             # Ansible configures
 ```
 
 ### Configuration Update (No Infrastructure Change)
 
 ```bash
 # Scale replicas
-make ansible-k8s-config api_replicas=5
+make scale COMPONENT=api REPLICAS=5
 
-# Tune database
-make ansible-k8s-tune db_shared_buffers=512MB
+# Apply configuration
+make config
+
+# Tune deployments
+make tune
 ```
 
 ### Infrastructure Update
 
 ```bash
 # Review changes
-make tf-plan-production
+make plan
 
 # Apply changes
-make tf-production
+make apply
 ```
 
 ### Quick Operations
@@ -103,16 +106,16 @@ kubectl top pods -n api-deployment-demo
 
 | Task | Terraform | Ansible | Make |
 |------|-----------|---------|------|
-| Deploy everything | `terraform apply` | N/A | `make deploy-production-full` |
-| Scale API to 3 | Change code + apply | `ansible-playbook ... -e api_replicas=3` | `make ansible-k8s-config api_replicas=3` |
-| Update env var | Change code + apply | `ansible-playbook ...` | `make ansible-k8s-config` |
-| Add new service | Add resource + apply | N/A | `make tf-production` |
-| Tune performance | N/A | `ansible-playbook --tags tuning` | `make ansible-k8s-tune` |
-| Destroy | `terraform destroy` | N/A | `make tf-destroy-production` |
+| Deploy everything | `terraform apply` | N/A | `make deploy` |
+| Scale API to 3 | Change code + apply | `ansible-playbook ... -e api_replicas=3` | `make scale COMPONENT=api REPLICAS=3` |
+| Update env var | Change code + apply | `ansible-playbook ...` | `make config` |
+| Add new service | Add resource + apply | N/A | `make apply` |
+| Tune performance | N/A | `ansible-playbook --tags tuning` | `make tune` |
+| Destroy | `terraform destroy` | N/A | `make destroy` |
 
 ## File Locations
 
-```
+```text
 api-deployment-demo/
 ├── terraform/              # Infrastructure as Code
 │   ├── production.tf       # Production Kubernetes resources
@@ -153,10 +156,10 @@ export ANSIBLE_TAGS="config,tuning"
 cd terraform && terraform validate
 
 # Check state
-make tf-output
+make output
 
 # Clean and reinitialize
-make tf-clean && make tf-init
+make clean-tf && make init
 ```
 
 ### Ansible Issues
@@ -192,19 +195,18 @@ kubectl get events -n api-deployment-demo --sort-by='.lastTimestamp'
 
 ```bash
 # Deployment
-make deploy-production-full    # Complete production deployment
-make deploy-staging-full       # Complete staging deployment
+make deploy                    # Complete production deployment
+make staging                   # Docker Compose staging deployment
 
 # Configuration
-make ansible-k8s-config        # Apply configuration
-make ansible-k8s-tune          # Apply tuning
-make ansible-k8s-all           # Both config and tuning
+make config                    # Apply configuration
+make tune                      # Apply tuning
+make ansible                   # Both config and tuning
 
 # Infrastructure
-make tf-production             # Terraform apply production
-make tf-staging                # Terraform apply staging
-make tf-plan-production        # Review changes
-make tf-output                 # Show outputs
+make apply                     # Terraform apply
+make plan                      # Review changes
+make output                    # Show outputs
 
 # CI/CD
 make ci-pipeline               # Build, test, deploy staging

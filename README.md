@@ -77,7 +77,7 @@ make production
 | **Nginx** | 2 pods | Reverse proxy, SSL termination, load balancer |
 | **PostgreSQL** | 1 pod | Persistent database (StatefulSet) |
 | **Prometheus** | 1 pod | Metrics collection and alerting |
-| **Grafana** | 1 pod | Monitoring dashboards and visualization |
+| **Grafana** | 1 pod | Dashboards with 4 auto-provisioned dashboards |
 
 ### Access Points
 
@@ -114,17 +114,18 @@ make events             # View recent cluster events
 ### Monitoring & Logs
 
 ```bash
-make logs-api-once      # API logs (snapshot)
-make logs-nginx-once    # Nginx logs (snapshot)
-make monitoring-forward # Port forward monitoring stack
+make logs-api           # API logs (follow)
+make logs-nginx         # Nginx logs (follow)
+make forward            # Port forward monitoring stack
 ```
 
 ### Scaling & Testing
 
 ```bash
-make scale-api REPLICAS=5   # Scale API pods
-make test-load              # Run load test
-make test-traffic           # Generate traffic
+make scale COMPONENT=api REPLICAS=5  # Scale API pods
+make scale COMPONENT=nginx REPLICAS=3 # Scale Nginx pods
+make test-load                        # Run load test
+make test-traffic                     # Generate traffic
 ```
 
 ### Cleanup
@@ -132,23 +133,24 @@ make test-traffic           # Generate traffic
 ```bash
 make clean-all          # Remove everything (cluster + images)
 make cluster-delete     # Delete Kind cluster only
-make tf-destroy         # Destroy Terraform resources
+make destroy            # Destroy Terraform resources
 ```
 
 ### Terraform
 
 ```bash
-make tf-init            # Initialize Terraform
-make tf-plan            # Preview changes
-make tf-apply           # Apply infrastructure
-make tf-output          # View outputs
+make init               # Initialize Terraform
+make plan               # Preview changes
+make apply              # Apply infrastructure
+make output             # View outputs
 ```
 
 ### Ansible
 
 ```bash
-make ansible-config     # Apply Kubernetes configuration
-make ansible-tune       # Enable autoscaling and tuning
+make config             # Apply Kubernetes configuration
+make tune               # Enable autoscaling and tuning
+make ansible            # Run all Ansible playbooks
 ```
 
 **Full list**: Run `make help`
@@ -204,6 +206,28 @@ Internet/localhost → Kind Cluster → Nginx (:80/:443) → API (:8000) → Pos
 
 ## Configuration
 
+### Security & Secrets Setup
+
+**⚠️ IMPORTANT**: Never commit secrets to version control!
+
+```bash
+# 1. Generate strong secrets
+openssl rand -base64 32    # For DB_PASSWORD
+openssl rand -base64 32    # For SECRET_KEY
+
+# 2. For Terraform, copy and customize
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with secure values
+```
+
+**Security Features:**
+
+- ✅ Kubernetes secrets marked as immutable
+- ✅ All sensitive variables marked `sensitive = true`
+- ✅ `.gitignore` excludes all secret files
+- ✅ Comprehensive security guide: [SECRETS-SECURITY.md](docs/SECRETS-SECURITY.md)
+
 ### Environment Variables
 
 Auto-generated `.env` file:
@@ -223,12 +247,17 @@ SSL_ENABLED=true
 - **Terraform**: Provisions TLS certificates and Kubernetes secrets
 - **Kubernetes**: Stores credentials securely (`kubectl get secrets -n production`)
 - **Commands**: `make secrets-tls` (regenerate TLS)
+- **Best Practices**: See [SECRETS-SECURITY.md](docs/SECRETS-SECURITY.md) for production recommendations
 
 ### Monitoring Configuration
 
 - **Prometheus**: Scrapes metrics from API, Nginx, PostgreSQL (port 9090)
-- **Grafana**: Pre-configured dashboards for API performance and system metrics
+- **Grafana**: 4 auto-provisioned dashboards (API, Infrastructure, Database, Nginx)
+- **Auto-Deployment**: Dashboards loaded automatically via ConfigMaps
+- **Access**: Navigate to Dashboards → Browse → API Demo folder
 - **Metrics**: `http_requests_total`, `http_request_duration_seconds`, CPU/memory usage
+
+**Verify Setup**: Run `./scripts/verify-monitoring.sh`
 
 ---
 
@@ -257,7 +286,7 @@ make logs-api-once
 
 ```bash
 ```bash
-make docker-images && make load-images
+make build && make load-images
 docker exec -it api-demo-cluster-control-plane crictl images
 ```
 
@@ -266,16 +295,15 @@ docker exec -it api-demo-cluster-control-plane crictl images
 ```bash
 ```bash
 # Services have 3-5min timeouts configured
-make tf-apply           # Retry
+make apply              # Retry
 make cluster-info       # Check cluster health
 ```
 
 **Monitoring not accessible**:
 
 ```bash
-```bash
-kubectl get pods -n production | grep -E 'grafana|prometheus'
-make monitoring-forward
+kubectl get pods -n monitoring | grep -E 'grafana|prometheus'
+make forward
 ```
 
 **Database connection issues**:
@@ -318,6 +346,7 @@ kubectl rollout restart deployment <name> -n production
 - 📚 **[QUICK-REFERENCE.md](docs/QUICK-REFERENCE.md)** - Command cheat sheet
 - 🔄 **[CI-CD-WORKFLOWS.md](docs/CI-CD-WORKFLOWS.md)** - Pipeline details
 - 🏗️ **[DEPLOYMENT-METHODS.md](docs/DEPLOYMENT-METHODS.md)** - Method comparison
+- 🔐 **[SECRETS-SECURITY.md](docs/SECRETS-SECURITY.md)** - Secrets management & security best practices
 
 ### External Links
 

@@ -31,10 +31,10 @@ This project supports three deployment methods. Choose based on your needs:
 **Quick Start:**
 
 ```bash
-make tf-staging      # Deploy staging
-make tf-production   # Deploy production
-make tf-output       # View outputs
-make tf-clean        # Clean Terraform state
+make staging         # Deploy staging
+make apply           # Deploy production
+make output          # View outputs
+make clean-tf        # Clean Terraform state
 ```
 
 **Pros:**
@@ -134,17 +134,16 @@ ansible/
 
 ```bash
 # Automated pipeline
-make test-automated
+make test
 
 # Manual deployments
 make staging
-make production
-make monitoring
+make deploy
+make forward
 
 # Status and logs
 make status
-make staging-logs
-make production-logs
+make logs
 
 # Cleanup
 make clean-staging

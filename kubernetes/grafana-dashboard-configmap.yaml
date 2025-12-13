@@ -63,9 +63,25 @@ data:
               "custom": {
                 "drawStyle": "line",
                 "lineWidth": 2,
-                "fillOpacity": 10
+                "fillOpacity": 10,
+                "axisPlacement": "auto",
+                "axisLabel": "Requests/sec",
+                "axisShow": true,
+                "axisGridShow": true,
+                "scaleDistribution": {"type": "linear"}
               },
               "unit": "reqps"
+            }
+          },
+          "options": {
+            "legend": {
+              "showLegend": true,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
             }
           },
           "gridPos": {"h": 8, "w": 10, "x": 6, "y": 0}
@@ -110,8 +126,24 @@ data:
               "unit": "s",
               "custom": {
                 "drawStyle": "line",
-                "lineWidth": 2
+                "lineWidth": 2,
+                "axisPlacement": "auto",
+                "axisLabel": "Duration (seconds)",
+                "axisShow": true,
+                "axisGridShow": true,
+                "scaleDistribution": {"type": "linear"}
               }
+            }
+          },
+          "options": {
+            "legend": {
+              "showLegend": true,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
             }
           },
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
@@ -190,8 +222,24 @@ data:
               "custom": {
                 "drawStyle": "line",
                 "lineWidth": 2,
-                "fillOpacity": 50
+                "fillOpacity": 50,
+                "axisPlacement": "auto",
+                "axisLabel": "Status (0=down, 1=up)",
+                "axisShow": true,
+                "axisGridShow": true,
+                "scaleDistribution": {"type": "linear"}
               }
+            }
+          },
+          "options": {
+            "legend": {
+              "showLegend": true,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "none"
             }
           },
           "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}
@@ -212,8 +260,24 @@ data:
               "unit": "reqps",
               "custom": {
                 "drawStyle": "line",
-                "lineWidth": 2
+                "lineWidth": 2,
+                "axisPlacement": "auto",
+                "axisLabel": "Requests/sec",
+                "axisShow": true,
+                "axisGridShow": true,
+                "scaleDistribution": {"type": "linear"}
               }
+            }
+          },
+          "options": {
+            "legend": {
+              "showLegend": true,
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
             }
           },
           "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}

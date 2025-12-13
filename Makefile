@@ -11,6 +11,22 @@
 ENV ?= production
 CLUSTER_NAME := api-demo-cluster
 NAMESPACE := api-deployment-demo
+MONITORING_NS := monitoring
+TF_DIR := terraform
+ANSIBLE_DIR := ansible
+
+# Port forward settings
+GRAFANA_PORT := 3000
+PROMETHEUS_PORT := 9090
+API_PORT := 8000
+
+# Image settings
+API_IMAGE := api-deployment-demo-api:latest
+NGINX_IMAGE := api-deployment-demo-nginx:latest
+IMAGES := $(API_IMAGE) $(NGINX_IMAGE)
+
+# Terraform variables
+TF_VARS := -var="environment=$(ENV)" -var="enable_monitoring=true"
 
 # =============================================================================
 # Help
@@ -21,38 +37,58 @@ help: ## Show this help message
 	@echo "============================================"
 	@echo ""
 	@echo "📋 Quick Start:"
-	@echo "  make quick-start          # Complete setup from scratch"
-	@echo "  make production           # Deploy production (Terraform + Ansible)"
+	@echo "  make deploy               # Full deployment (build + terraform + config)"
 	@echo "  make status               # Check deployment status"
+	@echo "  make urls                 # Show access URLs"
+	@echo "  make forward              # Enable monitoring access"
 	@echo ""
-	@echo "🔨 Build & Deploy:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
+	@echo "🔨 Build & Infrastructure:"
+	@echo "  make build                # Build Docker images"
+	@echo "  make cluster              # Create Kind cluster"
+	@echo "  make apply                # Deploy with Terraform"
+	@echo "  make config               # Apply Ansible configuration"
+	@echo ""
+	@echo "📊 Monitoring & Logs:"
+	@echo "  make logs                 # Show all logs"
+	@echo "  make logs-api             # Show API logs (follow)"
+	@echo "  make health               # Check health"
+	@echo ""
+	@echo "🧪 Testing:"
+	@echo "  make test                 # Run tests"
+	@echo "  make test-traffic         # Generate traffic"
+	@echo "  make validate             # Validate configs"
 	@echo ""
 	@echo "🧹 Cleanup:"
-	@echo "  make clean                # Remove deployments (keep cluster)"
-	@echo "  make clean-all            # Remove everything including cluster"
+	@echo "  make clean                # Remove deployments"
+	@echo "  make clean-all            # Nuclear cleanup"
+	@echo ""
+	@echo "💡 More commands: make help-all"
+
+help-all: ## Show all available commands
+	@echo "🚀 API Deployment Demo - All Commands"
+	@echo "======================================"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 # =============================================================================
 # Docker Images
 # =============================================================================
 
-docker-images: ## Build Docker images for API and Nginx
+build: ## Build Docker images for API and Nginx
 	@echo "🔨 Building Docker images..."
-	@docker build -t api-deployment-demo-api:latest api/
-	@docker build -t api-deployment-demo-nginx:latest nginx/
+	@docker build -t $(API_IMAGE) api/
+	@docker build -t $(NGINX_IMAGE) nginx/
 	@echo "✅ Images built successfully"
 
-load-images: docker-images ## Load images into Kind cluster
+load-images: build ## Load images into Kind cluster
 	@echo "📤 Loading images into Kind cluster..."
-	@kind load docker-image api-deployment-demo-api:latest --name $(CLUSTER_NAME)
-	@kind load docker-image api-deployment-demo-nginx:latest --name $(CLUSTER_NAME)
+	@for img in $(IMAGES); do kind load docker-image $$img --name $(CLUSTER_NAME); done
 	@echo "✅ Images loaded into cluster"
 
 # =============================================================================
 # Cluster Management
 # =============================================================================
 
-cluster-create: ## Create Kind Kubernetes cluster
+cluster: ## Create Kind Kubernetes cluster
 	@echo "🏗️  Creating Kind cluster..."
 	@if kind get clusters 2>/dev/null | grep -q $(CLUSTER_NAME); then \
 		echo "✅ Cluster $(CLUSTER_NAME) already exists"; \
@@ -68,134 +104,102 @@ cluster-delete: ## Delete Kind cluster
 
 cluster-info: ## Show cluster information
 	@kubectl cluster-info --context kind-$(CLUSTER_NAME)
-	@echo ""
 	@kubectl get nodes
 
 # =============================================================================
 # Terraform Infrastructure
 # =============================================================================
 
-tf-init: ## Initialize Terraform
+init: ## Initialize Terraform
 	@echo "🔧 Initializing Terraform..."
-	@cd terraform && terraform init
+	@cd $(TF_DIR) && terraform init
 
-tf-plan: tf-init ## Plan infrastructure changes
+plan: init ## Plan infrastructure changes
 	@echo "📋 Planning Terraform changes..."
-	@cd terraform && terraform plan \
-		-var="environment=$(ENV)" \
-		-var="enable_monitoring=true"
+	@cd $(TF_DIR) && terraform plan $(TF_VARS)
 
-tf-apply: tf-init cluster-create ## Apply Terraform infrastructure
+apply: init cluster ## Apply Terraform infrastructure
 	@echo "🚀 Deploying infrastructure with Terraform..."
-	@cd terraform && terraform apply \
-		-var="environment=$(ENV)" \
-		-var="enable_monitoring=true" \
-		-auto-approve
+	@cd $(TF_DIR) && terraform apply $(TF_VARS) -auto-approve
 	@echo "✅ Infrastructure deployed"
 
-tf-destroy: ## Destroy Terraform infrastructure
+destroy: ## Destroy Terraform infrastructure
 	@echo "🗑️  Destroying infrastructure..."
-	@cd terraform && terraform destroy \
-		-var="environment=$(ENV)" \
-		-auto-approve
+	@cd $(TF_DIR) && terraform destroy $(TF_VARS) -auto-approve
 	@echo "✅ Infrastructure destroyed"
 
-tf-output: ## Show Terraform outputs
-	@echo "📊 Terraform Outputs"
-	@echo "===================="
-	@echo ""
-	@cd terraform && terraform output -json | jq -r '"🏗️  Infrastructure:", "  Cluster:     " + .cluster_name.value, "  Environment: " + .environment.value, "  Namespace:   " + .namespace.value, "", "🐳 Docker Images:", "  API:   " + .docker_images.value.api, "  Nginx: " + .docker_images.value.nginx, "", "🌐 Production URLs:", "  Web (HTTP):       " + .production_urls.value.web, "  Web (HTTPS):      " + .production_urls.value.web_https, "  API Direct:       " + .production_urls.value.api, "  API via Nginx:    " + .production_urls.value.api_via_nginx, "  API Docs:         " + .production_urls.value.api_docs, "", "📊 Monitoring:", "  Prometheus: " + .production_urls.value.prometheus, "  Grafana:    " + .production_urls.value.grafana'
-
-tf-clean: ## Clean Terraform state files
-	@echo "🧹 Cleaning Terraform state..."
-	@rm -rf terraform/.terraform terraform/.terraform.lock.hcl
-	@rm -f terraform/terraform.tfstate terraform/terraform.tfstate.backup
-	@echo "✅ Terraform state cleaned"
+output: ## Show Terraform outputs
+	@cd $(TF_DIR) && terraform output -json | jq -r '"🏗️  Cluster: " + .cluster_name.value, "🌐 Environment: " + .environment.value, "📦 Namespace: " + .namespace.value, "", "🌐 URLs:", "  Web:       https://localhost", "  API:       http://localhost:$(API_PORT)", "  Docs:      http://localhost:$(API_PORT)/docs", "  Grafana:   http://localhost:$(GRAFANA_PORT) (admin/admin)", "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"'
 
 # =============================================================================
 # Ansible Configuration Management
 # =============================================================================
 
-ansible-config: ## Configure Kubernetes resources with Ansible
-	@echo "🔧 Configuring Kubernetes with Ansible..."
-	@cd ansible && ansible-playbook kubernetes.yml \
-		-e "environment=$(ENV)" \
-		--tags config
-	@echo "✅ Configuration applied"
+config: ## Configure Kubernetes resources with Ansible
+	@echo "🔧 Configuring with Ansible..."
+	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags config
 
-ansible-tune: ## Tune and optimize deployments
-	@echo "⚡ Optimizing deployments with Ansible..."
-	@cd ansible && ansible-playbook kubernetes.yml \
-		-e "environment=$(ENV)" \
-		--tags tuning
-	@echo "✅ Optimization complete"
+tune: ## Tune and optimize deployments
+	@echo "⚡ Optimizing with Ansible..."
+	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags tuning
 
-ansible-all: ## Run all Ansible playbooks
-	@echo "🚀 Running complete Ansible configuration..."
-	@cd ansible && ansible-playbook kubernetes.yml \
-		-e "environment=$(ENV)"
-	@echo "✅ Ansible configuration complete"
+ansible: ## Run all Ansible playbooks
+	@echo "🚀 Running Ansible configuration..."
+	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)"
 
-ansible-validate: ## Validate Ansible configuration
-	@cd ansible && ./validate-ansible.sh
+validate-ansible: ## Validate Ansible configuration
+	@cd $(ANSIBLE_DIR) && ./validate-ansible.sh
 
 # =============================================================================
-# Integrated Deployment Workflows
+# Deployment Workflows
 # =============================================================================
 
-production: docker-images tf-apply ansible-config ## Deploy production environment (full workflow)
-	@echo ""
-	@echo "✅ Production deployment complete!"
-	@$(MAKE) show-urls
+deploy: build apply config ## Full production deployment
+	@$(MAKE) urls
+
+production: deploy ## Alias for deploy
 
 staging: ## Deploy staging environment (Docker Compose)
 	@echo "🐳 Starting staging with Docker Compose..."
 	@docker compose up -d
-	@echo "✅ Staging started"
-	@echo ""
-	@echo "🌐 Staging URLs:"
+	@echo "✅ Staging URLs:"
 	@echo "  HTTPS: https://localhost:30443"
 	@echo "  API:   http://localhost:30800"
 
-quick-start: production ## Complete setup from scratch
-	@echo "🎉 Environment ready!"
+quick-start: deploy ## Complete setup from scratch
 
 # =============================================================================
 # Monitoring & Observability
 # =============================================================================
 
-monitoring-forward: ## Start port forwarding for monitoring
+forward: ## Start port forwarding for monitoring
 	@echo "🚀 Starting port forwarding..."
-	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
+	@pkill -f "kubectl.*port-forward.*(grafana|prometheus)" 2>/dev/null || true
 	@sleep 1
-	@kubectl port-forward -n monitoring svc/grafana 3000:3000 > /dev/null 2>&1 &
-	@kubectl port-forward -n monitoring svc/prometheus 9090:9090 > /dev/null 2>&1 &
-	@echo "✅ Port forwarding active"
-	@echo "  Grafana:    http://localhost:3000"
-	@echo "  Prometheus: http://localhost:9090"
+	@kubectl port-forward -n $(MONITORING_NS) svc/grafana $(GRAFANA_PORT):$(GRAFANA_PORT) > /dev/null 2>&1 &
+	@kubectl port-forward -n $(MONITORING_NS) svc/prometheus $(PROMETHEUS_PORT):$(PROMETHEUS_PORT) > /dev/null 2>&1 &
+	@echo "✅ Monitoring available:"
+	@echo "  Grafana:    http://localhost:$(GRAFANA_PORT)"
+	@echo "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"
 
-monitoring-stop: ## Stop port forwarding
-	@pkill -f "kubectl.*port-forward.*monitoring" 2>/dev/null || true
+forward-stop: ## Stop port forwarding
+	@pkill -f "kubectl.*port-forward" 2>/dev/null || true
 	@echo "✅ Port forwarding stopped"
 
-logs-api: ## Show API logs (follow mode)
-	@kubectl logs -n $(NAMESPACE) -l app=api-demo -l '!component' --tail=50 -f
+logs: ## Show all application logs
+	@kubectl logs -n $(NAMESPACE) -l app=api-demo --tail=50 --all-containers=true
 
-logs-api-once: ## Show API logs (no follow)
-	@kubectl logs -n $(NAMESPACE) -l app=api-demo -l '!component' --tail=50
+logs-api: ## Show API logs (follow)
+	@kubectl logs -n $(NAMESPACE) -l app=api-demo,component=api --tail=50 -f
 
-logs-nginx: ## Show Nginx logs (follow mode)
+logs-nginx: ## Show Nginx logs (follow)
 	@kubectl logs -n $(NAMESPACE) -l app=api-demo,component=nginx --tail=50 -f
 
-logs-nginx-once: ## Show Nginx logs (no follow)
-	@kubectl logs -n $(NAMESPACE) -l app=api-demo,component=nginx --tail=50
+logs-grafana: ## Show Grafana logs
+	@kubectl logs -n $(MONITORING_NS) -l app=grafana --tail=50
 
-logs-monitoring: ## Show monitoring logs
-	@echo "📊 Grafana logs:"
-	@kubectl logs -n monitoring -l app=grafana --tail=20
-	@echo ""
-	@echo "📊 Prometheus logs:"
-	@kubectl logs -n monitoring -l app=prometheus --tail=20
+logs-prometheus: ## Show Prometheus logs
+	@kubectl logs -n $(MONITORING_NS) -l app=prometheus --tail=50
 
 # =============================================================================
 # Status & Health Checks
@@ -204,15 +208,11 @@ logs-monitoring: ## Show monitoring logs
 status: ## Show deployment status
 	@echo "📊 Deployment Status"
 	@echo "===================="
-	@echo ""
 	@if kind get clusters 2>/dev/null | grep -q $(CLUSTER_NAME); then \
 		echo "🏗️  Cluster: ✅ Running"; \
 		echo ""; \
-		echo "📦 Application Pods:"; \
-		kubectl get pods -n $(NAMESPACE) 2>/dev/null || echo "  No pods found"; \
-		echo ""; \
-		echo "📊 Monitoring Pods:"; \
-		kubectl get pods -n monitoring 2>/dev/null || echo "  No pods found"; \
+		echo "📦 Pods:"; \
+		kubectl get pods -n $(NAMESPACE) -n $(MONITORING_NS) 2>/dev/null || echo "  No pods found"; \
 		echo ""; \
 		echo "🌐 Services:"; \
 		kubectl get svc -n $(NAMESPACE) 2>/dev/null || echo "  No services found"; \
@@ -221,66 +221,46 @@ status: ## Show deployment status
 	fi
 
 health: ## Check application health
-	@echo "🏥 Health Checks"
-	@echo "================"
-	@echo ""
-	@printf "API Health:     "
-	@if curl -sf http://localhost:8000/health >/dev/null 2>&1; then echo "✅ OK"; else echo "❌ Not responding"; fi
-	@printf "Web Frontend:   "
-	@if curl -sfk https://localhost:443 >/dev/null 2>&1; then echo "✅ OK"; else echo "❌ Not responding"; fi
-	@printf "Grafana:        "
-	@if curl -sf http://localhost:3000/api/health >/dev/null 2>&1; then echo "✅ OK"; else echo "⚠️  Not forwarded (run: make monitoring-forward)"; fi
-	@printf "Prometheus:     "
-	@if curl -sf http://localhost:9090/-/healthy >/dev/null 2>&1; then echo "✅ OK"; else echo "⚠️  Not forwarded (run: make monitoring-forward)"; fi
+	@printf "API:        "; curl -sf http://localhost:$(API_PORT)/health >/dev/null 2>&1 && echo "✅" || echo "❌"
+	@printf "Web:        "; curl -sfk https://localhost >/dev/null 2>&1 && echo "✅" || echo "❌"
+	@printf "Grafana:    "; curl -sf http://localhost:$(GRAFANA_PORT)/api/health >/dev/null 2>&1 && echo "✅" || echo "⚠️  (run: make forward)"
+	@printf "Prometheus: "; curl -sf http://localhost:$(PROMETHEUS_PORT)/-/healthy >/dev/null 2>&1 && echo "✅" || echo "⚠️  (run: make forward)"
 
-show-urls: ## Display access URLs
-	@echo ""
+urls: ## Display access URLs
 	@echo "🌐 Access URLs"
 	@echo "=============="
-	@echo "Production:"
-	@echo "  Web:        https://localhost (or http://localhost)"
-	@echo "  API:        http://localhost:8000"
-	@echo "  API Health: http://localhost:8000/health"
-	@echo "  API Docs:   http://localhost:8000/docs"
+	@echo "  Web:        https://localhost"
+	@echo "  API:        http://localhost:$(API_PORT)"
+	@echo "  API Docs:   http://localhost:$(API_PORT)/docs"
+	@echo "  Grafana:    http://localhost:$(GRAFANA_PORT) (admin/admin)"
+	@echo "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"
 	@echo ""
-	@echo "Monitoring (requires port-forward):"
-	@echo "  Grafana:    http://localhost:3000 (admin/admin)"
-	@echo "  Prometheus: http://localhost:9090"
-	@echo ""
-	@echo "💡 Run 'make monitoring-forward' to enable monitoring access"
+	@echo "💡 Run 'make forward' for monitoring access"
 
 # =============================================================================
 # Testing & Validation
 # =============================================================================
 
-test: ## Run all tests
-	@echo "🧪 Running tests..."
+test: ## Run deployment tests
 	@./scripts/test-automated-deployment.sh
 
 test-load: ## Run load test
-	@echo "🚦 Running load test..."
 	@./scripts/load-test.sh
 
 test-traffic: ## Generate test traffic
-	@echo "🚦 Generating traffic..."
 	@./scripts/generate-traffic.sh
 
 validate: ## Validate all configurations
-	@echo "✅ Validating configurations..."
-	@docker compose config >/dev/null && echo "✅ Docker Compose valid"
-	@cd ansible && ./validate-ansible.sh
-	@for script in scripts/*.sh; do bash -n "$$script" && echo "✅ $$script valid"; done
+	@echo "✅ Validating..."
+	@docker compose config >/dev/null && echo "  ✅ Docker Compose"
+	@cd $(ANSIBLE_DIR) && ./validate-ansible.sh
+	@for script in scripts/*.sh; do bash -n "$$script" 2>/dev/null && echo "  ✅ $$script"; done
 
 # =============================================================================
 # Secrets Management
 # =============================================================================
 
-secrets-generate: ## Generate Kubernetes secrets
-	@echo "🔐 Generating secrets..."
-	@./scripts/generate-secrets.sh $(ENV)
-
-secrets-apply: ## Apply secrets to cluster
-	@echo "🔐 Applying secrets..."
+secrets: ## Generate and apply secrets
 	@APPLY=true ./scripts/generate-secrets.sh $(ENV)
 
 secrets-tls: ## Generate TLS secrets
@@ -293,58 +273,40 @@ secrets-tls: ## Generate TLS secrets
 clean: ## Clean deployments (keep cluster and images)
 	@echo "🧹 Cleaning deployments..."
 	@kubectl delete namespace $(NAMESPACE) --ignore-not-found=true
-	@kubectl delete namespace monitoring --ignore-not-found=true
-	@$(MAKE) monitoring-stop
+	@kubectl delete namespace $(MONITORING_NS) --ignore-not-found=true
+	@$(MAKE) forward-stop
 	@echo "✅ Deployments cleaned"
 
 clean-staging: ## Clean staging environment
-	@echo "🧹 Cleaning staging..."
 	@docker compose down -v
-	@echo "✅ Staging cleaned"
 
-clean-all: ## Nuclear cleanup - remove everything
+clean-tf: ## Clean Terraform state files
+	@echo "🧹 Cleaning Terraform state..."
+	@rm -rf $(TF_DIR)/.terraform $(TF_DIR)/.terraform.lock.hcl
+	@rm -f $(TF_DIR)/terraform.tfstate $(TF_DIR)/terraform.tfstate.backup
+
+clean-all: ## Complete cleanup - remove everything
 	@echo "💥 Complete cleanup..."
-	@echo "⚠️  This will remove:"
-	@echo "   • All deployments and namespaces"
-	@echo "   • Kind cluster"
-	@echo "   • Docker images"
-	@echo "   • Terraform state"
-	@echo ""
+	@echo "⚠️  This removes: deployments, cluster, images, terraform state"
 	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
-	@echo ""
-	@echo "🧹 Stopping services..."
 	@docker compose down -v 2>/dev/null || true
-	@$(MAKE) monitoring-stop
-	@echo "🗑️  Deleting cluster..."
+	@$(MAKE) forward-stop
 	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
-	@echo "🐳 Removing Docker images..."
-	@docker images --format "{{.Repository}}:{{.Tag}}" | grep "^api-deployment-demo" | xargs -r docker rmi -f 2>/dev/null || true
-	@echo "🗑️  Removing dangling images..."
-	@docker image prune -f 2>/dev/null || true
-	@$(MAKE) tf-clean
-	@pkill -f "kubectl.*port-forward" 2>/dev/null || true
+	@docker images "api-deployment-demo*" -q | xargs -r docker rmi -f 2>/dev/null || true
+	@docker rmi -f postgres:15-alpine prometheuscommunity/postgres-exporter:latest nginx/nginx-prometheus-exporter:latest 2>/dev/null || true
+	@docker image prune -f >/dev/null 2>&1
+	@$(MAKE) clean-tf
 	@echo "✅ Complete cleanup finished"
 
 # =============================================================================
-# Development Shortcuts
+# Development & Operations
 # =============================================================================
 
-dev: staging ## Start development environment
-	@echo "✅ Development environment ready"
-
 restart: ## Restart all deployments
-	@echo "🔄 Restarting deployments..."
-	@kubectl rollout restart deployment -n $(NAMESPACE)
-	@kubectl rollout restart deployment -n monitoring
-	@echo "✅ Restarts initiated"
+	@kubectl rollout restart deployment -n $(NAMESPACE) -n $(MONITORING_NS)
 
-scale-api: ## Scale API deployment (REPLICAS=3)
-	@kubectl scale deployment/api-deployment -n $(NAMESPACE) --replicas=$(or $(REPLICAS),3)
-	@echo "✅ API scaled to $(or $(REPLICAS),3) replicas"
-
-scale-nginx: ## Scale Nginx deployment (REPLICAS=2)
-	@kubectl scale deployment/nginx-deployment -n $(NAMESPACE) --replicas=$(or $(REPLICAS),2)
-	@echo "✅ Nginx scaled to $(or $(REPLICAS),2) replicas"
+scale: ## Scale deployments (COMPONENT=api|nginx REPLICAS=3)
+	@kubectl scale deployment/$(COMPONENT)-deployment -n $(NAMESPACE) --replicas=$(REPLICAS)
 
 pods: ## List all pods
 	@kubectl get pods -A
@@ -352,24 +314,8 @@ pods: ## List all pods
 events: ## Show recent cluster events
 	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' | tail -20
 
-describe-api: ## Describe API deployment
-	@kubectl describe deployment api-deployment -n $(NAMESPACE)
+describe: ## Describe deployment (COMPONENT=api|nginx)
+	@kubectl describe deployment $(COMPONENT)-deployment -n $(NAMESPACE)
 
-describe-nginx: ## Describe Nginx deployment
-	@kubectl describe deployment nginx-deployment -n $(NAMESPACE)
-
-# =============================================================================
-# CI/CD Workflows
-# =============================================================================
-
-ci-build: docker-images ## CI: Build images
-	@echo "✅ Build complete"
-
-ci-deploy: production ## CI: Deploy to production
-	@echo "✅ Deployment complete"
-
-ci-test: test ## CI: Run tests
-	@echo "✅ Tests complete"
-
-ci-pipeline: ci-build ci-test ci-deploy ## CI: Full pipeline
-	@echo "✅ CI/CD pipeline complete"
+shell: ## Open shell in pod (COMPONENT=api|nginx)
+	@kubectl exec -it -n $(NAMESPACE) deployment/$(COMPONENT)-deployment -- sh

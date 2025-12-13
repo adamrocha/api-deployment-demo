@@ -248,7 +248,7 @@ fi
 
 echo "🌐 Testing ingress endpoint: $INGRESS_ADDRESS"
 
-# Port forward for local testing if needed
+# Use direct access for local testing
 if [[ "$INGRESS_ADDRESS" == "localhost" ]]; then
     echo "🔌 Using kind cluster ports (8080/8443)..."
     TEST_URL="http://localhost:8080"
@@ -274,9 +274,6 @@ if curl -s -I "$TEST_URL" -H "Host: api-demo.staging.local" >/dev/null 2>&1; the
 else
     echo -e "${YELLOW}⚠️  Ingress may not be fully ready (normal for new deployments)${NC}"
 fi
-
-# Clean up port forward if we started it
-# (No longer needed for kind cluster)
 
 echo ""
 
@@ -365,9 +362,9 @@ echo "3. Monitor the deployment:"
 echo "   kubectl get pods -n $NAMESPACE -w"
 echo "   kubectl logs -f deployment/api-deployment -n $NAMESPACE"
 echo ""
-echo "4. Access monitoring (if Prometheus/Grafana are deployed):"
-echo "   kubectl port-forward svc/prometheus 9090:9090"
-echo "   kubectl port-forward svc/grafana 3000:3000"
+echo "4. Access monitoring (if deployed):"
+echo "   Grafana:    http://localhost:3000 (admin/admin)"
+echo "   Prometheus: http://localhost:9090"
 
 echo ""
 echo -e "${GREEN}🎉 Production Kubernetes deployment test completed successfully!${NC}"

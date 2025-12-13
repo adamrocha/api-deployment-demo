@@ -116,7 +116,6 @@ make events             # View recent cluster events
 ```bash
 make logs-api           # API logs (follow)
 make logs-nginx         # Nginx logs (follow)
-make forward            # Port forward monitoring stack
 ```
 
 ### Scaling & Testing

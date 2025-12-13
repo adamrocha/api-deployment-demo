@@ -15,7 +15,7 @@ MONITORING_NS := monitoring
 TF_DIR := terraform
 ANSIBLE_DIR := ansible
 
-# Port forward settings
+# Port settings
 GRAFANA_PORT := 3000
 PROMETHEUS_PORT := 9090
 API_PORT := 8000
@@ -40,7 +40,6 @@ help: ## Show this help message
 	@echo "  make deploy               # Full deployment (build + terraform + config)"
 	@echo "  make status               # Check deployment status"
 	@echo "  make urls                 # Show access URLs"
-	@echo "  make forward              # Enable monitoring access"
 	@echo ""
 	@echo "🔨 Build & Infrastructure:"
 	@echo "  make build                # Build Docker images"
@@ -175,20 +174,6 @@ quick-start: deploy ## Complete setup from scratch
 # Monitoring & Observability
 # =============================================================================
 
-forward: ## Start port forwarding for monitoring
-	@echo "🚀 Starting port forwarding..."
-	@pkill -f "kubectl.*port-forward.*(grafana|prometheus)" 2>/dev/null || true
-	@sleep 1
-	@kubectl port-forward -n $(MONITORING_NS) svc/grafana $(GRAFANA_PORT):$(GRAFANA_PORT) > /dev/null 2>&1 &
-	@kubectl port-forward -n $(MONITORING_NS) svc/prometheus $(PROMETHEUS_PORT):$(PROMETHEUS_PORT) > /dev/null 2>&1 &
-	@echo "✅ Monitoring available:"
-	@echo "  Grafana:    http://localhost:$(GRAFANA_PORT)"
-	@echo "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"
-
-forward-stop: ## Stop port forwarding
-	@pkill -f "kubectl.*port-forward" 2>/dev/null || true
-	@echo "✅ Port forwarding stopped"
-
 logs: ## Show all application logs
 	@kubectl logs -n $(NAMESPACE) -l app=api-demo --tail=50 --all-containers=true
 
@@ -226,8 +211,8 @@ status: ## Show deployment status
 health: ## Check application health
 	@printf "API:        "; curl -sf http://localhost:$(API_PORT)/health >/dev/null 2>&1 && echo "✅" || echo "❌"
 	@printf "Web:        "; curl -sfk https://localhost >/dev/null 2>&1 && echo "✅" || echo "❌"
-	@printf "Grafana:    "; curl -sf http://localhost:$(GRAFANA_PORT)/api/health >/dev/null 2>&1 && echo "✅" || echo "⚠️  (run: make forward)"
-	@printf "Prometheus: "; curl -sf http://localhost:$(PROMETHEUS_PORT)/-/healthy >/dev/null 2>&1 && echo "✅" || echo "⚠️  (run: make forward)"
+	@printf "Grafana:    "; curl -sf http://localhost:$(GRAFANA_PORT)/api/health >/dev/null 2>&1 && echo "✅" || echo "❌"
+	@printf "Prometheus: "; curl -sf http://localhost:$(PROMETHEUS_PORT)/-/healthy >/dev/null 2>&1 && echo "✅" || echo "❌"
 
 urls: ## Display access URLs
 	@echo "🌐 Access URLs"
@@ -237,8 +222,6 @@ urls: ## Display access URLs
 	@echo "  API Docs:   http://localhost:$(API_PORT)/docs"
 	@echo "  Grafana:    http://localhost:$(GRAFANA_PORT) (admin/admin)"
 	@echo "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"
-	@echo ""
-	@echo "💡 Run 'make forward' for monitoring access"
 
 # =============================================================================
 # Testing & Validation
@@ -277,7 +260,6 @@ clean: ## Clean deployments (keep cluster and images)
 	@echo "🧹 Cleaning deployments..."
 	@kubectl delete namespace $(NAMESPACE) --ignore-not-found=true
 	@kubectl delete namespace $(MONITORING_NS) --ignore-not-found=true
-	@$(MAKE) forward-stop
 	@echo "✅ Deployments cleaned"
 
 clean-staging: ## Clean staging environment
@@ -293,7 +275,6 @@ clean-all: ## Complete cleanup - remove everything
 	@echo "⚠️  This removes: deployments, cluster, images, terraform state"
 	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
 	@docker compose down -v 2>/dev/null || true
-	@$(MAKE) forward-stop
 	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
 	@docker images "api-deployment-demo*" -q | xargs -r docker rmi -f 2>/dev/null || true
 	@docker rmi -f postgres:15-alpine prometheuscommunity/postgres-exporter:latest nginx/nginx-prometheus-exporter:latest 2>/dev/null || true

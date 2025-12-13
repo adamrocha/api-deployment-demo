@@ -125,6 +125,9 @@ apply: init cluster ## Apply Terraform infrastructure
 
 destroy: ## Destroy Terraform infrastructure
 	@echo "🗑️  Destroying infrastructure..."
+
+	@docker compose down -v 2>/dev/null || true
+	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
 	@cd $(TF_DIR) && terraform destroy $(TF_VARS) -auto-approve
 	@echo "✅ Infrastructure destroyed"
 

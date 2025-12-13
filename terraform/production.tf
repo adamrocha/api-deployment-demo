@@ -2,7 +2,7 @@
 # Only created when environment = "production"
 
 # Kubernetes Namespace
-resource "kubernetes_namespace" "app" {
+resource "kubernetes_namespace_v1" "app" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
@@ -16,12 +16,12 @@ resource "kubernetes_namespace" "app" {
 }
 
 # Kubernetes Secret for Database
-resource "kubernetes_secret" "database" {
+resource "kubernetes_secret_v1" "database" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "database-credentials"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
   }
 
   data = {
@@ -31,25 +31,25 @@ resource "kubernetes_secret" "database" {
   }
 
   type = "Opaque"
-  
+
   # Mark as immutable for security - prevents accidental modifications
   immutable = true
-  
+
   lifecycle {
     # Prevent accidental deletion of secrets
-    prevent_destroy = false  # Set to true in production
+    prevent_destroy = false # Set to true in production
     # Ignore changes to annotations that might be added by external tools
     ignore_changes = [metadata[0].annotations]
   }
 }
 
 # Kubernetes Secret for API
-resource "kubernetes_secret" "api" {
+resource "kubernetes_secret_v1" "api" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "api-secrets"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
   }
 
   data = {
@@ -57,25 +57,25 @@ resource "kubernetes_secret" "api" {
   }
 
   type = "Opaque"
-  
+
   # Mark as immutable for security - prevents accidental modifications
   immutable = true
-  
+
   lifecycle {
     # Prevent accidental deletion of secrets
-    prevent_destroy = false  # Set to true in production
+    prevent_destroy = false # Set to true in production
     # Ignore changes to annotations that might be added by external tools
     ignore_changes = [metadata[0].annotations]
   }
 }
 
 # PostgreSQL Deployment
-resource "kubernetes_deployment" "postgres" {
+resource "kubernetes_deployment_v1" "postgres" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "postgres"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
 
     labels = {
       app = "postgres"
@@ -107,7 +107,7 @@ resource "kubernetes_deployment" "postgres" {
             name = "POSTGRES_DB"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-name"
               }
             }
@@ -117,7 +117,7 @@ resource "kubernetes_deployment" "postgres" {
             name = "POSTGRES_USER"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-user"
               }
             }
@@ -127,7 +127,7 @@ resource "kubernetes_deployment" "postgres" {
             name = "POSTGRES_PASSWORD"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-password"
               }
             }
@@ -167,7 +167,7 @@ resource "kubernetes_deployment" "postgres" {
             name = "POSTGRES_USER"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-user"
               }
             }
@@ -177,7 +177,7 @@ resource "kubernetes_deployment" "postgres" {
             name = "POSTGRES_PASSWORD"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-password"
               }
             }
@@ -187,14 +187,14 @@ resource "kubernetes_deployment" "postgres" {
             name = "POSTGRES_DB"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-name"
               }
             }
           }
 
           env {
-            name  = "DATA_SOURCE_NAME"
+            name = "DATA_SOURCE_NAME"
             # Construct DSN using secret references instead of hardcoded values
             value = "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:5432/$(POSTGRES_DB)?sslmode=disable"
           }
@@ -221,12 +221,12 @@ resource "kubernetes_deployment" "postgres" {
 }
 
 # PostgreSQL Service
-resource "kubernetes_service" "postgres" {
+resource "kubernetes_service_v1" "postgres" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "postgres"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
   }
 
   spec {
@@ -246,16 +246,16 @@ resource "kubernetes_service" "postgres" {
     create = "3m"
   }
 
-  depends_on = [kubernetes_deployment.postgres]
+  depends_on = [kubernetes_deployment_v1.postgres]
 }
 
 # API Deployment
-resource "kubernetes_deployment" "api" {
+resource "kubernetes_deployment_v1" "api" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "api-deployment"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
 
     labels = {
       app       = "api-demo"
@@ -296,7 +296,7 @@ resource "kubernetes_deployment" "api" {
             name = "DB_PASSWORD"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-password"
               }
             }
@@ -316,7 +316,7 @@ resource "kubernetes_deployment" "api" {
             name = "DB_NAME"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.database[0].metadata[0].name
+                name = kubernetes_secret_v1.database[0].metadata[0].name
                 key  = "db-name"
               }
             }
@@ -326,7 +326,7 @@ resource "kubernetes_deployment" "api" {
             name = "SECRET_KEY"
             value_from {
               secret_key_ref {
-                name = kubernetes_secret.api[0].metadata[0].name
+                name = kubernetes_secret_v1.api[0].metadata[0].name
                 key  = "secret-key"
               }
             }
@@ -380,16 +380,16 @@ resource "kubernetes_deployment" "api" {
     update = "10m"
   }
 
-  depends_on = [kubernetes_deployment.postgres]
+  depends_on = [kubernetes_deployment_v1.postgres]
 }
 
 # API Service
-resource "kubernetes_service" "api" {
+resource "kubernetes_service_v1" "api" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "api-service"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
   }
 
   spec {
@@ -414,12 +414,12 @@ resource "kubernetes_service" "api" {
 
 # API Service Alias (for Nginx compatibility)
 # Nginx config expects to resolve "api:8000"
-resource "kubernetes_service" "api_alias" {
+resource "kubernetes_service_v1" "api_alias" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "api"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
   }
 
   spec {
@@ -453,7 +453,7 @@ resource "null_resource" "apply_configmaps" {
     EOT
   }
 
-  depends_on = [kubernetes_namespace.app]
+  depends_on = [kubernetes_namespace_v1.app]
 
   triggers = {
     configmaps_hash = filesha1("${path.module}/../kubernetes/configmaps.yaml")
@@ -463,12 +463,12 @@ resource "null_resource" "apply_configmaps" {
 }
 
 # Nginx Deployment (Enhanced to match Make method)
-resource "kubernetes_deployment" "nginx" {
+resource "kubernetes_deployment_v1" "nginx" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "nginx-deployment"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
     labels = {
       app       = "api-demo"
       component = "nginx"
@@ -632,16 +632,16 @@ resource "kubernetes_deployment" "nginx" {
     update = "10m"
   }
 
-  depends_on = [kubernetes_deployment.api, null_resource.ssl_certs, null_resource.apply_configmaps]
+  depends_on = [kubernetes_deployment_v1.api, null_resource.ssl_certs, null_resource.apply_configmaps]
 }
 
 # Nginx Service (LoadBalancer type to match Make method)
-resource "kubernetes_service" "nginx" {
+resource "kubernetes_service_v1" "nginx" {
   count = var.environment == "production" ? 1 : 0
 
   metadata {
     name      = "nginx-service"
-    namespace = kubernetes_namespace.app[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.app[0].metadata[0].name
     labels = {
       app       = "api-demo"
       component = "nginx"
@@ -680,5 +680,5 @@ resource "kubernetes_service" "nginx" {
   # Don't wait for LoadBalancer external IP in Kind cluster
   wait_for_load_balancer = false
 
-  depends_on = [kubernetes_deployment.nginx]
+  depends_on = [kubernetes_deployment_v1.nginx]
 }

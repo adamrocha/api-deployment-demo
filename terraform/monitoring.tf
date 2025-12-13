@@ -1,7 +1,7 @@
 # Monitoring Stack - Prometheus & Grafana
 # Only deployed in production when enable_monitoring = true
 
-resource "kubernetes_namespace" "monitoring" {
+resource "kubernetes_namespace_v1" "monitoring" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
@@ -15,12 +15,12 @@ resource "kubernetes_namespace" "monitoring" {
 }
 
 # Prometheus ConfigMap
-resource "kubernetes_config_map" "prometheus_config" {
+resource "kubernetes_config_map_v1" "prometheus_config" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "prometheus-config"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 
   data = {
@@ -105,12 +105,12 @@ resource "kubernetes_config_map" "prometheus_config" {
 }
 
 # Prometheus Deployment
-resource "kubernetes_deployment" "prometheus" {
+resource "kubernetes_deployment_v1" "prometheus" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "prometheus"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 
   spec {
@@ -130,7 +130,7 @@ resource "kubernetes_deployment" "prometheus" {
       }
 
       spec {
-        service_account_name = kubernetes_service_account.prometheus[0].metadata[0].name
+        service_account_name = kubernetes_service_account_v1.prometheus[0].metadata[0].name
 
         container {
           name  = "prometheus"
@@ -184,21 +184,21 @@ resource "kubernetes_deployment" "prometheus" {
     }
   }
 
-  depends_on = [kubernetes_config_map.prometheus_config]
+  depends_on = [kubernetes_config_map_v1.prometheus_config]
 }
 
 # Prometheus ServiceAccount
-resource "kubernetes_service_account" "prometheus" {
+resource "kubernetes_service_account_v1" "prometheus" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "prometheus"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 }
 
 # Prometheus ClusterRole
-resource "kubernetes_cluster_role" "prometheus" {
+resource "kubernetes_cluster_role_v1" "prometheus" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
@@ -225,7 +225,7 @@ resource "kubernetes_cluster_role" "prometheus" {
 }
 
 # Prometheus ClusterRoleBinding
-resource "kubernetes_cluster_role_binding" "prometheus" {
+resource "kubernetes_cluster_role_binding_v1" "prometheus" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
@@ -235,23 +235,23 @@ resource "kubernetes_cluster_role_binding" "prometheus" {
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.prometheus[0].metadata[0].name
+    name      = kubernetes_cluster_role_v1.prometheus[0].metadata[0].name
   }
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.prometheus[0].metadata[0].name
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    name      = kubernetes_service_account_v1.prometheus[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 }
 
 # Prometheus Service
-resource "kubernetes_service" "prometheus" {
+resource "kubernetes_service_v1" "prometheus" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "prometheus"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 
   spec {
@@ -274,12 +274,12 @@ resource "kubernetes_service" "prometheus" {
 }
 
 # Grafana Deployment
-resource "kubernetes_deployment" "grafana" {
+resource "kubernetes_deployment_v1" "grafana" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 
   spec {
@@ -409,22 +409,22 @@ resource "kubernetes_deployment" "grafana" {
   }
 
   depends_on = [
-    kubernetes_config_map.grafana_dashboards_provisioning,
-    kubernetes_config_map.grafana_dashboard_api_performance,
-    kubernetes_config_map.grafana_dashboard_infrastructure,
-    kubernetes_config_map.grafana_dashboard_database,
-    kubernetes_config_map.grafana_dashboard_nginx_traffic,
-    kubernetes_config_map.grafana_datasource_provisioning
+    kubernetes_config_map_v1.grafana_dashboards_provisioning,
+    kubernetes_config_map_v1.grafana_dashboard_api_performance,
+    kubernetes_config_map_v1.grafana_dashboard_infrastructure,
+    kubernetes_config_map_v1.grafana_dashboard_database,
+    kubernetes_config_map_v1.grafana_dashboard_nginx_traffic,
+    kubernetes_config_map_v1.grafana_datasource_provisioning
   ]
 }
 
 # Grafana Service
-resource "kubernetes_service" "grafana" {
+resource "kubernetes_service_v1" "grafana" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 
   spec {
@@ -447,12 +447,12 @@ resource "kubernetes_service" "grafana" {
 }
 
 # Grafana Dashboard Provisioning ConfigMap
-resource "kubernetes_config_map" "grafana_dashboards_provisioning" {
+resource "kubernetes_config_map_v1" "grafana_dashboards_provisioning" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana-dashboards-provisioning"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 
   data = {
@@ -473,12 +473,12 @@ resource "kubernetes_config_map" "grafana_dashboards_provisioning" {
 }
 
 # Grafana Dashboard ConfigMaps
-resource "kubernetes_config_map" "grafana_dashboard_api_performance" {
+resource "kubernetes_config_map_v1" "grafana_dashboard_api_performance" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana-dashboard-api-performance"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
     labels = {
       grafana_dashboard = "1"
     }
@@ -489,12 +489,12 @@ resource "kubernetes_config_map" "grafana_dashboard_api_performance" {
   }
 }
 
-resource "kubernetes_config_map" "grafana_dashboard_infrastructure" {
+resource "kubernetes_config_map_v1" "grafana_dashboard_infrastructure" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana-dashboard-infrastructure"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
     labels = {
       grafana_dashboard = "1"
     }
@@ -505,12 +505,12 @@ resource "kubernetes_config_map" "grafana_dashboard_infrastructure" {
   }
 }
 
-resource "kubernetes_config_map" "grafana_dashboard_database" {
+resource "kubernetes_config_map_v1" "grafana_dashboard_database" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana-dashboard-database"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
     labels = {
       grafana_dashboard = "1"
     }
@@ -521,12 +521,12 @@ resource "kubernetes_config_map" "grafana_dashboard_database" {
   }
 }
 
-resource "kubernetes_config_map" "grafana_dashboard_nginx_traffic" {
+resource "kubernetes_config_map_v1" "grafana_dashboard_nginx_traffic" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana-dashboard-nginx-traffic"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
     labels = {
       grafana_dashboard = "1"
     }
@@ -538,12 +538,12 @@ resource "kubernetes_config_map" "grafana_dashboard_nginx_traffic" {
 }
 
 # Prometheus Data Source Provisioning
-resource "kubernetes_config_map" "grafana_datasource_provisioning" {
+resource "kubernetes_config_map_v1" "grafana_datasource_provisioning" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "grafana-datasource-provisioning"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 
   data = {
@@ -565,17 +565,17 @@ resource "kubernetes_config_map" "grafana_datasource_provisioning" {
 # ============================================================================
 
 # ServiceAccount for kube-state-metrics
-resource "kubernetes_service_account" "kube_state_metrics" {
+resource "kubernetes_service_account_v1" "kube_state_metrics" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "kube-state-metrics"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 }
 
 # ClusterRole for kube-state-metrics
-resource "kubernetes_cluster_role" "kube_state_metrics" {
+resource "kubernetes_cluster_role_v1" "kube_state_metrics" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
@@ -620,7 +620,7 @@ resource "kubernetes_cluster_role" "kube_state_metrics" {
 }
 
 # ClusterRoleBinding for kube-state-metrics
-resource "kubernetes_cluster_role_binding" "kube_state_metrics" {
+resource "kubernetes_cluster_role_binding_v1" "kube_state_metrics" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
@@ -630,23 +630,23 @@ resource "kubernetes_cluster_role_binding" "kube_state_metrics" {
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.kube_state_metrics[0].metadata[0].name
+    name      = kubernetes_cluster_role_v1.kube_state_metrics[0].metadata[0].name
   }
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.kube_state_metrics[0].metadata[0].name
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    name      = kubernetes_service_account_v1.kube_state_metrics[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
   }
 }
 
 # kube-state-metrics Deployment
-resource "kubernetes_deployment" "kube_state_metrics" {
+resource "kubernetes_deployment_v1" "kube_state_metrics" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "kube-state-metrics"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
 
     labels = {
       app       = "kube-state-metrics"
@@ -672,7 +672,7 @@ resource "kubernetes_deployment" "kube_state_metrics" {
       }
 
       spec {
-        service_account_name = kubernetes_service_account.kube_state_metrics[0].metadata[0].name
+        service_account_name = kubernetes_service_account_v1.kube_state_metrics[0].metadata[0].name
 
         container {
           name  = "kube-state-metrics"
@@ -723,12 +723,12 @@ resource "kubernetes_deployment" "kube_state_metrics" {
 }
 
 # kube-state-metrics Service
-resource "kubernetes_service" "kube_state_metrics" {
+resource "kubernetes_service_v1" "kube_state_metrics" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "kube-state-metrics"
-    namespace = kubernetes_namespace.monitoring[0].metadata[0].name
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
 
     labels = {
       app       = "kube-state-metrics"

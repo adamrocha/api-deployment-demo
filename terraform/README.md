@@ -227,7 +227,7 @@ terraform import docker_image.api api-deployment-demo-api:latest
 ## Comparison: Terraform vs Ansible
 
 | Aspect | Terraform | Ansible |
-|--------|-----------|---------|
+| --- | --- | --- |
 | **Purpose** | Infrastructure as Code | Configuration Management |
 | **State** | Managed state file | Stateless |
 | **Declarative** | Yes | No (procedural) |

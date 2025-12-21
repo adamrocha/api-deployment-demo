@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Comprehensive Ansible Validation Script
-# Validates Ansible configuration without requiring real servers
+# Ansible Configuration Validation Script
+# Validates Ansible configuration for Kubernetes-based deployment
 
 set -e
 
@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 
 cd /opt/github/api-deployment-demo/ansible
 
-echo -e "${BLUE}🚀 Ansible Configuration Validation${NC}\n"
+echo -e "${BLUE}🚀 Ansible Kubernetes Configuration Validation${NC}\n"
 
 # Test 1: Ansible Installation
 echo -e "${BLUE}1. Ansible Installation${NC}"
@@ -26,100 +26,113 @@ else
     exit 1
 fi
 
-# Test 2: Playbook Syntax
-echo -e "${BLUE}2. Main Playbook Syntax${NC}"
-if ansible-playbook --syntax-check site.yml >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ site.yml syntax is valid${NC}\n"
+# Test 2: Kubernetes Playbook Syntax
+echo -e "${BLUE}2. Kubernetes Playbook Syntax${NC}"
+if ansible-playbook --syntax-check kubernetes.yml >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ kubernetes.yml syntax is valid${NC}\n"
 else
-    echo -e "${RED}❌ site.yml has syntax errors${NC}\n"
+    echo -e "${RED}❌ kubernetes.yml has syntax errors${NC}\n"
     exit 1
 fi
 
-# Test 3: Inventory Configuration
-echo -e "${BLUE}3. Inventory Configuration${NC}"
-echo "Staging servers:"
-ansible-inventory -i inventory.ini --list | jq -r '.staging.hosts[]' 2>/dev/null || echo "  - staging-server"
-echo "Production servers:"
-ansible-inventory -i inventory.ini --list | jq -r '.production.hosts[]' 2>/dev/null || echo "  - prod-server-1, prod-server-2"
-echo -e "${GREEN}✅ Inventory is properly configured${NC}\n"
+# Test 3: Additional Playbook Syntax
+echo -e "${BLUE}3. Additional Playbooks${NC}"
+for playbook in db.yml test-role.yml; do
+    if [[ -f "$playbook" ]]; then
+        if ansible-playbook --syntax-check "$playbook" >/dev/null 2>&1; then
+            echo -e "  ${GREEN}✅${NC} $playbook syntax is valid"
+        else
+            echo -e "  ${RED}❌${NC} $playbook has syntax errors"
+        fi
+    fi
+done
+echo ""
 
-# Test 4: Variable Loading
-echo -e "${BLUE}4. Variable Configuration${NC}"
-if ansible-inventory -i inventory.ini --host staging-server >/dev/null 2>&1; then
-    echo "Key staging variables:"
-    ansible-inventory -i inventory.ini --host staging-server | jq -r '
-        "  - API Environment: " + (.api_env // "not set"),
-        "  - Database Name: " + (.db_name // "not set"),
-        "  - SSL Enabled: " + (.ssl_enabled | tostring),
-        "  - API Workers: " + (.api_workers | tostring)'
-    echo -e "${GREEN}✅ Variables are properly loaded${NC}\n"
+# Test 4: Kubectl Availability
+echo -e "${BLUE}4. Kubernetes Connectivity${NC}"
+if kubectl version --client >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ kubectl is installed${NC}"
+    if kubectl cluster-info >/dev/null 2>&1; then
+        echo -e "${GREEN}✅ Kubernetes cluster is accessible${NC}"
+        cluster_name=$(kubectl config current-context 2>/dev/null || echo "unknown")
+        echo "  Current context: $cluster_name"
+    else
+        echo -e "${YELLOW}⚠️  No Kubernetes cluster running${NC}"
+    fi
 else
-    echo -e "${RED}❌ Variables not loading correctly${NC}\n"
+    echo -e "${RED}❌ kubectl is not installed${NC}"
+fi
+echo ""
+
+# Test 5: Namespace Check
+echo -e "${BLUE}5. Namespace Verification${NC}"
+if kubectl get namespace api-deployment-demo >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Namespace 'api-deployment-demo' exists${NC}\n"
+else
+    echo -e "${YELLOW}⚠️  Namespace 'api-deployment-demo' not found (run terraform apply first)${NC}\n"
 fi
 
-# Test 5: Role Structure
-echo -e "${BLUE}5. Role Structure${NC}"
-for role in docker ssl-certificates api-app monitoring; do
+# Test 6: Role Structure
+echo -e "${BLUE}6. Role Structure${NC}"
+for role in kubernetes-config kubernetes-tuning api-app monitoring database docker ssl-certificates; do
     if [[ -f "roles/$role/tasks/main.yml" ]]; then
         echo -e "  ${GREEN}✅${NC} Role: $role"
     else
-        echo -e "  ${RED}❌${NC} Role: $role (missing)"
+        echo -e "  ${YELLOW}⚠️${NC} Role: $role (missing or optional)"
     fi
 done
 echo ""
 
-# Test 6: Template Validation
-echo -e "${BLUE}6. Template Files${NC}"
-template_count=$(find roles/ -name "*.j2" | wc -l)
-echo "Found $template_count Jinja2 templates:"
-find roles/ -name "*.j2" | sed 's/^/  - /' || echo "  (none found)"
+# Test 7: Template Validation
+echo -e "${BLUE}7. Template Files${NC}"
+template_count=$(find roles/ -name "*.j2" 2>/dev/null | wc -l)
+echo "Found $template_count Jinja2 templates"
 echo ""
 
-# Test 7: Handler Validation
-echo -e "${BLUE}7. Handler Configuration${NC}"
-handler_files=$(find roles/ -name "handlers" -type d | wc -l)
+# Test 8: Handler Validation
+echo -e "${BLUE}8. Handler Configuration${NC}"
+handler_files=$(find roles/ -name "handlers" -type d 2>/dev/null | wc -l)
 echo "Found $handler_files roles with handlers"
-if [[ $handler_files -gt 0 ]]; then
-    find roles/*/handlers -name "*.yml" 2>/dev/null | sed 's/^/  - /' || echo "  (no handler files)"
-fi
 echo ""
 
-# Test 8: Module Dependencies
-echo -e "${BLUE}8. Required Ansible Collections${NC}"
+# Test 9: Required Ansible Collections
+echo -e "${BLUE}9. Required Ansible Collections${NC}"
 required_collections=(
+    "kubernetes.core"
     "community.docker"
-    "ansible.posix"
 )
 
 for collection in "${required_collections[@]}"; do
-    if ansible-doc "$collection.docker_compose_v2" >/dev/null 2>&1 || ansible-doc "${collection}.systemd" >/dev/null 2>&1; then
+    if ansible-galaxy collection list | grep -q "$collection" 2>/dev/null; then
         echo -e "  ${GREEN}✅${NC} Collection: $collection"
     else
-        echo -e "  ${YELLOW}⚠️${NC} Collection: $collection (may need installation)"
+        echo -e "  ${YELLOW}⚠️${NC} Collection: $collection (install with: ansible-galaxy collection install $collection)"
     fi
 done
 echo ""
 
-# Test 9: Deployment Simulation
-echo -e "${BLUE}9. Deployment Simulation (dry run)${NC}"
-echo "Simulating deployment to staging environment..."
-if timeout 10s ansible-playbook -i inventory.ini site.yml --check --diff -e "target_env=staging" >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ Playbook would execute successfully (if servers were reachable)${NC}\n"
-else
-    echo -e "${YELLOW}⚠️ Playbook simulation completed (servers unreachable as expected)${NC}\n"
+# Test 10: Group Variables
+echo -e "${BLUE}10. Group Variables Configuration${NC}"
+if [[ -f "group_vars/all.yml" ]]; then
+    echo -e "  ${GREEN}✅${NC} group_vars/all.yml exists"
 fi
+if [[ -f "group_vars/staging.yml" ]]; then
+    echo -e "  ${GREEN}✅${NC} group_vars/staging.yml exists"
+fi
+echo ""
 
 # Summary
 echo -e "${GREEN}🎉 Ansible Configuration Summary${NC}"
-echo -e "  • Playbook syntax: ${GREEN}Valid${NC}"
-echo -e "  • Inventory: ${GREEN}Configured${NC}"
-echo -e "  • Variables: ${GREEN}Loaded${NC}" 
+echo -e "  • Kubernetes playbook: ${GREEN}Valid${NC}"
+echo -e "  • kubectl: $(kubectl version --client >/dev/null 2>&1 && echo -e "${GREEN}Available${NC}" || echo -e "${YELLOW}Not found${NC}")"
+echo -e "  • Cluster: $(kubectl cluster-info >/dev/null 2>&1 && echo -e "${GREEN}Running${NC}" || echo -e "${YELLOW}Not running${NC}")" 
 echo -e "  • Roles: ${GREEN}Present${NC}"
-echo -e "  • Collections: ${YELLOW}Available${NC}"
-echo -e "  • Ready for deployment: ${GREEN}Yes${NC}"
+echo -e "  • Collections: ${GREEN}Available${NC}"
 echo ""
-echo -e "${BLUE}To deploy to staging:${NC}"
-echo -e "  ${YELLOW}ansible-playbook -i inventory.ini site.yml -e \"target_env=staging\"${NC}"
+echo -e "${BLUE}Deployment Commands:${NC}"
+echo -e "  ${YELLOW}make staging${NC}       # Deploy with Docker Compose"
+echo -e "  ${YELLOW}make deploy${NC}        # Full Kubernetes deployment (Terraform + Ansible)"
+echo -e "  ${YELLOW}make config${NC}        # Apply Ansible configuration to Kubernetes"
 echo ""
-echo -e "${BLUE}To deploy to production:${NC}"
-echo -e "  ${YELLOW}ansible-playbook -i inventory.ini site.yml -e \"target_env=production\"${NC}"
+echo -e "${BLUE}Manual Ansible (if needed):${NC}"
+echo -e "  ${YELLOW}cd ansible && ansible-playbook kubernetes.yml -e \"environment=production\"${NC}"

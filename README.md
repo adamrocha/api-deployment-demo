@@ -72,7 +72,7 @@ make production
 ### Production Environment
 
 | Component | Count | Purpose |
-|-----------|-------|---------|
+| --- | --- | --- |
 | **API** | 2-10 pods | FastAPI + Gunicorn (autoscales on CPU) |
 | **Nginx** | 2 pods | Reverse proxy, SSL termination, load balancer |
 | **PostgreSQL** | 1 pod | Persistent database (StatefulSet) |
@@ -82,7 +82,7 @@ make production
 ### Access Points
 
 | Service | URL | Port Mapping |
-|---------|-----|--------------|
+| --- | --- | --- |
 | Web (HTTPS) | <https://localhost> | 443 → 30443 |
 | API Direct | <http://localhost:8000> | 8000 → 30800 |
 | Grafana | <http://localhost:3000> | 3000 → 30300 |
@@ -176,7 +176,7 @@ Internet/localhost → Kind Cluster → Nginx (:80/:443) → API (:8000) → Pos
 ### Deployment Comparison
 
 | Method | Use Case | State Tracking | Idempotent | Preview |
-|--------|----------|----------------|------------|---------|
+| --- | --- | --- |
 | **Terraform** | Infrastructure provisioning | ✅ Yes | ✅ Yes | ✅ `terraform plan` |
 | **Ansible** | Configuration management | ❌ No | ✅ Yes | ⚠️ `--check` |
 | **kubectl** | Manual operations | ❌ No | ⚠️ Partial | ❌ No |

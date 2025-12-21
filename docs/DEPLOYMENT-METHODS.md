@@ -5,7 +5,7 @@ This project supports three deployment methods. Choose based on your needs:
 ## 🚀 Quick Decision Matrix
 
 | I want to... | Use |
-|-------------|-----|
+| --- | --- | --- |
 | Deploy infrastructure declaratively with state tracking | **Terraform** |
 | Automate configuration and sequential tasks | **Ansible** |
 | Quick manual operations and learning | **Make/Scripts** |
@@ -284,7 +284,7 @@ terraform apply -var="environment=staging"
 
 ## 🔧 Tool Installation
 
-### Terraform
+### Installing Terraform
 
 ```bash
 # macOS
@@ -333,7 +333,7 @@ make --version
 ## 📊 Feature Matrix
 
 | Feature | Terraform | Ansible | Make/Scripts |
-|---------|-----------|---------|--------------|
+| --- | --- | --- | --- |
 | State tracking | ✅ Yes | ❌ No | ❌ No |
 | Idempotency | ✅ Built-in | ✅ Task-level | ❌ Manual |
 | Preview changes | ✅ terraform plan | ⚠️ --check | ❌ No |
@@ -347,17 +347,17 @@ make --version
 
 ## 🎓 Learning Resources
 
-### Terraform
+### Terraform Documentation
 
 - Official: <https://learn.hashicorp.com/terraform>
 - Project: `terraform/README.md`
 
-### Ansible
+### Ansible Documentation
 
 - Official: <https://docs.ansible.com/>
 - Project: `ansible/README.md`
 
-### Make
+### Make Documentation
 
 - GNU Make: <https://www.gnu.org/software/make/manual/>
 - Project: Run `make help`

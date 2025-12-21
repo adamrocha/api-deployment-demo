@@ -56,7 +56,7 @@ This guide outlines security best practices for managing secrets, credentials, a
 ### Current Secrets in Project
 
 | Secret Type | Location | Environments | Rotation Frequency |
-|-------------|----------|--------------|-------------------|
+| --- | --- | --- | --- |
 | Database Password | `terraform.tfvars`, K8s secrets | All | 90 days |
 | API Secret Key | `terraform.tfvars`, K8s secrets | All | 90 days |
 | TLS Certificates | `nginx/ssl/`, K8s secrets | Production | 365 days |
@@ -136,8 +136,6 @@ This guide outlines security best practices for managing secrets, credentials, a
 ---
 
 ## Terraform Secrets
-
-### Current Implementation
 
 Secrets are managed via variables in `terraform.tfvars`:
 
@@ -224,8 +222,6 @@ resource "kubernetes_secret" "database" {
 
 ## Kubernetes Secrets
 
-### Security Best Practices
-
 1. **Enable Encryption at Rest**
 
    ```yaml
@@ -300,8 +296,6 @@ kubectl auth can-i get secrets --as=system:serviceaccount:default:default
 
 ## Ansible Vault
 
-### Current Implementation
-
 Sensitive data is encrypted using Ansible Vault:
 
 ```bash
@@ -334,7 +328,7 @@ ansible-playbook site.yml --ask-vault-pass
 
 2. **Separate secrets by environment**
 
-   ```
+   ```text
    group_vars/
      staging/
        vault.yml    # Encrypted staging secrets
@@ -459,7 +453,7 @@ done
 ### Rotation Schedule
 
 | Secret Type | Frequency | Automation | Priority |
-|-------------|-----------|------------|----------|
+| --- | --- | --- | --- |
 | Database Passwords | 90 days | Recommended | High |
 | API Keys | 90 days | Recommended | High |
 | TLS Certificates | 365 days | Let's Encrypt | High |
@@ -658,7 +652,7 @@ echo "🔐 Secret Key: $NEW_SECRET_KEY"
 ### Secret Management Solutions
 
 | Solution | Best For | Pricing | Integration |
-|----------|----------|---------|-------------|
+| --- | --- | --- | --- |
 | HashiCorp Vault | Multi-cloud, enterprise | Open source / Enterprise | Excellent |
 | AWS Secrets Manager | AWS environments | Pay per secret | Native AWS |
 | Azure Key Vault | Azure environments | Pay per operation | Native Azure |

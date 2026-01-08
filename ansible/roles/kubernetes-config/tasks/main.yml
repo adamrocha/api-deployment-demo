@@ -1,0 +1,87 @@
+---
+# Main tasks for kubernetes-config role
+- name: Set context to Kind cluster
+  command: kubectl config use-context {{ k8s_context }}
+  changed_when: false
+  tags: [config]
+
+- name: Verify namespace exists
+  command: kubectl get namespace {{ k8s_namespace }}
+  register: ns_check
+  failed_when: false
+  changed_when: false
+  tags: [config]
+
+- name: Scale API deployment
+  command: >
+    kubectl scale deployment api-deployment
+    --replicas={{ api_replicas }}
+    -n {{ k8s_namespace }}
+  when: api_replicas is defined
+  tags: [scaling, api]
+
+- name: Update API resource limits
+  shell: |
+    kubectl set resources deployment api-deployment \
+      --requests=cpu={{ api_cpu_request }},memory={{ api_memory_request }} \
+      --limits=cpu={{ api_cpu_limit }},memory={{ api_memory_limit }} \
+      -n {{ k8s_namespace }}
+  when: api_cpu_request is defined
+  tags: [resources, api]
+
+- name: Scale Nginx deployment
+  command: >
+    kubectl scale deployment nginx-deployment
+    --replicas={{ nginx_replicas }}
+    -n {{ k8s_namespace }}
+  when: nginx_replicas is defined
+  tags: [scaling, nginx]
+
+- name: Update Nginx resource limits
+  shell: |
+    kubectl set resources deployment nginx-deployment \
+      --requests=cpu={{ nginx_cpu_request }},memory={{ nginx_memory_request }} \
+      --limits=cpu={{ nginx_cpu_limit }},memory={{ nginx_memory_limit }} \
+      -n {{ k8s_namespace }}
+  when: nginx_cpu_request is defined
+  tags: [resources, nginx]
+
+- name: Configure API environment variables
+  shell: |
+    kubectl set env deployment/api-deployment \
+      LOG_LEVEL={{ api_log_level }} \
+      API_WORKERS={{ api_workers }} \
+      -n {{ k8s_namespace }}
+  when: api_log_level is defined
+  tags: [config, api]
+
+- name: Update database configuration
+  shell: |
+    kubectl set resources deployment postgres \
+      --requests=cpu={{ db_cpu_request }},memory={{ db_memory_request }} \
+      --limits=cpu={{ db_cpu_limit }},memory={{ db_memory_limit }} \
+      -n {{ k8s_namespace }}
+  when: db_cpu_request is defined
+  tags: [resources, database]
+
+- name: Wait for deployments to be ready
+  command: >
+    kubectl wait --for=condition=available --timeout=300s
+    deployment/{{ item }}
+    -n {{ k8s_namespace }}
+  loop:
+    - api-deployment
+    - nginx-deployment
+    - postgres
+  tags: [verification]
+
+- name: Get deployment status
+  command: kubectl get deployments -n {{ k8s_namespace }}
+  register: deployment_status
+  changed_when: false
+  tags: [verification]
+
+- name: Display deployment status
+  debug:
+    var: deployment_status.stdout_lines
+  tags: [verification]

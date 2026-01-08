@@ -298,7 +298,7 @@ restart: ## Restart all deployments
 	@kubectl rollout restart deployment -n $(MONITORING_NS)
 	@echo "✅ All deployments restarted"
 
-scale: ## Scale deployments (COMPONENT=api|nginx REPLICAS=3)
+scale: ## Scale deployments (usage: make scale COMPONENT=api REPLICAS=3)
 	@kubectl scale deployment/$(COMPONENT)-deployment -n $(NAMESPACE) --replicas=$(REPLICAS)
 
 pods: ## List all pods
@@ -307,8 +307,8 @@ pods: ## List all pods
 events: ## Show recent cluster events
 	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' | tail -20
 
-describe: ## Describe deployment (COMPONENT=api|nginx)
+describe: ## Describe deployment (usage: make describe COMPONENT=api)
 	@kubectl describe deployment $(COMPONENT)-deployment -n $(NAMESPACE)
 
-shell: ## Open shell in pod (COMPONENT=api|nginx)
+shell: ## Open shell in pod (usage: make shell COMPONENT=api)
 	@kubectl exec -it -n $(NAMESPACE) deployment/$(COMPONENT)-deployment -- sh

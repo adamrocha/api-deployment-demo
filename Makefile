@@ -118,7 +118,9 @@ plan: init ## Plan infrastructure changes
 	@cd $(TF_DIR) && terraform plan $(TF_VARS)
 
 apply: init cluster ## Apply Terraform infrastructure
-	@echo "🚀 Deploying infrastructure with Terraform..."
+	@echo "� Generating TLS certificates..."
+	@./scripts/generate-tls-secrets.sh $(NAMESPACE) nginx-ssl-certs || echo "⚠️  TLS generation skipped"
+	@echo "�🚀 Deploying infrastructure with Terraform..."
 	@cd $(TF_DIR) && terraform apply $(TF_VARS) -auto-approve
 	@echo "✅ Infrastructure deployed"
 	@echo "🔐 Ensuring secrets are up to date..."

@@ -496,7 +496,7 @@ resource "null_resource" "apply_configmaps" {
   triggers = {
     configmaps_hash = filesha1("${path.module}/../kubernetes/configmaps.yaml")
     html_hash       = filesha1("${path.module}/../kubernetes/nginx-html-configmap.yaml")
-    tls_hash        = filesha1("${path.module}/../kubernetes/tls-secret.yaml")
+    tls_hash        = try(filesha1("${path.module}/../kubernetes/tls-secret.yaml"), "not-generated")
   }
 }
 

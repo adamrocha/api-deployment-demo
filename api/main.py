@@ -9,7 +9,7 @@ import os
 import time
 import psutil
 from dotenv import load_dotenv
-from prometheus_client import Counter, Histogram, Gauge, Summary, generate_latest, CONTENT_TYPE_LATEST, Info
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, Info
 
 # Load environment variables
 load_dotenv()

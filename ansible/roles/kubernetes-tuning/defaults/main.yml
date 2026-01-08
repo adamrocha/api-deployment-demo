@@ -1,0 +1,34 @@
+---
+# Default variables for kubernetes-tuning role
+k8s_namespace: api-deployment-demo
+
+# Performance Tuning
+enable_hpa: true
+hpa_min_replicas: 2
+hpa_max_replicas: 10
+hpa_target_cpu: 70
+
+# Resource Optimization
+optimize_resources: true
+enable_pod_disruption_budget: true
+pdb_min_available: 1
+
+# Network Tuning
+enable_network_policies: false  # Can cause connectivity issues in Kind
+service_mesh_enabled: false
+
+# Monitoring and Observability
+enable_pod_annotations: true
+enable_metrics: true
+
+# Database Tuning
+db_shared_buffers: "256MB"
+db_effective_cache_size: "1GB"
+db_work_mem: "4MB"
+db_maintenance_work_mem: "64MB"
+
+# Nginx Tuning
+nginx_worker_processes: "auto"
+nginx_worker_connections: 1024
+nginx_keepalive_timeout: 65
+nginx_client_max_body_size: "10m"

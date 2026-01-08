@@ -43,33 +43,38 @@ echo ""
 # We'll hit different endpoints to create realistic load
 run_load_test() {
     local duration=$1
-    local end_time=$((SECONDS + duration))
+    local workers=20  # Number of parallel workers
     
-    while [ $SECONDS -lt $end_time ]; do
-        # Create CPU-intensive requests
-        curl -s "$API_URL/users/" > /dev/null &
-        curl -s "$API_URL/health" > /dev/null &
-        curl -s "$API_URL/docs" > /dev/null &
-        
-        # Add a CPU-intensive endpoint if available
-        curl -s -X POST "$API_URL/users/" \
-            -H "Content-Type: application/json" \
-            -d '{"name": "LoadTest User", "email": "test@example.com"}' > /dev/null &
-        
-        # Small delay to prevent overwhelming
-        sleep 0.01
+    # Function to run in each worker
+    worker() {
+        local end_time=$1
+        while [ $(date +%s) -lt $end_time ]; do
+            curl -s "$API_URL/users/" > /dev/null
+            curl -s "$API_URL/health" > /dev/null
+            curl -s -X POST "$API_URL/users/" \
+                -H "Content-Type: application/json" \
+                -d '{"name": "LoadTest", "email": "test@example.com"}' > /dev/null 2>&1 || true
+            sleep 0.1
+        done
+    }
+    
+    local end_time=$(($(date +%s) + duration))
+    
+    # Start worker processes
+    for i in $(seq 1 $workers); do
+        worker $end_time &
     done
     
-    # Wait for background jobs to complete
+    # Wait for all workers to complete
     wait
 }
 
 # Monitor scaling in background
 monitor_scaling() {
     local duration=$1
-    local end_time=$((SECONDS + duration))
+    local end_time=$(($(date +%s) + duration))
     
-    while [ $SECONDS -lt $end_time ]; do
+    while [ $(date +%s) -lt $end_time ]; do
         echo -e "${BLUE}[$(date '+%H:%M:%S')] Monitoring autoscaling...${NC}"
         
         echo "📊 HPA Status:"

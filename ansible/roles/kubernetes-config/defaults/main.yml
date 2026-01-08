@@ -1,0 +1,46 @@
+---
+# Default variables for kubernetes-config role
+k8s_namespace: api-deployment-demo
+k8s_context: kind-api-demo-cluster
+
+# API Configuration
+api_replicas: 2
+api_cpu_request: "250m"
+api_cpu_limit: "500m"
+api_memory_request: "256Mi"
+api_memory_limit: "512Mi"
+api_log_level: "info"
+api_workers: 4
+
+# Nginx Configuration  
+nginx_replicas: 2
+nginx_cpu_request: "100m"
+nginx_cpu_limit: "200m"
+nginx_memory_request: "64Mi"
+nginx_memory_limit: "128Mi"
+
+# Database Configuration
+db_replicas: 1
+db_cpu_request: "250m"
+db_cpu_limit: "500m"
+db_memory_request: "256Mi"
+db_memory_limit: "512Mi"
+db_max_connections: 100
+
+# Monitoring Configuration
+monitoring_enabled: true
+prometheus_retention: "15d"
+grafana_admin_password: "{{ lookup('env', 'GRAFANA_PASSWORD') | default('admin', true) }}"
+
+# SSL/TLS Configuration
+ssl_enabled: true
+ssl_cert_path: "{{ playbook_dir }}/../nginx/ssl"
+
+# HPA Configuration
+hpa_enabled: true
+hpa_min_replicas: 2
+hpa_max_replicas: 10
+hpa_cpu_threshold: 70
+
+# Environment
+deploy_environment: production

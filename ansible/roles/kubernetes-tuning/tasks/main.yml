@@ -1,0 +1,96 @@
+---
+# Kubernetes tuning and optimization tasks
+- name: Enable Horizontal Pod Autoscaler for API
+  shell: |
+    kubectl autoscale deployment api-deployment \
+      --min={{ hpa_min_replicas }} \
+      --max={{ hpa_max_replicas }} \
+      --cpu-percent={{ hpa_target_cpu }} \
+      -n {{ k8s_namespace }} \
+      --dry-run=client -o yaml | kubectl apply -f -
+  when: enable_hpa | bool
+  tags: [hpa, autoscaling]
+
+- name: Create Pod Disruption Budget for API
+  shell: |
+    cat <<EOF | kubectl apply -f -
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      name: api-pdb
+      namespace: {{ k8s_namespace }}
+    spec:
+      minAvailable: {{ pdb_min_available }}
+      selector:
+        matchLabels:
+          app: api-demo
+    EOF
+  when: enable_pod_disruption_budget | bool
+  tags: [pdb, availability]
+
+- name: Create Pod Disruption Budget for Nginx
+  shell: |
+    cat <<EOF | kubectl apply -f -
+    apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      name: nginx-pdb
+      namespace: {{ k8s_namespace }}
+    spec:
+      minAvailable: {{ pdb_min_available }}
+      selector:
+        matchLabels:
+          app: api-demo
+          component: nginx
+    EOF
+  when: enable_pod_disruption_budget | bool
+  tags: [pdb, availability]
+
+- name: Add pod annotations for monitoring
+  shell: |
+    kubectl annotate deployment api-deployment \
+      prometheus.io/scrape="true" \
+      prometheus.io/port="8000" \
+      prometheus.io/path="/metrics" \
+      -n {{ k8s_namespace }} \
+      --overwrite
+  when: enable_pod_annotations | bool
+  tags: [monitoring, annotations]
+
+- name: Optimize database with custom config
+  shell: |
+    kubectl set env deployment/postgres \
+      POSTGRES_SHARED_BUFFERS="{{ db_shared_buffers }}" \
+      POSTGRES_EFFECTIVE_CACHE_SIZE="{{ db_effective_cache_size }}" \
+      POSTGRES_WORK_MEM="{{ db_work_mem }}" \
+      POSTGRES_MAINTENANCE_WORK_MEM="{{ db_maintenance_work_mem }}" \
+      -n {{ k8s_namespace }}
+  when: optimize_resources | bool
+  tags: [database, tuning]
+
+- name: Get current resource usage
+  command: kubectl top pods -n {{ k8s_namespace }}
+  register: resource_usage
+  failed_when: false
+  changed_when: false
+  tags: [metrics]
+
+- name: Display resource usage
+  debug:
+    msg: "{{ resource_usage.stdout_lines }}"
+  when: resource_usage.stdout_lines is defined
+  tags: [metrics]
+
+- name: Check HPA status
+  command: kubectl get hpa -n {{ k8s_namespace }}
+  register: hpa_status
+  failed_when: false
+  changed_when: false
+  when: enable_hpa | bool
+  tags: [hpa, verification]
+
+- name: Display HPA status
+  debug:
+    msg: "{{ hpa_status.stdout_lines }}"
+  when: enable_hpa | bool and hpa_status.stdout_lines is defined
+  tags: [hpa, verification]

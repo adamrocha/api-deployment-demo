@@ -121,6 +121,9 @@ apply: init cluster ## Apply Terraform infrastructure
 	@echo "🚀 Deploying infrastructure with Terraform..."
 	@cd $(TF_DIR) && terraform apply $(TF_VARS) -auto-approve
 	@echo "✅ Infrastructure deployed"
+	@echo "🔐 Ensuring secrets are up to date..."
+	@$(MAKE) secrets
+	@echo "✅ Secrets synchronized"
 
 destroy: ## Destroy Terraform infrastructure
 	@echo "🗑️  Destroying infrastructure..."
@@ -131,7 +134,7 @@ destroy: ## Destroy Terraform infrastructure
 	@echo "✅ Infrastructure destroyed"
 
 output: ## Show Terraform outputs
-	@cd $(TF_DIR) && terraform output -json | jq -r '"🏗️  Cluster: " + .cluster_name.value, "🌐 Environment: " + .environment.value, "📦 Namespace: " + .namespace.value, "", "🌐 URLs:", "  Web:       https://localhost", "  API:       http://localhost:$(API_PORT)", "  Docs:      http://localhost:$(API_PORT)/docs", "  Grafana:   http://localhost:$(GRAFANA_PORT) (admin/admin)", "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"'
+	@cd $(TF_DIR) && terraform output -json | jq -r '"🏗️  Cluster: " + .cluster_name.value, "🌐 Environment: " + .environment.value, "📦 Namespace: " + .namespace.value, "", "🌐 URLs:", "  Web:       https://localhost", "  API:       http://localhost:$(API_PORT)", "  Docs:      http://localhost:$(API_PORT)/docs", "  Grafana:   http://localhost:$(GRAFANA_PORT) ", "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"'
 
 # =============================================================================
 # Ansible Configuration Management
@@ -220,7 +223,7 @@ urls: ## Display access URLs
 	@echo "  Web:        https://localhost"
 	@echo "  API:        http://localhost:$(API_PORT)"
 	@echo "  API Docs:   http://localhost:$(API_PORT)/docs"
-	@echo "  Grafana:    http://localhost:$(GRAFANA_PORT) (admin/admin)"
+	@echo "  Grafana:    http://localhost:$(GRAFANA_PORT)"
 	@echo "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"
 
 # =============================================================================
@@ -251,6 +254,9 @@ secrets: ## Generate and apply secrets
 
 secrets-tls: ## Generate TLS secrets
 	@./scripts/generate-tls-secrets.sh $(NAMESPACE) nginx-ssl-certs
+
+get-secrets: ## Display all passwords and credentials
+	@./scripts/get-passwords.sh
 
 # =============================================================================
 # Cleanup
@@ -287,7 +293,10 @@ clean-all: ## Complete cleanup - remove everything
 # =============================================================================
 
 restart: ## Restart all deployments
-	@kubectl rollout restart deployment -n $(NAMESPACE) -n $(MONITORING_NS)
+	@echo "🔄 Restarting deployments..."
+	@kubectl rollout restart deployment -n $(NAMESPACE)
+	@kubectl rollout restart deployment -n $(MONITORING_NS)
+	@echo "✅ All deployments restarted"
 
 scale: ## Scale deployments (COMPONENT=api|nginx REPLICAS=3)
 	@kubectl scale deployment/$(COMPONENT)-deployment -n $(NAMESPACE) --replicas=$(REPLICAS)

@@ -53,7 +53,7 @@ resource "kubernetes_secret_v1" "api" {
   }
 
   data = {
-    secret-key = var.secret_key
+    SECRET_KEY = var.secret_key
   }
 
   type = "Opaque"
@@ -365,7 +365,7 @@ resource "kubernetes_deployment_v1" "api" {
             value_from {
               secret_key_ref {
                 name = kubernetes_secret_v1.api[0].metadata[0].name
-                key  = "secret-key"
+                key  = "SECRET_KEY"
               }
             }
           }

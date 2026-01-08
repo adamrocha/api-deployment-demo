@@ -21,7 +21,7 @@ The following happens automatically:
 3. **Auto-Discovery**: Grafana automatically discovers and loads dashboards on startup
 4. **Prometheus Configured**: Prometheus data source is pre-configured and set as default
 
-**No manual import needed!** Just access Grafana at `http://localhost:3000` (admin/admin) and navigate to **Dashboards → Browse → API Demo** folder.
+**No manual import needed!** Just access Grafana at `http://localhost:3000` and navigate to **Dashboards → Browse → API Demo** folder.
 
 ---
 
@@ -186,7 +186,7 @@ kubectl rollout restart deployment/grafana -n monitoring
 
 To import dashboards manually via UI:
 
-1. Access Grafana: `http://localhost:3000` (admin/admin)
+1. Access Grafana: `http://localhost:3000`
 2. Navigate to **Dashboards** → **Import**
 3. Click **Upload JSON file**
 4. Select dashboard file from `monitoring/dashboards/`
@@ -200,7 +200,7 @@ To import dashboards manually via UI:
 curl -X POST \
   -H "Content-Type: application/json" \
   -d @monitoring/dashboards/api-performance.json \
-  http://admin:admin@localhost:3000/api/dashboards/db
+  http://admin:PASSWORD@localhost:3000/api/dashboards/db
 ```
 
 ---

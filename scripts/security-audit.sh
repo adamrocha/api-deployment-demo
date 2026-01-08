@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Ansible Vault Security Audit Script
-# Checks that all sensitive information is properly encrypted
+# Terraform & Kubernetes Security Audit Script
+# Checks for exposed secrets, hardcoded passwords, and security misconfigurations
 
 set -e
 
@@ -12,122 +12,228 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}🔐 Ansible Vault Security Audit${NC}\n"
+echo -e "${BLUE}🔐 Security Audit - Terraform & Kubernetes${NC}\n"
 
-cd /opt/github/api-deployment-demo/ansible
+cd /opt/github/api-deployment-demo
 
-# Check 1: Verify vault files are encrypted
-echo -e "${BLUE}1. Checking Vault File Encryption${NC}"
-vault_files=(
-    "group_vars/db/vault.yml"
-    "group_vars/staging/vault.yml"
-    "group_vars/production/vault.yml"
+ISSUES_FOUND=0
+
+# =============================================================================
+# 1. Check for terraform.tfvars in git
+# =============================================================================
+echo -e "${BLUE}1. Checking Git Repository for Exposed Secrets${NC}"
+echo "   Scanning for terraform.tfvars..."
+
+if git ls-files | grep -q "terraform.tfvars$"; then
+    echo -e "   ${RED}❌ terraform.tfvars is tracked in git!${NC}"
+    echo -e "   ${YELLOW}   This file contains secrets and should NOT be committed${NC}"
+    ((ISSUES_FOUND++))
+else
+    echo -e "   ${GREEN}✅${NC} terraform.tfvars is not tracked in git"
+fi
+
+# Check git history for accidentally committed secrets
+echo "   Checking git history for terraform.tfvars..."
+if git log --all --full-history -- "terraform/terraform.tfvars" 2>/dev/null | grep -q "commit"; then
+    echo -e "   ${YELLOW}⚠️  terraform.tfvars was previously committed to git${NC}"
+    echo -e "   ${YELLOW}   Consider removing from history: git filter-branch${NC}"
+    ((ISSUES_FOUND++))
+else
+    echo -e "   ${GREEN}✅${NC} terraform.tfvars has never been committed"
+fi
+
+# =============================================================================
+# 2. Check for hardcoded passwords in Terraform
+# =============================================================================
+echo -e "\n${BLUE}2. Scanning Terraform Files for Hardcoded Credentials${NC}"
+
+# Check for password = "..." patterns (excluding variables, examples, documentation, and terraform.tfvars)
+if grep -r 'password\s*=\s*"[^$]' terraform/ 2>/dev/null | grep -v "var\." | grep -v "example" | grep -v "random_password" | grep -v "SECRETS.md" | grep -v "README.md" | grep -v "REPLACE_WITH" | grep -v "terraform.tfvars" >/dev/null; then
+    echo -e "   ${RED}❌ Found hardcoded passwords in Terraform .tf files:${NC}"
+    grep -r 'password\s*=\s*"[^$]' terraform/ 2>/dev/null | grep -v "var\." | grep -v "example" | grep -v "random_password" | grep -v "SECRETS.md" | grep -v "README.md" | grep -v "REPLACE_WITH" | grep -v "terraform.tfvars" | sed 's/^/      /'
+    ((ISSUES_FOUND++))
+else
+    echo -e "   ${GREEN}✅${NC} No hardcoded passwords found in Terraform .tf files"
+fi
+
+# Check for weak default values in variables.tf
+echo "   Checking for weak default values..."
+if grep -E 'default\s*=\s*"(admin|password|secret|123456)"' terraform/variables.tf >/dev/null 2>&1; then
+    echo -e "   ${RED}❌ Found weak default values in variables.tf:${NC}"
+    grep -E 'default\s*=\s*"(admin|password|secret|123456)"' terraform/variables.tf | sed 's/^/      /'
+    ((ISSUES_FOUND++))
+else
+    echo -e "   ${GREEN}✅${NC} No weak default values in variables.tf"
+fi
+
+# =============================================================================
+# 3. Check terraform.tfvars file permissions and content
+# =============================================================================
+echo -e "\n${BLUE}3. Checking terraform.tfvars Security${NC}"
+
+if [[ -f "terraform/terraform.tfvars" ]]; then
+    # Check file permissions
+    perms=$(ls -l terraform/terraform.tfvars | awk '{print $1}')
+    if [[ "$perms" == "-rw-------" ]]; then
+        echo -e "   ${GREEN}✅${NC} terraform.tfvars has secure permissions (600)"
+    else
+        echo -e "   ${YELLOW}⚠️  terraform.tfvars permissions: $perms${NC}"
+        echo -e "   ${YELLOW}   Recommended: chmod 600 terraform/terraform.tfvars${NC}"
+        ((ISSUES_FOUND++))
+    fi
+    
+    # Check for placeholder values
+    if grep -E '(CHANGE_ME|TODO|REPLACEME|xxx|password123)' terraform/terraform.tfvars >/dev/null 2>&1; then
+        echo -e "   ${YELLOW}⚠️  Found placeholder values in terraform.tfvars${NC}"
+        echo -e "   ${YELLOW}   Run: ./scripts/generate-secrets.sh terraform${NC}"
+        ((ISSUES_FOUND++))
+    else
+        echo -e "   ${GREEN}✅${NC} No placeholder values detected"
+    fi
+    
+    # Check for empty password fields
+    if grep -E '(db_password|secret_key|grafana_password)\s*=\s*""' terraform/terraform.tfvars >/dev/null 2>&1; then
+        echo -e "   ${RED}❌ Found empty password fields in terraform.tfvars${NC}"
+        grep -E '(db_password|secret_key|grafana_password)\s*=\s*""' terraform/terraform.tfvars | sed 's/^/      /'
+        ((ISSUES_FOUND++))
+    else
+        echo -e "   ${GREEN}✅${NC} All password fields are populated"
+    fi
+else
+    echo -e "   ${YELLOW}⚠️  terraform.tfvars does not exist${NC}"
+    echo -e "   ${YELLOW}   Generate it: ./scripts/generate-secrets.sh terraform${NC}"
+    ((ISSUES_FOUND++))
+fi
+
+# =============================================================================
+# 4. Check Kubernetes secrets
+# =============================================================================
+echo -e "\n${BLUE}4. Checking Kubernetes Secrets Configuration${NC}"
+
+# Check if kubectl is available
+if command -v kubectl &> /dev/null; then
+    if kubectl cluster-info &>/dev/null; then
+        # Check for secrets in api-deployment-demo namespace
+        if kubectl get namespace api-deployment-demo &>/dev/null; then
+            secret_count=$(kubectl get secrets -n api-deployment-demo 2>/dev/null | grep -v "default-token" | tail -n +2 | wc -l | tr -d ' ')
+            
+            if [[ $secret_count -gt 0 ]]; then
+                echo -e "   ${GREEN}✅${NC} Found $secret_count Kubernetes secret(s)"
+                
+                # Check for required secrets
+                required_secrets=("api-secrets" "db-secrets" "tls-secret")
+                for secret in "${required_secrets[@]}"; do
+                    if kubectl get secret "$secret" -n api-deployment-demo &>/dev/null; then
+                        echo -e "   ${GREEN}✅${NC} Secret '$secret' exists"
+                    else
+                        echo -e "   ${YELLOW}⚠️  Secret '$secret' not found${NC}"
+                    fi
+                done
+            else
+                echo -e "   ${YELLOW}⚠️  No secrets found in api-deployment-demo namespace${NC}"
+                echo -e "   ${YELLOW}   Deploy with: make deploy${NC}"
+            fi
+        else
+            echo -e "   ${YELLOW}⚠️  Namespace 'api-deployment-demo' not found${NC}"
+            echo -e "   ${YELLOW}   Deploy with: make deploy${NC}"
+        fi
+    else
+        echo -e "   ${YELLOW}⚠️  Kubernetes cluster not accessible${NC}"
+    fi
+else
+    echo -e "   ${YELLOW}⚠️  kubectl not installed, skipping Kubernetes checks${NC}"
+fi
+
+# =============================================================================
+# 5. Check for exposed secrets in configuration files
+# =============================================================================
+echo -e "\n${BLUE}5. Scanning Configuration Files for Exposed Secrets${NC}"
+
+# Check docker-compose.yml for hardcoded passwords
+if grep -E 'POSTGRES_PASSWORD:\s*[^$]' docker-compose.yml 2>/dev/null | grep -v '${' >/dev/null; then
+    echo -e "   ${RED}❌ Found hardcoded password in docker-compose.yml${NC}"
+    ((ISSUES_FOUND++))
+else
+    echo -e "   ${GREEN}✅${NC} docker-compose.yml uses environment variables"
+fi
+
+# Check Ansible files for plain text secrets
+if find ansible/ -name "*.yml" -exec grep -l "password:\s*[\"'][^{$]" {} \; 2>/dev/null | grep -v vault | grep -v example >/dev/null; then
+    echo -e "   ${YELLOW}⚠️  Found potential plain text passwords in Ansible files:${NC}"
+    find ansible/ -name "*.yml" -exec grep -l "password:\s*[\"'][^{$]" {} \; 2>/dev/null | grep -v vault | grep -v example | sed 's/^/      /'
+    ((ISSUES_FOUND++))
+else
+    echo -e "   ${GREEN}✅${NC} No plain text passwords in Ansible files"
+fi
+
+# =============================================================================
+# 6. Check .gitignore coverage
+# =============================================================================
+echo -e "\n${BLUE}6. Verifying .gitignore Configuration${NC}"
+
+required_patterns=("*.tfvars" ".vault_pass" "*.pem" "*.key" ".env")
+missing_patterns=()
+
+for pattern in "${required_patterns[@]}"; do
+    # Check if pattern exists in .gitignore (handles wildcards and path-specific entries)
+    if grep -F "$pattern" .gitignore 2>/dev/null >/dev/null; then
+        echo -e "   ${GREEN}✅${NC} '$pattern' is in .gitignore"
+    else
+        echo -e "   ${YELLOW}⚠️  '$pattern' not found in .gitignore${NC}"
+        missing_patterns+=("$pattern")
+        ((ISSUES_FOUND++))
+    fi
+done
+
+if [[ ${#missing_patterns[@]} -gt 0 ]]; then
+    echo -e "\n   ${YELLOW}Add to .gitignore:${NC}"
+    for pattern in "${missing_patterns[@]}"; do
+        echo -e "      $pattern"
+    done
+fi
+
+# =============================================================================
+# 7. Check file permissions on sensitive files
+# =============================================================================
+echo -e "\n${BLUE}7. Checking File Permissions on Sensitive Files${NC}"
+
+sensitive_files=(
+    "nginx/ssl/nginx-selfsigned.key"
+    "terraform/terraform.tfvars"
 )
 
-for vault_file in "${vault_files[@]}"; do
-    if [[ -f "$vault_file" ]]; then
-        if head -1 "$vault_file" | grep -q "\$ANSIBLE_VAULT"; then
-            echo -e "   ${GREEN}✅${NC} $vault_file is properly encrypted"
+for file in "${sensitive_files[@]}"; do
+    if [[ -f "$file" ]]; then
+        perms=$(ls -l "$file" | awk '{print $1}')
+        if [[ "$perms" =~ ^-rw------- ]]; then
+            echo -e "   ${GREEN}✅${NC} $file has secure permissions"
         else
-            echo -e "   ${RED}❌${NC} $vault_file is NOT encrypted"
-        fi
-    else
-        echo -e "   ${YELLOW}⚠️${NC} $vault_file does not exist"
-    fi
-done
-
-# Check 2: Verify no plain text passwords in group_vars
-echo -e "\n${BLUE}2. Scanning for Plain Text Passwords${NC}"
-plain_text_found=false
-
-# Search for potential plain text passwords (excluding vault variable references)
-if grep -r "password.*[\"'][^{]" group_vars/ 2>/dev/null | grep -v "vault_" | grep -v "{{" >/dev/null; then
-    echo -e "   ${RED}❌${NC} Found plain text passwords:"
-    grep -r "password.*[\"'][^{]" group_vars/ 2>/dev/null | grep -v "vault_" | grep -v "{{" | sed 's/^/     /'
-    plain_text_found=true
-else
-    echo -e "   ${GREEN}✅${NC} No plain text passwords found"
-fi
-
-# Check for other sensitive patterns
-sensitive_patterns=("secret.*:" "key.*:" "token.*:")
-for pattern in "${sensitive_patterns[@]}"; do
-    if grep -r "$pattern.*[\"'][^{]" group_vars/ 2>/dev/null | grep -v "vault_" | grep -v "{{" >/dev/null; then
-        echo -e "   ${RED}❌${NC} Found plain text secrets matching '$pattern':"
-        grep -r "$pattern.*[\"'][^{]" group_vars/ 2>/dev/null | grep -v "vault_" | grep -v "{{" | sed 's/^/     /'
-        plain_text_found=true
-    fi
-done
-
-if ! $plain_text_found; then
-    echo -e "   ${GREEN}✅${NC} All sensitive data properly uses vault variables"
-fi
-
-# Check 3: Vault password file security
-echo -e "\n${BLUE}3. Vault Password File Security${NC}"
-if [[ -f ".vault_pass" ]]; then
-    perms=$(ls -l .vault_pass | cut -d' ' -f1)
-    if [[ "$perms" == "-rw-------" ]]; then
-        echo -e "   ${GREEN}✅${NC} .vault_pass has secure permissions (600)"
-    else
-        echo -e "   ${RED}❌${NC} .vault_pass permissions are too open: $perms"
-        echo -e "   ${YELLOW}Fix with:${NC} chmod 600 .vault_pass"
-    fi
-else
-    echo -e "   ${YELLOW}⚠️${NC} .vault_pass file not found"
-fi
-
-# Check 4: Test vault decryption
-echo -e "\n${BLUE}4. Testing Vault Decryption${NC}"
-if [[ -f ".vault_pass" ]]; then
-    for vault_file in "${vault_files[@]}"; do
-        if [[ -f "$vault_file" ]]; then
-            if ansible-vault view "$vault_file" --vault-password-file .vault_pass >/dev/null 2>&1; then
-                echo -e "   ${GREEN}✅${NC} $vault_file decrypts successfully"
-            else
-                echo -e "   ${RED}❌${NC} $vault_file decryption failed"
-            fi
-        fi
-    done
-else
-    echo -e "   ${YELLOW}⚠️${NC} Cannot test decryption - .vault_pass missing"
-fi
-
-# Check 5: Verify vault variable references
-echo -e "\n${BLUE}5. Verifying Vault Variable References${NC}"
-vault_vars_used=0
-
-for vault_file in "${vault_files[@]}"; do
-    if [[ -f "$vault_file" ]]; then
-        # Get vault variable names from the encrypted file
-        if ansible-vault view "$vault_file" --vault-password-file .vault_pass 2>/dev/null | grep -q "^vault_"; then
-            echo -e "   ${GREEN}✅${NC} $vault_file contains vault_ variables"
-            ((vault_vars_used++))
+            echo -e "   ${YELLOW}⚠️  $file permissions: $perms (recommend 600)${NC}"
+            ((ISSUES_FOUND++))
         fi
     fi
 done
 
-# Check if vault variables are referenced in main config files
-if grep -r "{{ vault_" group_vars/ >/dev/null 2>&1; then
-    echo -e "   ${GREEN}✅${NC} Vault variables are referenced in configuration"
+# =============================================================================
+# SUMMARY
+# =============================================================================
+echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BLUE}📋 Security Audit Summary${NC}"
+echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
+
+if [[ $ISSUES_FOUND -eq 0 ]]; then
+    echo -e "${GREEN}🎉 Security Audit: PASSED${NC}"
+    echo -e "${GREEN}✅ No security issues detected${NC}\n"
 else
-    echo -e "   ${RED}❌${NC} No vault variable references found in configuration"
+    echo -e "${YELLOW}⚠️  Security Audit: $ISSUES_FOUND issue(s) found${NC}"
+    echo -e "${YELLOW}Review the output above for details${NC}\n"
 fi
 
-# Summary
-echo -e "\n${GREEN}📋 Security Audit Summary${NC}"
-if [[ $vault_vars_used -gt 0 ]]; then
-    echo -e "   ${GREEN}✅${NC} $vault_vars_used vault files properly encrypted"
-    echo -e "   ${GREEN}✅${NC} Sensitive data secured with Ansible Vault"
-    echo -e "   ${GREEN}✅${NC} No plain text secrets detected"
-    echo -e "   ${GREEN}✅${NC} Vault password file properly protected"
-    echo -e "\n${BLUE}🎉 Security Audit: PASSED${NC}"
-else
-    echo -e "   ${RED}❌${NC} Security issues detected - review output above"
-    echo -e "\n${RED}🚨 Security Audit: FAILED${NC}"
-fi
+echo -e "${BLUE}💡 Security Best Practices:${NC}"
+echo -e "   • Generate secrets: ${YELLOW}./scripts/generate-secrets.sh terraform${NC}"
+echo -e "   • Verify .gitignore: ${YELLOW}git status --ignored${NC}"
+echo -e "   • Check git history: ${YELLOW}git log --all --full-history -- '*tfvars'${NC}"
+echo -e "   • Rotate secrets regularly and use strong random passwords"
+echo -e "   • Never commit terraform.tfvars, .vault_pass, or private keys${NC}\n"
 
-echo -e "\n${BLUE}Usage Examples:${NC}"
-echo -e "   • Deploy with vault: ${YELLOW}ansible-playbook -i inventory.ini db.yml --vault-password-file .vault_pass${NC}"
-echo -e "   • Edit vault file: ${YELLOW}ansible-vault edit group_vars/db/vault.yml --vault-password-file .vault_pass${NC}"
-echo -e "   • View vault file: ${YELLOW}ansible-vault view group_vars/staging/vault.yml --vault-password-file .vault_pass${NC}"
+exit $ISSUES_FOUND

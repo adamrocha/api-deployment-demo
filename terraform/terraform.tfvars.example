@@ -32,14 +32,18 @@ kubeconfig_path = "~/.kube/config"
 #   python3 -c 'import secrets; print(secrets.token_urlsafe(32))'
 #   pwgen -s 32 1
 # 
+# Or use the automated script:
+#   ./scripts/generate-secrets.sh terraform
+# 
 # Requirements:
 #   - Minimum 32 characters
 #   - Mix of uppercase, lowercase, numbers, special chars
 #   - Never use dictionary words or common patterns
 #   - Different values for staging and production
 
-db_password = "CHANGE_ME_USE_STRONG_RANDOM_PASSWORD_HERE"
-secret_key  = "CHANGE_ME_USE_STRONG_RANDOM_SECRET_KEY_HERE"
+db_password      = "REPLACE_WITH_SECURE_DB_PASSWORD"
+secret_key       = "REPLACE_WITH_SECURE_API_SECRET_KEY"
+grafana_password = "REPLACE_WITH_SECURE_GRAFANA_PASSWORD"
 
 # Staging ports
 staging_ports = {

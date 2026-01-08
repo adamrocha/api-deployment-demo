@@ -31,14 +31,21 @@ variable "db_password" {
   description = "Database password"
   type        = string
   sensitive   = true
-  default     = "staging_password"
+  # No default - must be provided via terraform.tfvars or environment variable
 }
 
 variable "secret_key" {
   description = "API secret key"
   type        = string
   sensitive   = true
-  default     = "change-me-in-production"
+  # No default - must be provided via terraform.tfvars or environment variable
+}
+
+variable "grafana_password" {
+  description = "Grafana admin password"
+  type        = string
+  sensitive   = true
+  # No default - must be provided via terraform.tfvars or environment variable
 }
 
 variable "staging_ports" {

@@ -19,7 +19,7 @@ terraform apply -auto-approve
 
 ### Access Monitoring
 
-- **Grafana**: <http://localhost:3000> (admin/admin)
+- **Grafana**: <http://localhost:3000>
 - **Prometheus**: <http://localhost:9090>
 
 ### View Dashboards

@@ -14,6 +14,22 @@ resource "kubernetes_namespace_v1" "monitoring" {
   }
 }
 
+# Grafana Admin Secret
+resource "kubernetes_secret_v1" "grafana_admin" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name      = "grafana-admin-secret"
+    namespace = kubernetes_namespace_v1.monitoring[0].metadata[0].name
+  }
+
+  data = {
+    admin-password = var.grafana_password
+  }
+
+  type = "Opaque"
+}
+
 # Prometheus ConfigMap
 resource "kubernetes_config_map_v1" "prometheus_config" {
   count = var.environment == "production" && var.enable_monitoring ? 1 : 0
@@ -308,8 +324,13 @@ resource "kubernetes_deployment_v1" "grafana" {
           }
 
           env {
-            name  = "GF_SECURITY_ADMIN_PASSWORD"
-            value = "admin"
+            name = "GF_SECURITY_ADMIN_PASSWORD"
+            value_from {
+              secret_key_ref {
+                name = "grafana-admin-secret"
+                key  = "admin-password"
+              }
+            }
           }
 
           env {

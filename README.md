@@ -186,7 +186,7 @@ Internet/localhost → Kind Cluster → Nginx (:80/:443) → API (:8000) → Pos
 | --- | --- | --- | --- | --- |
 | **Terraform** | Infrastructure provisioning | ✅ Yes | ✅ Yes | ✅ `terraform plan` |
 | **Ansible** | Configuration management | ❌ No | ✅ Yes | ⚠️ `--check` |
-| **kubectl** | Manual operations | ❌ No | ⚠️ Partial | ❌ No |
+| **kubectl** | Manual operations | ❌ No | ✅ Yes (apply) / ❌ No (create) | ❌ No |
 
 ### Kubernetes Resources
 

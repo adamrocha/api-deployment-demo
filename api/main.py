@@ -26,7 +26,7 @@ if not DATABASE_URL:
         raise ValueError("DB_PASSWORD environment variable is required")
     postgres_host = os.getenv("DB_HOST", "localhost")
     postgres_port = os.getenv("DB_PORT", "5432")
-    postgres_db = os.getenv("DB_NAME", "api_db")
+    postgres_db = os.getenv("DB_NAME", "api_production")
     DATABASE_URL = f"postgresql://{postgres_user}:{postgres_password}@{postgres_host}:{postgres_port}/{postgres_db}"
 
 engine = create_engine(DATABASE_URL)

@@ -189,18 +189,18 @@ load_env() {
             API_ENV="${API_ENV:-development}"
             log_info "Setting development-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
             ;;
+        *)
+            log_warning "Unknown environment '$ENVIRONMENT', using development defaults"
+            DB_NAME="${DB_NAME:-api_dev}"
+            API_ENV="${API_ENV:-development}"
+            log_info "Setting development-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            ;;
     esac
     
     # Construct DATABASE_URL once after environment-specific DB_NAME is set
     DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
     
     # Set remaining defaults for ConfigMap variables
-    DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-md5}"
-    API_WORKERS="${API_WORKERS:-4}"
-    API_PORT="${API_PORT:-8000}"
-    SERVER_NAME="${SERVER_NAME:-localhost}"
-    HTTP_PORT="${HTTP_PORT:-80}"
-    HTTPS_PORT="${HTTPS_PORT:-443}"
     DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-md5}"
     API_WORKERS="${API_WORKERS:-4}"
     API_PORT="${API_PORT:-8000}"

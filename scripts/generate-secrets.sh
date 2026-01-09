@@ -125,7 +125,8 @@ needs_password() {
 
 # Load environment variables
 load_env() {
-    local env_file=$(get_env_file)
+    local env_file
+    env_file=$(get_env_file)
     
     log_info "Loading environment variables from $env_file"
     
@@ -299,6 +300,23 @@ stringData:
 EOF
 
     log_success "Generated secrets file: $output_file"
+    
+    # Display next steps
+    echo ""
+    log_info "📋 Next Steps:"
+    echo ""
+    echo "  Manual Apply:"
+    echo "    1. Review the generated file: $output_file"
+    echo "    2. Delete immutable secrets if they exist:"
+    echo "       kubectl delete secret api-secrets -n $NAMESPACE"
+    echo "       kubectl delete secret postgres-secrets -n $NAMESPACE"
+    echo "       kubectl delete secret grafana-admin-secret -n monitoring"
+    echo "    3. Apply the secrets:"
+    echo "       kubectl apply -f $output_file"
+    echo ""
+    echo "  Automatic Apply:"
+    echo "    APPLY=true $0 $ENVIRONMENT $NAMESPACE"
+    echo ""
 }
 
 # Apply secrets to cluster
@@ -317,7 +335,8 @@ apply_secrets() {
         local secrets_to_check=("api-secrets" "postgres-secrets")
         for secret in "${secrets_to_check[@]}"; do
             if kubectl get secret "$secret" -n "$NAMESPACE" &>/dev/null; then
-                local is_immutable=$(kubectl get secret "$secret" -n "$NAMESPACE" -o jsonpath='{.immutable}' 2>/dev/null)
+                local is_immutable
+                is_immutable=$(kubectl get secret "$secret" -n "$NAMESPACE" -o jsonpath='{.immutable}' 2>/dev/null)
                 if [[ "$is_immutable" == "true" ]]; then
                     log_warning "Secret $secret is immutable, deleting before recreating..."
                     kubectl delete secret "$secret" -n "$NAMESPACE"
@@ -328,7 +347,8 @@ apply_secrets() {
         # Check monitoring namespace for grafana secret
         if kubectl get namespace monitoring &>/dev/null; then
             if kubectl get secret grafana-admin-secret -n monitoring &>/dev/null; then
-                local is_immutable=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.immutable}' 2>/dev/null)
+                local is_immutable
+                is_immutable=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.immutable}' 2>/dev/null)
                 if [[ "$is_immutable" == "true" ]]; then
                     log_warning "Secret grafana-admin-secret is immutable, deleting before recreating..."
                     kubectl delete secret grafana-admin-secret -n monitoring
@@ -343,10 +363,6 @@ apply_secrets() {
         # Verify secrets
         log_info "Verifying secrets in cluster:"
         kubectl get secrets -n "$NAMESPACE" -l "generated-by=generate-secrets.sh"
-    else
-        log_info "Files generated. To apply to cluster, run:"
-        log_info "  kubectl apply -f $secrets_file"
-        log_info "Or run this script with APPLY=true"
     fi
 }
 
@@ -409,15 +425,19 @@ generate_terraform_vars() {
         fi
         
         # Create backup
-        local backup_file="${tfvars_file}.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup_file
+        backup_file="${tfvars_file}.backup.$(date +%Y%m%d_%H%M%S)"
         cp "$tfvars_file" "$backup_file"
         log_success "Backed up existing file to $backup_file"
     fi
     
     # Generate secure passwords
-    local db_password=$(openssl rand -base64 32)
-    local secret_key=$(openssl rand -base64 32)
-    local grafana_password=$(openssl rand -base64 24)
+    local db_password
+    db_password="$(openssl rand -base64 32)"
+    local secret_key
+    secret_key="$(openssl rand -base64 32)"
+    local grafana_password
+    grafana_password="$(openssl rand -base64 24)"
     
     # Create terraform.tfvars from example
     if [[ -f "$tfvars_example" ]]; then

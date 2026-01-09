@@ -149,13 +149,6 @@ load_env() {
         update_env_file "$env_file" "DB_PASSWORD" "$DB_PASSWORD"
         log_info "Generated secure database password"
         updated=true
-        
-        # Update DATABASE_URL if it exists
-        if [[ -n "${DATABASE_URL:-}" ]]; then
-            DB_NAME_FROM_URL=$(echo "$DATABASE_URL" | sed -n 's/.*\/\([^?]*\).*/\1/p')
-            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME_FROM_URL:-$DB_NAME}"
-            update_env_file "$env_file" "DATABASE_URL" "$DATABASE_URL"
-        fi
     fi
     
     if needs_password SECRET_KEY; then
@@ -174,34 +167,40 @@ load_env() {
     
     [[ "$updated" == true ]] && log_success "Updated $env_file with secure passwords"
     
+    # Set defaults for ConfigMap variables (before environment-specific overrides)
+    DB_HOST="${DB_HOST:-postgres}"
+    DB_PORT="${DB_PORT:-5432}"
+    DB_USER="${DB_USER:-postgres}"
+    
     # Override environment-specific variables based on ENVIRONMENT parameter
     case "$ENVIRONMENT" in
         production)
             DB_NAME="api_production"
             API_ENV="production"
             log_info "Setting production-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
-            # Update DATABASE_URL with correct database name
-            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
             ;;
         staging)
             DB_NAME="api_staging"
             API_ENV="staging"
             log_info "Setting staging-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
-            # Update DATABASE_URL with correct database name
-            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
             ;;
         development)
             DB_NAME="${DB_NAME:-api_dev}"
             API_ENV="${API_ENV:-development}"
             log_info "Setting development-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
-            # Update DATABASE_URL with correct database name
-            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
             ;;
     esac
     
-    # Set defaults for ConfigMap variables
-    DB_HOST="${DB_HOST:-postgres}"
-    DB_PORT="${DB_PORT:-5432}"
+    # Construct DATABASE_URL once after environment-specific DB_NAME is set
+    DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    
+    # Set remaining defaults for ConfigMap variables
+    DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-md5}"
+    API_WORKERS="${API_WORKERS:-4}"
+    API_PORT="${API_PORT:-8000}"
+    SERVER_NAME="${SERVER_NAME:-localhost}"
+    HTTP_PORT="${HTTP_PORT:-80}"
+    HTTPS_PORT="${HTTPS_PORT:-443}"
     DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-md5}"
     API_WORKERS="${API_WORKERS:-4}"
     API_PORT="${API_PORT:-8000}"

@@ -182,7 +182,7 @@ Internet/localhost → Kind Cluster → Nginx (:80/:443) → API (:8000) → Pos
 
 ### Deployment Comparison
 
-```python
+```plain
 | Method | Use Case | State Tracking | Idempotent | Preview |
 | --- | --- | --- |
 | **Terraform** | Infrastructure provisioning | ✅ Yes | ✅ Yes | ✅ `terraform plan` |

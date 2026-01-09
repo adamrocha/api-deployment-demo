@@ -62,7 +62,7 @@ run_load_test() {
     # Function to run in each worker
     worker() {
         local end_time=$1
-        while [ $(date +%s) -lt $end_time ]; do
+        while [ "$(date +%s)" -lt "$end_time" ]; do
             curl -s "$API_URL/users/" > /dev/null
             curl -s "$API_URL/health" > /dev/null
             curl -s -X POST "$API_URL/users/" \
@@ -88,7 +88,7 @@ monitor_pods() {
     local duration=$1
     local end_time=$(($(date +%s) + duration))
     
-    while [ $(date +%s) -lt $end_time ]; do
+    while [ "$(date +%s)" -lt "$end_time" ]; do
         echo -e "${BLUE}[$(date '+%H:%M:%S')] Monitoring pods...${NC}"
         
         echo "🚀 Current API Pods:"

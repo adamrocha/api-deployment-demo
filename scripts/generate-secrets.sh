@@ -173,6 +173,31 @@ load_env() {
     
     [[ "$updated" == true ]] && log_success "Updated $env_file with secure passwords"
     
+    # Override environment-specific variables based on ENVIRONMENT parameter
+    case "$ENVIRONMENT" in
+        production)
+            DB_NAME="api_production"
+            API_ENV="production"
+            log_info "Setting production-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            # Update DATABASE_URL with correct database name
+            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+            ;;
+        staging)
+            DB_NAME="api_staging"
+            API_ENV="staging"
+            log_info "Setting staging-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            # Update DATABASE_URL with correct database name
+            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+            ;;
+        development)
+            DB_NAME="${DB_NAME:-api_dev}"
+            API_ENV="${API_ENV:-development}"
+            log_info "Setting development-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            # Update DATABASE_URL with correct database name
+            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+            ;;
+    esac
+    
     # Set defaults for ConfigMap variables
     DB_HOST="${DB_HOST:-postgres}"
     DB_PORT="${DB_PORT:-5432}"

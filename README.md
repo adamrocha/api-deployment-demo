@@ -182,11 +182,13 @@ Internet/localhost → Kind Cluster → Nginx (:80/:443) → API (:8000) → Pos
 
 ### Deployment Comparison
 
+```python
 | Method | Use Case | State Tracking | Idempotent | Preview |
 | --- | --- | --- |
 | **Terraform** | Infrastructure provisioning | ✅ Yes | ✅ Yes | ✅ `terraform plan` |
 | **Ansible** | Configuration management | ❌ No | ✅ Yes | ⚠️ `--check` |
 | **kubectl** | Manual operations | ❌ No | ⚠️ Partial | ❌ No |
+```
 
 ### Kubernetes Resources
 

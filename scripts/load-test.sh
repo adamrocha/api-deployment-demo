@@ -133,7 +133,15 @@ echo -e "${GREEN}✅ Load Test Complete!${NC}"
 echo ""
 echo -e "${BLUE}📊 Summary:${NC}"
 echo "  • Load test sent concurrent requests for 3 minutes"
-echo "  • API handled requests across $(kubectl get pods -n api-deployment-demo -l app=api-demo,component=api --no-headers 2>/dev/null | wc -l | xargs) pod(s)"
+
+# Get pod count with error handling
+POD_COUNT=$(kubectl get pods -n api-deployment-demo -l app=api-demo,component=api --no-headers 2>/dev/null | wc -l | xargs)
+if [[ -n "$POD_COUNT" && "$POD_COUNT" =~ ^[0-9]+$ && "$POD_COUNT" -gt 0 ]]; then
+    echo "  • API handled requests across $POD_COUNT pod(s)"
+else
+    echo "  • API pod count: unavailable (check cluster connectivity)"
+fi
+
 echo "  • Check logs with: kubectl logs -n api-deployment-demo -l app=api-demo,component=api"
 echo ""
 echo -e "${YELLOW}💡 Note:${NC} This deployment uses static replicas (no autoscaling configured)"

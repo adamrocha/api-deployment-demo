@@ -1,9 +1,7 @@
 -- Initialize the database for API deployment demo
--- This script uses the POSTGRES_DB environment variable set by docker-compose.yml or Kubernetes
--- The database is already created by PostgreSQL using POSTGRES_DB, so we just connect to it
-
--- Connect to the database (database name comes from POSTGRES_DB environment variable)
--- In docker-entrypoint-initdb.d scripts, the POSTGRES_DB database is already created
+-- This script runs in the context of the database specified by POSTGRES_DB environment variable
+-- PostgreSQL's docker-entrypoint-initdb.d automatically creates and connects to that database
+-- before executing this script, so no explicit database creation or connection is needed
 
 -- Create a sample table (this will also be created by SQLAlchemy, but included for reference)
 CREATE TABLE IF NOT EXISTS users (

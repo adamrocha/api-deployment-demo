@@ -1,10 +1,10 @@
 -- Initialize the database for API deployment demo
 
 -- Create database if it doesn't exist
-CREATE DATABASE api_db;
+CREATE DATABASE api_production;
 
 -- Connect to the database
-\c api_db;
+\c api_production;
 
 -- Create a sample table (this will also be created by SQLAlchemy, but included for reference)
 CREATE TABLE IF NOT EXISTS users (

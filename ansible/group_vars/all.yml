@@ -14,7 +14,7 @@ http_port: 80
 https_port: 443
 
 # Database configuration
-db_name: api_db
+db_name: api_production
 db_user: postgres
 db_port: 5432
 postgres_data_dir: "/var/lib/postgresql/15/main"

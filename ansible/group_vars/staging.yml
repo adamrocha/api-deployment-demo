@@ -2,7 +2,7 @@
 
 # Database configuration (non-sensitive)
 db_password: "{{ vault_staging_db_password }}"
-db_host_auth_method: md5
+db_host_auth_method: scram-sha-256
 
 # API configuration  
 api_env: staging

@@ -204,8 +204,11 @@ status: ## Show deployment status
 	@if kind get clusters 2>/dev/null | grep -q $(CLUSTER_NAME); then \
 		echo "🏗️  Cluster: ✅ Running"; \
 		echo ""; \
-		echo "📦 Pods:"; \
-		kubectl get pods -n $(NAMESPACE) -n $(MONITORING_NS) 2>/dev/null || echo "  No pods found"; \
+		echo "📦 Application Pods:"; \
+		kubectl get pods -n $(NAMESPACE) 2>/dev/null || echo "  No pods found"; \
+		echo ""; \
+		echo "📊 Monitoring Pods:"; \
+		kubectl get pods -n $(MONITORING_NS) 2>/dev/null || echo "  No pods found"; \
 		echo ""; \
 		echo "🌐 Services:"; \
 		kubectl get svc -n $(NAMESPACE) 2>/dev/null || echo "  No services found"; \

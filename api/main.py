@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import os
+import sys
 import time
 import psutil
 from dotenv import load_dotenv
@@ -181,7 +182,7 @@ api_info = Info(
 # Set application info
 api_info.info({
     'version': '1.0.0',
-    'python_version': os.sys.version.split()[0],
+    'python_version': sys.version.split()[0],
     'environment': os.getenv('API_ENV', 'unknown')
 })
 
@@ -224,7 +225,7 @@ async def health_check():
         environment = "staging"
         deployment_type = "docker-compose"
     # Check for local development
-    elif "localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL:
+    elif DATABASE_URL and ("localhost" in DATABASE_URL or "127.0.0.1" in DATABASE_URL):
         environment = "local"
         deployment_type = "development"
     
@@ -272,8 +273,8 @@ async def metrics(db: Session = Depends(get_db)):
         
         # Database connection pool metrics
         pool = engine.pool
-        database_pool_size.set(pool.size())
-        database_pool_overflow.set(pool.overflow())
+        database_pool_size.set(pool.size()) # pyright: ignore[reportAttributeAccessIssue]
+        database_pool_overflow.set(pool.overflow()) # pyright: ignore[reportAttributeAccessIssue]
         
         # Database connection count (actual active connections)
         try:
@@ -359,6 +360,11 @@ async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
     except Exception as e:
         database_errors_total.labels(error_type='get_users').inc()
         http_exceptions_total.labels(exception_type=type(e).__name__, endpoint='/users').inc()
+        http_requests_total.labels(method='GET', endpoint='/users', status='500').inc()
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+@app.delete("/users/{user_id}")
+async def delete_user(user_id: int, db: Session = Depends(get_db)):
     start_time = time.time()
     
     try:
@@ -390,18 +396,6 @@ async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
         http_exceptions_total.labels(exception_type=type(e).__name__, endpoint='/users/{id}').inc()
         http_requests_total.labels(method='DELETE', endpoint='/users/{id}', status='500').inc()
         raise HTTPException(status_code=500, detail="Internal server error")
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-@app.delete("/users/{user_id}")
-async def delete_user(user_id: int, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    db.delete(user)
-    db.commit()
-    return {"message": "User deleted successfully"}
 
 @app.get("/products")
 async def get_products():

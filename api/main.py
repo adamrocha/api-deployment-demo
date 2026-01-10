@@ -357,6 +357,8 @@ async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
         
         return users
         
+    except HTTPException:
+        raise
     except Exception as e:
         database_errors_total.labels(error_type='get_users').inc()
         http_exceptions_total.labels(exception_type=type(e).__name__, endpoint='/users').inc()

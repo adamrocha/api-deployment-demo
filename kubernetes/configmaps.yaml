@@ -27,7 +27,7 @@ metadata:
 data:
   DB_NAME: "api_production"
   DB_USER: "postgres"
-  DB_HOST_AUTH_METHOD: "md5"
+  DB_HOST_AUTH_METHOD: "scram-sha-256"
   
 ---
 apiVersion: v1

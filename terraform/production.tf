@@ -25,7 +25,7 @@ resource "kubernetes_secret_v1" "database" {
   }
 
   data = {
-    db-name     = "api_db"
+    db-name     = "api_production"
     db-user     = "postgres"
     db-password = var.db_password
   }

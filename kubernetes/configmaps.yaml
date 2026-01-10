@@ -13,7 +13,7 @@ data:
   API_WORKERS: "4"
   DB_HOST: "postgres-service"
   DB_PORT: "5432"
-  DB_NAME: "api_db"
+  DB_NAME: "api_production"
   
 ---
 apiVersion: v1
@@ -25,9 +25,9 @@ metadata:
     app: api-demo
     component: database
 data:
-  DB_NAME: "api_db"
+  DB_NAME: "api_production"
   DB_USER: "postgres"
-  DB_HOST_AUTH_METHOD: "md5"
+  DB_HOST_AUTH_METHOD: "scram-sha-256"
   
 ---
 apiVersion: v1

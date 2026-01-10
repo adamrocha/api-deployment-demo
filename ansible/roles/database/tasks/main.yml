@@ -20,7 +20,7 @@
 - name: Initialize PostgreSQL database
   command: >
     {{ postgres_bin_dir }}/initdb -D {{ postgres_data_dir }}
-    --auth-host=md5 --auth-local=peer --encoding=UTF8
+    --auth-host=scram-sha-256 --auth-local=peer --encoding=UTF8
     --locale={{ postgres_locale }} --data-checksums
   become_user: postgres
   when: not postgres_initialized.stat.exists

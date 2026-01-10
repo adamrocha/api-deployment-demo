@@ -31,7 +31,7 @@ backup_hour: "2"
 backup_retention_days: 7
 
 # Security settings
-postgres_auth_method: "md5"
+postgres_auth_method: "scram-sha-256"
 
 # Application database settings (these will be overridden by vault variables)
 db_name: "{{ vault_db_name | default('app_db') }}"

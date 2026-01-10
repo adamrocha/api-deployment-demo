@@ -17,7 +17,7 @@ postgres_work_mem: "8MB"
 postgres_maintenance_work_mem: "128MB"
 
 # Security settings
-postgres_auth_method: "md5"
+postgres_auth_method: "scram-sha-256"
 
 # Backup configuration
 backup_enabled: true

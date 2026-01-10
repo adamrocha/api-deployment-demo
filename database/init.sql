@@ -1,10 +1,7 @@
 -- Initialize the database for API deployment demo
-
--- Create database if it doesn't exist
-CREATE DATABASE api_db;
-
--- Connect to the database
-\c api_db;
+-- This script runs in the context of the database specified by POSTGRES_DB environment variable
+-- PostgreSQL's docker-entrypoint-initdb.d automatically creates and connects to that database
+-- before executing this script, so no explicit database creation or connection is needed
 
 -- Create a sample table (this will also be created by SQLAlchemy, but included for reference)
 CREATE TABLE IF NOT EXISTS users (

@@ -125,7 +125,8 @@ needs_password() {
 
 # Load environment variables
 load_env() {
-    local env_file=$(get_env_file)
+    local env_file
+    env_file=$(get_env_file)
     
     log_info "Loading environment variables from $env_file"
     
@@ -148,13 +149,6 @@ load_env() {
         update_env_file "$env_file" "DB_PASSWORD" "$DB_PASSWORD"
         log_info "Generated secure database password"
         updated=true
-        
-        # Update DATABASE_URL if it exists
-        if [[ -n "${DATABASE_URL:-}" ]]; then
-            DB_NAME_FROM_URL=$(echo "$DATABASE_URL" | sed -n 's/.*\/\([^?]*\).*/\1/p')
-            DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME_FROM_URL:-$DB_NAME}"
-            update_env_file "$env_file" "DATABASE_URL" "$DATABASE_URL"
-        fi
     fi
     
     if needs_password SECRET_KEY; then
@@ -173,10 +167,41 @@ load_env() {
     
     [[ "$updated" == true ]] && log_success "Updated $env_file with secure passwords"
     
-    # Set defaults for ConfigMap variables
+    # Set defaults for ConfigMap variables (before environment-specific overrides)
     DB_HOST="${DB_HOST:-postgres}"
     DB_PORT="${DB_PORT:-5432}"
-    DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-md5}"
+    DB_USER="${DB_USER:-postgres}"
+    
+    # Override environment-specific variables based on ENVIRONMENT parameter
+    case "$ENVIRONMENT" in
+        production)
+            DB_NAME="${DB_NAME:-api_production}"
+            API_ENV="${API_ENV:-production}"
+            log_info "Setting production-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            ;;
+        staging)
+            DB_NAME="${DB_NAME:-api_staging}"
+            API_ENV="${API_ENV:-staging}"
+            log_info "Setting staging-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            ;;
+        development)
+            DB_NAME="${DB_NAME:-api_dev}"
+            API_ENV="${API_ENV:-development}"
+            log_info "Setting development-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            ;;
+        *)
+            log_warning "Unknown environment '$ENVIRONMENT', using development defaults"
+            DB_NAME="${DB_NAME:-api_dev}"
+            API_ENV="${API_ENV:-development}"
+            log_info "Setting development-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
+            ;;
+    esac
+    
+    # Construct DATABASE_URL once after environment-specific DB_NAME is set
+    DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    
+    # Set remaining defaults for ConfigMap variables
+    DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-scram-sha-256}"
     API_WORKERS="${API_WORKERS:-4}"
     API_PORT="${API_PORT:-8000}"
     SERVER_NAME="${SERVER_NAME:-localhost}"
@@ -274,6 +299,23 @@ stringData:
 EOF
 
     log_success "Generated secrets file: $output_file"
+    
+    # Display next steps
+    echo ""
+    log_info "📋 Next Steps:"
+    echo ""
+    echo "  Manual Apply:"
+    echo "    1. Review the generated file: $output_file"
+    echo "    2. Delete immutable secrets if they exist:"
+    echo "       kubectl delete secret api-secrets -n $NAMESPACE"
+    echo "       kubectl delete secret postgres-secrets -n $NAMESPACE"
+    echo "       kubectl delete secret grafana-admin-secret -n monitoring"
+    echo "    3. Apply the secrets:"
+    echo "       kubectl apply -f $output_file"
+    echo ""
+    echo "  Automatic Apply:"
+    echo "    APPLY=true $0 $ENVIRONMENT $NAMESPACE"
+    echo ""
 }
 
 # Apply secrets to cluster
@@ -283,16 +325,23 @@ apply_secrets() {
     if [[ "${APPLY:-false}" == "true" ]]; then
         log_info "Applying secrets to Kubernetes cluster"
         
-        # Create namespaces if they don't exist
-        kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-        kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+        # Create namespaces if they don't exist (silently check first to avoid warnings)
+        if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
+            log_info "Creating namespace: $NAMESPACE"
+            kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+        fi
+        if ! kubectl get namespace monitoring &>/dev/null; then
+            log_info "Creating namespace: monitoring"
+            kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+        fi
         
         # Check for and delete immutable secrets before applying
         log_info "Checking for immutable secrets..."
         local secrets_to_check=("api-secrets" "postgres-secrets")
         for secret in "${secrets_to_check[@]}"; do
             if kubectl get secret "$secret" -n "$NAMESPACE" &>/dev/null; then
-                local is_immutable=$(kubectl get secret "$secret" -n "$NAMESPACE" -o jsonpath='{.immutable}' 2>/dev/null)
+                local is_immutable
+                is_immutable=$(kubectl get secret "$secret" -n "$NAMESPACE" -o jsonpath='{.immutable}' 2>/dev/null)
                 if [[ "$is_immutable" == "true" ]]; then
                     log_warning "Secret $secret is immutable, deleting before recreating..."
                     kubectl delete secret "$secret" -n "$NAMESPACE"
@@ -303,7 +352,8 @@ apply_secrets() {
         # Check monitoring namespace for grafana secret
         if kubectl get namespace monitoring &>/dev/null; then
             if kubectl get secret grafana-admin-secret -n monitoring &>/dev/null; then
-                local is_immutable=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.immutable}' 2>/dev/null)
+                local is_immutable
+                is_immutable=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.immutable}' 2>/dev/null)
                 if [[ "$is_immutable" == "true" ]]; then
                     log_warning "Secret grafana-admin-secret is immutable, deleting before recreating..."
                     kubectl delete secret grafana-admin-secret -n monitoring
@@ -312,16 +362,14 @@ apply_secrets() {
         fi
         
         # Apply secrets
-        kubectl apply -f "$secrets_file"
+        # Note: Using --server-side to handle resources that may have been created by Terraform
+        # This avoids warnings about missing last-applied-configuration annotations
+        kubectl apply -f "$secrets_file" --server-side --force-conflicts
         log_success "Applied secrets to cluster"
         
         # Verify secrets
         log_info "Verifying secrets in cluster:"
         kubectl get secrets -n "$NAMESPACE" -l "generated-by=generate-secrets.sh"
-    else
-        log_info "Files generated. To apply to cluster, run:"
-        log_info "  kubectl apply -f $secrets_file"
-        log_info "Or run this script with APPLY=true"
     fi
 }
 
@@ -384,15 +432,19 @@ generate_terraform_vars() {
         fi
         
         # Create backup
-        local backup_file="${tfvars_file}.backup.$(date +%Y%m%d_%H%M%S)"
+        local backup_file
+        backup_file="${tfvars_file}.backup.$(date +%Y%m%d_%H%M%S)"
         cp "$tfvars_file" "$backup_file"
         log_success "Backed up existing file to $backup_file"
     fi
     
     # Generate secure passwords
-    local db_password=$(openssl rand -base64 32)
-    local secret_key=$(openssl rand -base64 32)
-    local grafana_password=$(openssl rand -base64 24)
+    local db_password
+    db_password="$(openssl rand -base64 32)"
+    local secret_key
+    secret_key="$(openssl rand -base64 32)"
+    local grafana_password
+    grafana_password="$(openssl rand -base64 24)"
     
     # Create terraform.tfvars from example
     if [[ -f "$tfvars_example" ]]; then

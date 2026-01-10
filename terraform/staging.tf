@@ -34,7 +34,7 @@ resource "docker_container" "postgres" {
     "POSTGRES_DB=api_staging",
     "POSTGRES_USER=postgres",
     "POSTGRES_PASSWORD=${var.db_password}",
-    "POSTGRES_HOST_AUTH_METHOD=md5"
+    "POSTGRES_HOST_AUTH_METHOD=scram-sha-256"
   ]
 
   volumes {

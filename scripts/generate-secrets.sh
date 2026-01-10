@@ -175,13 +175,13 @@ load_env() {
     # Override environment-specific variables based on ENVIRONMENT parameter
     case "$ENVIRONMENT" in
         production)
-            DB_NAME="api_production"
-            API_ENV="production"
+            DB_NAME="${DB_NAME:-api_production}"
+            API_ENV="${API_ENV:-production}"
             log_info "Setting production-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
             ;;
         staging)
-            DB_NAME="api_staging"
-            API_ENV="staging"
+            DB_NAME="${DB_NAME:-api_staging}"
+            API_ENV="${API_ENV:-staging}"
             log_info "Setting staging-specific configuration: DB_NAME=$DB_NAME, API_ENV=$API_ENV"
             ;;
         development)
@@ -201,7 +201,7 @@ load_env() {
     DATABASE_URL="postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
     
     # Set remaining defaults for ConfigMap variables
-    DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-md5}"
+    DB_HOST_AUTH_METHOD="${DB_HOST_AUTH_METHOD:-scram-sha-256}"
     API_WORKERS="${API_WORKERS:-4}"
     API_PORT="${API_PORT:-8000}"
     SERVER_NAME="${SERVER_NAME:-localhost}"
@@ -325,9 +325,15 @@ apply_secrets() {
     if [[ "${APPLY:-false}" == "true" ]]; then
         log_info "Applying secrets to Kubernetes cluster"
         
-        # Create namespaces if they don't exist
-        kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
-        kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+        # Create namespaces if they don't exist (silently check first to avoid warnings)
+        if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
+            log_info "Creating namespace: $NAMESPACE"
+            kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+        fi
+        if ! kubectl get namespace monitoring &>/dev/null; then
+            log_info "Creating namespace: monitoring"
+            kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+        fi
         
         # Check for and delete immutable secrets before applying
         log_info "Checking for immutable secrets..."
@@ -356,7 +362,9 @@ apply_secrets() {
         fi
         
         # Apply secrets
-        kubectl apply -f "$secrets_file"
+        # Note: Using --server-side to handle resources that may have been created by Terraform
+        # This avoids warnings about missing last-applied-configuration annotations
+        kubectl apply -f "$secrets_file" --server-side --force-conflicts
         log_success "Applied secrets to cluster"
         
         # Verify secrets

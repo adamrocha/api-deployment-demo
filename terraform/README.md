@@ -309,7 +309,7 @@ By default, Terraform stores state locally in `terraform.tfstate`. This works fi
 
 For team environments, use remote state backends:
 
-**Example: S3 Backend**
+### Example: S3 Backend
 
 ```hcl
 # In providers.tf
@@ -331,11 +331,11 @@ terraform {
 - Google Cloud Storage
 - HashiCorp Consul
 
-## Troubleshooting
+## Troubleshooting Guide
 
 ### Common Deployment Issues
 
-**CreateContainerConfigError: Secret Key Not Found**
+#### CreateContainerConfigError: Secret Key Not Found
 
 If pods fail with `Error: couldn't find key SECRET_KEY in Secret`, this indicates a mismatch between the secret key name and the deployment reference.
 
@@ -349,7 +349,7 @@ kubectl delete secret api-secrets -n api-deployment-demo
 make apply  # Terraform will recreate with correct format
 ```
 
-**Grafana Pod Failing: grafana-admin-secret Not Found**
+#### Grafana Pod Failing: grafana-admin-secret Not Found
 
 The Grafana admin password secret is automatically created by Terraform.
 
@@ -362,7 +362,7 @@ terraform import -var="environment=production" -var="enable_monitoring=true" \
   'kubernetes_secret_v1.grafana_admin[0]' monitoring/grafana-admin-secret
 ```
 
-**Terraform State Corruption: Unexpected Identity Change**
+#### Terraform State Corruption: Unexpected Identity Change
 
 If you see "Unexpected Identity Change" errors during apply:
 

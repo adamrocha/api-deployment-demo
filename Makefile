@@ -311,7 +311,7 @@ pods: ## List all pods
 	@kubectl get pods -A
 
 events: ## Show recent cluster events
-	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' | tail -20
+	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' -w
 
 describe: ## Describe deployment (usage: make describe COMPONENT=api)
 	@kubectl describe deployment $(COMPONENT)-deployment -n $(NAMESPACE)

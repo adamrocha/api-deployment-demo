@@ -779,3 +779,275 @@ resource "kubernetes_service_v1" "kube_state_metrics" {
     }
   }
 }
+
+# =============================================================================
+# Metrics Server (Required for HPA)
+# =============================================================================
+
+resource "kubernetes_service_account_v1" "metrics_server" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name      = "metrics-server"
+    namespace = "kube-system"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+}
+
+resource "kubernetes_cluster_role_v1" "metrics_server" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name = "system:metrics-server"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["pods", "nodes", "nodes/stats", "namespaces", "configmaps"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  rule {
+    api_groups = [""]
+    resources  = ["nodes/metrics"]
+    verbs      = ["get"]
+  }
+
+  rule {
+    api_groups = ["apps"]
+    resources  = ["deployments"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "metrics_server" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name = "system:metrics-server"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role_v1.metrics_server[0].metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account_v1.metrics_server[0].metadata[0].name
+    namespace = "kube-system"
+  }
+}
+
+resource "kubernetes_cluster_role_binding_v1" "metrics_server_auth_delegator" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name = "metrics-server:system:auth-delegator"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "system:auth-delegator"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account_v1.metrics_server[0].metadata[0].name
+    namespace = "kube-system"
+  }
+}
+
+resource "kubernetes_role_binding_v1" "metrics_server_auth_reader" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name      = "metrics-server-auth-reader"
+    namespace = "kube-system"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = "extension-apiserver-authentication-reader"
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account_v1.metrics_server[0].metadata[0].name
+    namespace = "kube-system"
+  }
+}
+
+resource "kubernetes_deployment_v1" "metrics_server" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name      = "metrics-server"
+    namespace = "kube-system"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+
+  spec {
+    replicas = 1
+
+    selector {
+      match_labels = {
+        app = "metrics-server"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app = "metrics-server"
+        }
+      }
+
+      spec {
+        service_account_name = kubernetes_service_account_v1.metrics_server[0].metadata[0].name
+
+        container {
+          name  = "metrics-server"
+          image = "registry.k8s.io/metrics-server/metrics-server:v0.7.0"
+
+          args = [
+            "--cert-dir=/tmp",
+            "--secure-port=4443",
+            "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
+            "--kubelet-use-node-status-port",
+            "--metric-resolution=15s",
+            "--kubelet-insecure-tls" # Required for Kind clusters with self-signed certs
+          ]
+
+          port {
+            name           = "https"
+            container_port = 4443
+            protocol       = "TCP"
+          }
+
+          resources {
+            requests = {
+              cpu    = "100m"
+              memory = "200Mi"
+            }
+            limits = {
+              cpu    = "200m"
+              memory = "400Mi"
+            }
+          }
+
+          liveness_probe {
+            http_get {
+              path   = "/livez"
+              port   = "https"
+              scheme = "HTTPS"
+            }
+            initial_delay_seconds = 20
+            period_seconds        = 10
+            failure_threshold     = 3
+          }
+
+          readiness_probe {
+            http_get {
+              path   = "/readyz"
+              port   = "https"
+              scheme = "HTTPS"
+            }
+            initial_delay_seconds = 20
+            period_seconds        = 10
+            failure_threshold     = 3
+          }
+
+          security_context {
+            run_as_non_root              = true
+            run_as_user                  = 1000
+            allow_privilege_escalation   = false
+            read_only_root_filesystem    = true
+          }
+
+          volume_mount {
+            name       = "tmp-dir"
+            mount_path = "/tmp"
+          }
+        }
+
+        volume {
+          name = "tmp-dir"
+          empty_dir {}
+        }
+
+        priority_class_name = "system-cluster-critical"
+      }
+    }
+  }
+}
+
+resource "kubernetes_service_v1" "metrics_server" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name      = "metrics-server"
+    namespace = "kube-system"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+
+  spec {
+    selector = {
+      app = "metrics-server"
+    }
+
+    port {
+      name        = "https"
+      port        = 443
+      target_port = "https"
+      protocol    = "TCP"
+    }
+
+    type = "ClusterIP"
+  }
+}
+
+resource "kubernetes_api_service_v1" "metrics_server" {
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
+
+  metadata {
+    name = "v1beta1.metrics.k8s.io"
+    labels = {
+      app = "metrics-server"
+    }
+  }
+
+  spec {
+    service {
+      name      = kubernetes_service_v1.metrics_server[0].metadata[0].name
+      namespace = "kube-system"
+    }
+
+    group                    = "metrics.k8s.io"
+    version                  = "v1beta1"
+    insecure_skip_tls_verify = true
+    group_priority_minimum   = 100
+    version_priority         = 100
+  }
+}

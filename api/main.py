@@ -412,6 +412,36 @@ async def get_products():
     http_request_duration_seconds.labels(method='GET', endpoint='/products').observe(time.time() - start_time)
     return result
 
+@app.get("/stress")
+async def cpu_stress_test():
+    """CPU-intensive endpoint for load testing and autoscaling demo"""
+    start_time = time.time()
+    http_requests_total.labels(method='GET', endpoint='/stress', status='200').inc()
+    
+    # CPU-intensive computation: calculate prime numbers
+    def find_primes(n):
+        primes = []
+        for num in range(2, n):
+            is_prime = True
+            for i in range(2, int(num ** 0.5) + 1):
+                if num % i == 0:
+                    is_prime = False
+                    break
+            if is_prime:
+                primes.append(num)
+        return primes
+    
+    # Generate load (adjust range to control CPU intensity)
+    result = find_primes(5000)
+    
+    http_request_duration_seconds.labels(method='GET', endpoint='/stress').observe(time.time() - start_time)
+    return {
+        "status": "completed",
+        "primes_found": len(result),
+        "duration_seconds": round(time.time() - start_time, 3),
+        "message": "CPU stress test completed - use for HPA autoscaling demo"
+    }
+
 # Create tables
 @app.on_event("startup")
 async def startup_event():

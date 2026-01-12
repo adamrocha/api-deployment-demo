@@ -398,6 +398,8 @@ resource "kubernetes_deployment_v1" "api" {
             }
             initial_delay_seconds = 60
             period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 5
           }
 
           readiness_probe {
@@ -407,6 +409,8 @@ resource "kubernetes_deployment_v1" "api" {
             }
             initial_delay_seconds = 30
             period_seconds        = 5
+            timeout_seconds       = 5
+            failure_threshold     = 3
           }
         }
       }

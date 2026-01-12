@@ -43,7 +43,7 @@ resource "docker_container" "postgres" {
   }
 
   volumes {
-    host_path      = "${path.cwd}/../database/init.sql"
+    host_path      = abspath("${path.module}/../database/init.sql")
     container_path = "/docker-entrypoint-initdb.d/init.sql"
     read_only      = true
   }
@@ -127,18 +127,18 @@ resource "docker_container" "nginx" {
   ]
 
   volumes {
-    host_path      = "${path.cwd}/../nginx/logs"
+    host_path      = abspath("${path.module}/../nginx/logs")
     container_path = "/var/log/nginx"
   }
 
   volumes {
-    host_path      = "${path.cwd}/../nginx/ssl"
+    host_path      = abspath("${path.module}/../nginx/ssl")
     container_path = "/etc/nginx/ssl"
     read_only      = true
   }
 
   volumes {
-    host_path      = "${path.cwd}/../nginx/index.html"
+    host_path      = abspath("${path.module}/../nginx/index.html")
     container_path = "/usr/share/nginx/html/index.html"
     read_only      = true
   }

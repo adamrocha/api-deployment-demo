@@ -144,9 +144,9 @@ output: ## Show Terraform outputs
 
 config: ## Configure Kubernetes resources with Ansible
 	@echo "🔧 Configuring with Ansible..."
-	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags config
+	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)"
 
-tune: ## Tune and optimize deployments
+tune: ## Tune and optimize deployments (HPA, PDB, etc)
 	@echo "⚡ Optimizing with Ansible..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags tuning
 
@@ -162,6 +162,7 @@ validate-ansible: ## Validate Ansible configuration
 # =============================================================================
 
 deploy: build apply config ## Full production deployment
+	@echo "✅ Deployment complete!"
 	@$(MAKE) urls
 
 production: deploy ## Alias for deploy

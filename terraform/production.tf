@@ -263,7 +263,7 @@ resource "kubernetes_service_v1" "postgres_metrics" {
   metadata {
     name      = "postgres-metrics"
     namespace = kubernetes_namespace_v1.app[0].metadata[0].name
-    
+
     labels = {
       app       = "api-demo"
       component = "database"

@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
 import os
 import sys
 import time
@@ -186,11 +187,20 @@ api_info.info({
     'environment': os.getenv('API_ENV', 'unknown')
 })
 
+# Lifespan event handler
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Create database tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown: cleanup if needed (currently none required)
+
 # FastAPI app
 app = FastAPI(
     title="API Deployment Demo",
     description="A sample API deployed with Docker, PostgreSQL, and Nginx",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Database dependency
@@ -432,7 +442,8 @@ async def cpu_stress_test():
         return primes
     
     # Generate load (adjust range to control CPU intensity)
-    result = find_primes(5000)
+    # Increased from 10,000 to 75,000 for aggressive CPU usage and HPA testing
+    result = find_primes(75000)
     
     http_request_duration_seconds.labels(method='GET', endpoint='/stress').observe(time.time() - start_time)
     return {
@@ -441,8 +452,3 @@ async def cpu_stress_test():
         "duration_seconds": round(time.time() - start_time, 3),
         "message": "CPU stress test completed - use for HPA autoscaling demo"
     }
-
-# Create tables
-@app.on_event("startup")
-async def startup_event():
-    Base.metadata.create_all(bind=engine)

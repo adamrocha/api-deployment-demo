@@ -58,14 +58,14 @@ fi
 # Start load test
 echo -e "${CYAN}🔥 Starting intensive CPU load test to trigger autoscaling...${NC}"
 echo -e "${CYAN}Target: >70% CPU using /stress endpoint (prime number calculation)${NC}"
-echo -e "${CYAN}Workers: 50 concurrent, hammering CPU for 5 minutes${NC}"
+echo -e "${CYAN}Workers: 75 concurrent, hammering CPU for 5 minutes${NC}"
 echo ""
 
 # Run multiple concurrent requests to create CPU load
 run_load_test() {
     local duration=$1
-    local workers=50
-    local max_background_jobs=100
+    local workers=75
+    local max_background_jobs=200
     
     # Function to run in each worker
     worker() {
@@ -186,7 +186,7 @@ echo ""
 echo -e "${GREEN}✅ Load Test Complete!${NC}"
 echo ""
 echo -e "${BLUE}📊 Summary:${NC}"
-echo "  • Load test ran for 5 minutes with 50 concurrent workers targeting CPU-intensive /stress endpoint"
+echo "  • Load test ran for 5 minutes with 75 concurrent workers targeting CPU-intensive /stress endpoint"
 
 # Get pod count with error handling
 POD_COUNT=$(kubectl get pods -n api-deployment-demo -l app=api-demo,component=api --no-headers 2>/dev/null | grep -c Running || echo 0)

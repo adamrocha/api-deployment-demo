@@ -201,6 +201,7 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -d @monitoring/dashboards/api-performance.json \
   http://admin:PASSWORD@localhost:3000/api/dashboards/db
+  # checkov:skip=CKV_SECRET_4: Not a secret, just an example
 ```
 
 ---

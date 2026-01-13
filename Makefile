@@ -146,11 +146,11 @@ config: ## Configure Kubernetes resources with Ansible
 	@echo "🔧 Configuring with Ansible..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags config
 
-tune: ## Tune and optimize deployments
+tune: ## Tune and optimize deployments (HPA, PDB, etc)
 	@echo "⚡ Optimizing with Ansible..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags tuning
 
-ansible: ## Run all Ansible playbooks
+ansible: ## Run all Ansible playbooks (config + tuning)
 	@echo "🚀 Running Ansible configuration..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)"
 
@@ -162,6 +162,7 @@ validate-ansible: ## Validate Ansible configuration
 # =============================================================================
 
 deploy: build apply config ## Full production deployment
+	@echo "✅ Deployment complete!"
 	@$(MAKE) urls
 
 production: deploy ## Alias for deploy
@@ -244,6 +245,9 @@ test-load: ## Run load test
 test-traffic: ## Generate test traffic
 	@./scripts/generate-traffic.sh
 
+verify-metrics: ## Verify metrics server and HPA status
+	@./scripts/verify-metrics.sh
+
 validate: ## Validate all configurations
 	@echo "✅ Validating..."
 	@docker compose config >/dev/null && echo "  ✅ Docker Compose"
@@ -309,8 +313,11 @@ scale: ## Scale deployments (usage: make scale COMPONENT=api REPLICAS=3)
 pods: ## List all pods
 	@kubectl get pods -A
 
-events: ## Show recent cluster events
+events: ## Show last 20 cluster events (one-time)
 	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' | tail -20
+
+watch-events: ## Watch cluster events continuously (Ctrl+C to exit)
+	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' -w
 
 describe: ## Describe deployment (usage: make describe COMPONENT=api)
 	@kubectl describe deployment $(COMPONENT)-deployment -n $(NAMESPACE)

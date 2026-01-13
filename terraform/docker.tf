@@ -5,12 +5,12 @@
 resource "null_resource" "ssl_certs" {
   provisioner "local-exec" {
     command     = "./generate-ssl.sh"
-    working_dir = "${path.cwd}/../nginx"
+    working_dir = "${path.module}/../nginx"
   }
 
   # Only run if certificates don't exist
   triggers = {
-    cert_exists = fileexists("${path.cwd}/../nginx/ssl/nginx-selfsigned.crt") ? "exists" : "missing"
+    cert_exists = fileexists("${path.module}/../nginx/ssl/nginx-selfsigned.crt") ? "exists" : "missing"
   }
 }
 

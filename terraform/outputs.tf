@@ -43,3 +43,35 @@ output "docker_images" {
     nginx = docker_image.nginx.name
   }
 }
+
+output "autoscaling_config" {
+  description = "HPA autoscaling configuration"
+  value = var.environment == "production" ? {
+    enabled               = true
+    min_replicas          = 2
+    max_replicas          = 10
+    cpu_threshold_percent = 50
+    scale_up_policy       = "100% or 4 pods per 15 seconds"
+    scale_down_policy     = "50% per 60 seconds after 5 min stabilization"
+    stress_endpoint_info  = "/stress calculates 75,000 primes for CPU load testing"
+  } : null
+}
+
+output "health_check_config" {
+  description = "Pod health check configuration"
+  value = var.environment == "production" ? {
+    startup_initial_delay       = "10s"
+    startup_timeout             = "5s"
+    startup_period              = "10s"
+    startup_failure_threshold   = 12
+    startup_max_time            = "120s (12 x 10s)"
+    liveness_period             = "30s"
+    liveness_timeout            = "10s"
+    liveness_failure_threshold  = 6
+    liveness_max_grace          = "180s (6 x 30s) before restart"
+    readiness_period            = "10s"
+    readiness_timeout           = "10s"
+    readiness_failure_threshold = 3
+    readiness_max_grace         = "30s (3 x 10s) before traffic removal"
+  } : null
+}

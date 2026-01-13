@@ -104,7 +104,7 @@ make production
 ### Deployment
 
 ```bash
-make production          # Full production deployment
+make production         # Full production deployment
 make staging            # Docker Compose staging environment
 make ci-pipeline        # CI/CD automated pipeline
 ```
@@ -128,7 +128,7 @@ make logs-nginx         # Nginx logs (follow)
 ### Scaling & Testing
 
 ```bash
-make scale COMPONENT=api REPLICAS=5  # Scale API pods
+make scale COMPONENT=api REPLICAS=5   # Scale API pods
 make scale COMPONENT=nginx REPLICAS=3 # Scale Nginx pods
 make test-load                        # Run load test
 make test-traffic                     # Generate traffic
@@ -179,6 +179,22 @@ Internet/localhost → Kind Cluster → Nginx (:80/:443) → API (:8000) → Pos
                                                 ↓
                                             Prometheus (:9090) → Grafana (:3000)
 ```
+
+### Environment Architecture
+
+**Staging (Docker Compose)**:
+
+- Database: `api_staging` on port `35432`
+- API: Port `30800`, API_ENV=`staging`
+- Nginx: Ports `30080`/`30443`
+- Use: Local development and testing
+
+**Production (Kubernetes/Terraform)**:
+
+- Database: `api_production` on port `5432` (internal)
+- API: Port `8000`, API_ENV=`production`
+- Nginx: Port `443` (HTTPS)
+- Use: Production-like environment with monitoring
 
 ### Deployment Comparison
 
@@ -289,7 +305,7 @@ SSL_ENABLED=true
 ### Quick Diagnostics
 
 ```bash
-make cluster-info        # Cluster health
+make cluster-info       # Cluster health
 make pods               # Pod status
 make events             # Recent events
 make health             # Endpoint health checks
@@ -385,10 +401,13 @@ kubectl rollout restart deployment <name> -n production
 
 ### Documentation
 
-- 📚 **[QUICK-REFERENCE.md](docs/QUICK-REFERENCE.md)** - Command cheat sheet
-- 🔄 **[CI-CD-WORKFLOWS.md](docs/CI-CD-WORKFLOWS.md)** - Pipeline details
-- 🏗️ **[DEPLOYMENT-METHODS.md](docs/DEPLOYMENT-METHODS.md)** - Method comparison
-- 🔐 **[SECRETS-SECURITY.md](docs/SECRETS-SECURITY.md)** - Secrets management & security best practices
+- 📚 **[Quick Reference](docs/QUICK-REFERENCE.md)** - Command cheat sheet
+- 🏗️ **[Deployment Methods](docs/DEPLOYMENT-METHODS.md)** - Method comparison (Terraform, Ansible, kubectl)
+- 🔐 **[Secrets & Security](docs/SECRETS-SECURITY.md)** - Secrets management & security best practices
+- 📊 **[Monitoring Setup](docs/MONITORING-SETUP.md)** - Prometheus & Grafana configuration
+- 📈 **[Grafana Dashboards](docs/GRAFANA-DASHBOARDS.md)** - Dashboard documentation
+- 🔧 **[Terraform Guide](docs/TERRAFORM-GUIDE.md)** - Infrastructure as Code reference
+- 📝 **[Changelog](docs/CHANGELOG.md)** - Version history and updates
 
 ### External Links
 

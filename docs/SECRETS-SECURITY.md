@@ -211,7 +211,7 @@ data "aws_secretsmanager_secret_version" "db_password" {
   secret_id = "api/production/db_password"
 }
 
-resource "kubernetes_" "database" {
+resource "kubernetes_secret" "database" {
   data = {
     db-password = data.aws_secretsmanager_secret_version.db_password.secret_string
   }

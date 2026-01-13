@@ -38,7 +38,7 @@
 ### Health Check Resilience
 
 - **Startup Probe**: Added dedicated startup probe for initial container startup
-  - File: [terraform/production.tf](../terraform/production.tf)
+  - File: [terraform/production.tf](terraform/production.tf)
   - 120 seconds max startup time (12 failures × 10s)
   - Separates startup time from liveness checks
   - Prevents premature restarts during initialization

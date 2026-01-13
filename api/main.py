@@ -434,15 +434,24 @@ def cpu_stress_test():
     
     # CPU-intensive computation: calculate prime numbers
     def find_primes(n):
-        primes = []
-        for num in range(2, n):
-            is_prime = True
-            for i in range(2, int(num ** 0.5) + 1):
-                if num % i == 0:
-                    is_prime = False
-                    break
-            if is_prime:
-                primes.append(num)
+        # Use Sieve of Eratosthenes for O(n log log n) complexity
+        if n < 2:
+            return []
+
+        # is_prime[i] indicates whether i is prime
+        is_prime = [True] * (n + 1)
+        is_prime[0] = False
+        is_prime[1] = False
+
+        limit = int(n ** 0.5) + 1
+        for p in range(2, limit):
+            if is_prime[p]:
+                # Start marking from p*p to avoid redundant work
+                for multiple in range(p * p, n + 1, p):
+                    is_prime[multiple] = False
+
+        # Original behavior: primes less than n
+        primes = [i for i in range(2, n) if is_prime[i]]
         return primes
     
     # Generate load (adjust range to control CPU intensity)

@@ -401,10 +401,13 @@ kubectl rollout restart deployment <name> -n production
 
 ### Documentation
 
-- 📚 **[QUICK-REFERENCE.md](docs/QUICK-REFERENCE.md)** - Command cheat sheet
-- 🔄 **[CI-CD-WORKFLOWS.md](docs/CI-CD-WORKFLOWS.md)** - Pipeline details
-- 🏗️ **[DEPLOYMENT-METHODS.md](docs/DEPLOYMENT-METHODS.md)** - Method comparison
-- 🔐 **[SECRETS-SECURITY.md](docs/SECRETS-SECURITY.md)** - Secrets management & security best practices
+- 📚 **[Quick Reference](docs/QUICK-REFERENCE.md)** - Command cheat sheet
+- 🏗️ **[Deployment Methods](docs/DEPLOYMENT-METHODS.md)** - Method comparison (Terraform, Ansible, kubectl)
+- 🔐 **[Secrets & Security](docs/SECRETS-SECURITY.md)** - Secrets management & security best practices
+- 📊 **[Monitoring Setup](docs/MONITORING-SETUP.md)** - Prometheus & Grafana configuration
+- 📈 **[Grafana Dashboards](docs/GRAFANA-DASHBOARDS.md)** - Dashboard documentation
+- 🔧 **[Terraform Guide](docs/TERRAFORM-GUIDE.md)** - Infrastructure as Code reference
+- 📝 **[Changelog](docs/CHANGELOG.md)** - Version history and updates
 
 ### External Links
 

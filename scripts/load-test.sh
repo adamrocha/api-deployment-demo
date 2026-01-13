@@ -57,7 +57,7 @@ fi
 
 # Start load test
 echo -e "${CYAN}🔥 Starting intensive CPU load test to trigger autoscaling...${NC}"
-echo -e "${CYAN}Target: >70% CPU using /stress endpoint (prime number calculation)${NC}"
+echo -e "${CYAN}Target: >50% CPU using /stress endpoint (75,000 prime calculation)${NC}"
 echo -e "${CYAN}Workers: 75 concurrent, hammering CPU for 5 minutes${NC}"
 echo ""
 
@@ -113,7 +113,7 @@ monitor_pods() {
         
         # Show HPA status if available
         if kubectl get hpa -n api-deployment-demo 2>/dev/null | grep -q api; then
-            echo -e "${GREEN}📈 HPA Status (triggers at 70% CPU):${NC}"
+            echo -e "${GREEN}📈 HPA Status (triggers at 50% CPU):${NC}"
             kubectl get hpa -n api-deployment-demo
             echo ""
         fi
@@ -147,7 +147,7 @@ MONITOR_PID=$!
 
 # Run load test for 5 minutes to allow time for autoscaling
 echo -e "${YELLOW}⚡ Running load test for 5 minutes to trigger autoscaling...${NC}"
-echo -e "${CYAN}Expect to see CPU rise above 70% and pods scale from 2 to ~5-10${NC}"
+echo -e "${CYAN}Expect to see CPU rise above 50% and pods scale from 2 to ~5-10${NC}"
 echo ""
 run_load_test 300
 

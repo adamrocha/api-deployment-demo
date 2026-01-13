@@ -1,6 +1,6 @@
 # Grafana Dashboards
 
-This directory contains pre-configured Grafana dashboards for monitoring the API Deployment Demo infrastructure.
+Pre-configured Grafana dashboards for monitoring the API Deployment Demo infrastructure.
 
 ## Automated Deployment
 

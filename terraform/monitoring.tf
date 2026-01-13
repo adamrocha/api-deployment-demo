@@ -972,7 +972,7 @@ resource "kubernetes_deployment_v1" "metrics_server" {
               port   = "https"
               scheme = "HTTPS"
             }
-            initial_delay_seconds = 20
+            initial_delay_seconds = 30
             period_seconds        = 10
             failure_threshold     = 3
           }

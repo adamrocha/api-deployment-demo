@@ -68,8 +68,10 @@ resource "kubernetes_horizontal_pod_autoscaler_v2" "api_deployment" {
     }
   }
 
+  # Wait for metrics server to be ready and collect initial metrics
   depends_on = [
     kubernetes_deployment_v1.api,
-    kubernetes_deployment_v1.metrics_server
+    kubernetes_deployment_v1.metrics_server,
+    kubernetes_api_service_v1.metrics_server
   ]
 }

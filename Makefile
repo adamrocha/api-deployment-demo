@@ -245,6 +245,9 @@ test-load: ## Run load test
 test-traffic: ## Generate test traffic
 	@./scripts/generate-traffic.sh
 
+verify-metrics: ## Verify metrics server and HPA status
+	@./scripts/verify-metrics.sh
+
 validate: ## Validate all configurations
 	@echo "✅ Validating..."
 	@docker compose config >/dev/null && echo "  ✅ Docker Compose"

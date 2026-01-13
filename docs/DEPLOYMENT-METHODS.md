@@ -350,7 +350,7 @@ make --version
 ### Terraform Documentation
 
 - Official: <https://learn.hashicorp.com/terraform>
-- Project: `terraform/README.md`
+- Project: [Terraform Guide](TERRAFORM-GUIDE.md)
 
 ### Ansible Documentation
 
@@ -400,7 +400,7 @@ deploy-production:
 
 Each method has detailed documentation:
 
-- **Terraform**: See `terraform/README.md`
+- **Terraform**: See [Terraform Guide](TERRAFORM-GUIDE.md)
 - **Ansible**: See `ansible/README.md` (if exists) or playbook comments
 - **Make**: Run `make help`
 

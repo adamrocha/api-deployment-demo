@@ -144,13 +144,13 @@ output: ## Show Terraform outputs
 
 config: ## Configure Kubernetes resources with Ansible
 	@echo "🔧 Configuring with Ansible..."
-	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)"
+	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags config
 
 tune: ## Tune and optimize deployments (HPA, PDB, etc)
 	@echo "⚡ Optimizing with Ansible..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags tuning
 
-ansible: ## Run all Ansible playbooks
+ansible: ## Run all Ansible playbooks (config + tuning)
 	@echo "🚀 Running Ansible configuration..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)"
 

@@ -423,8 +423,12 @@ async def get_products():
     return result
 
 @app.get("/stress")
-async def cpu_stress_test():
-    """CPU-intensive endpoint for load testing and autoscaling demo"""
+def cpu_stress_test():
+    """CPU-intensive endpoint for load testing and autoscaling demo
+    
+    Note: Using sync def (not async def) so FastAPI runs this in a thread pool.
+    This prevents blocking the event loop with CPU-intensive operations.
+    """
     start_time = time.time()
     http_requests_total.labels(method='GET', endpoint='/stress', status='200').inc()
     

@@ -313,7 +313,10 @@ scale: ## Scale deployments (usage: make scale COMPONENT=api REPLICAS=3)
 pods: ## List all pods
 	@kubectl get pods -A
 
-events: ## Show recent cluster events
+events: ## Show last 20 cluster events (one-time)
+	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' | tail -20
+
+watch-events: ## Watch cluster events continuously (Ctrl+C to exit)
 	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' -w
 
 describe: ## Describe deployment (usage: make describe COMPONENT=api)

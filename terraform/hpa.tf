@@ -1,8 +1,9 @@
 # Horizontal Pod Autoscaler for API Deployment
 # Automatically scales API pods based on CPU utilization
+# Requires metrics-server to be enabled
 
 resource "kubernetes_horizontal_pod_autoscaler_v2" "api_deployment" {
-  count = var.environment == "production" ? 1 : 0
+  count = var.environment == "production" && var.enable_monitoring ? 1 : 0
 
   metadata {
     name      = "api-deployment"

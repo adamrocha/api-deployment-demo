@@ -755,6 +755,52 @@ Before going to production:
 5. ✅ Enable audit logging
 6. ✅ Test incident response procedures
 7. ✅ Document all secrets and locations
+8. ✅ **Remove `--kubelet-insecure-tls` from metrics-server** (see below)
+
+---
+
+## ⚠️ Production Security Considerations
+
+### Metrics Server TLS Configuration
+
+**Current Status (Development/Kind):** The metrics-server uses `--kubelet-insecure-tls` because Kind's kubelet certificates lack IP Subject Alternative Names (SANs).
+
+**Security Risk:**
+
+- Disables TLS verification for kubelet connections
+- Allows potential MITM attacks on metrics data
+- Could enable manipulation of HPA autoscaling decisions
+
+**Production Requirements:**
+
+For production Kubernetes clusters (GKE, EKS, AKS, etc.), update [terraform/monitoring.tf](../terraform/monitoring.tf):
+
+```terraform
+args = [
+  "--cert-dir=/tmp",
+  "--secure-port=4443",
+  "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
+  "--kubelet-use-node-status-port",
+  "--metric-resolution=15s"
+  # Remove: "--kubelet-insecure-tls"
+]
+```
+
+**Why it's safe to remove:**
+
+- Managed Kubernetes services (GKE, EKS, AKS) provision kubelets with proper certificates
+- Certificates include IP SANs and are signed by the cluster CA
+- Metrics-server automatically validates using the service account CA
+
+**Verification:**
+
+```bash
+# After deployment, check metrics-server logs
+kubectl logs -n kube-system -l app=metrics-server
+
+# Should see successful scraping without TLS errors
+# Should NOT see "failed to verify certificate" errors
+```
 
 ---
 

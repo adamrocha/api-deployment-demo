@@ -929,13 +929,16 @@ resource "kubernetes_deployment_v1" "metrics_server" {
           name  = "metrics-server"
           image = "registry.k8s.io/metrics-server/metrics-server:v0.7.0"
 
+          # NOTE: Kind clusters use kubelet certs without IP SANs
+          # For production on real K8s clusters, remove --kubelet-insecure-tls
+          # and ensure kubelets have proper certificates with IP/DNS SANs
           args = [
             "--cert-dir=/tmp",
             "--secure-port=4443",
             "--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname",
             "--kubelet-use-node-status-port",
             "--metric-resolution=15s",
-            "--kubelet-insecure-tls" # Required for Kind clusters with self-signed certs
+            "--kubelet-insecure-tls" # Required for Kind - remove for production
           ]
 
           port {

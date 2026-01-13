@@ -141,8 +141,8 @@ Secrets are managed via variables in `terraform.tfvars`:
 
 ```hcl
 # terraform.tfvars (NOT in version control)
-db_password = "your-secure-password"
-secret_key  = "your-secure-secret-key"
+db_password = "..."
+secret_key  = "..."
 ```
 
 ### Security Features
@@ -211,7 +211,7 @@ data "aws_secretsmanager_secret_version" "db_password" {
   secret_id = "api/production/db_password"
 }
 
-resource "kubernetes_secret" "database" {
+resource "kubernetes_" "database" {
   data = {
     db-password = data.aws_secretsmanager_secret_version.db_password.secret_string
   }
@@ -340,8 +340,8 @@ ansible-playbook site.yml --ask-vault-pass
 
    ```yaml
    # group_vars/production/vault.yml
-   vault_db_password: "encrypted-value"
-   vault_secret_key: "encrypted-value"
+   vault_db_password: "..."
+   vault_secret_key: "..."
    
    # group_vars/production/vars.yml
    db_password: "{{ vault_db_password }}"

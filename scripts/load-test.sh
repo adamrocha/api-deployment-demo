@@ -74,12 +74,20 @@ run_load_test() {
             # Use CPU-intensive /stress endpoint to trigger autoscaling
             curl -s "$API_URL/stress" > /dev/null &
             
+            # Optional small delay to avoid ultra-rapid process spawning
+            sleep 0.01
+            
             # Controlled background job limit to prevent fork bomb
-            local job_count
-            job_count=$(jobs -r | wc -l)
-            if [ "$job_count" -ge "$max_background_jobs" ]; then
+            while :; do
+                local job_count
+                job_count=$(jobs -r | wc -l)
+                if [ "$job_count" -lt "$max_background_jobs" ]; then
+                    break
+                fi
+                # Wait for at least one background job to finish before spawning more
                 wait -n 2>/dev/null || true
-            fi
+                sleep 0.05
+            done
         done
         # Clean up all background jobs for this worker
         wait

@@ -263,7 +263,7 @@ resource "kubernetes_service_v1" "postgres_metrics" {
   metadata {
     name      = "postgres-metrics"
     namespace = kubernetes_namespace_v1.app[0].metadata[0].name
-    
+
     labels = {
       app       = "api-demo"
       component = "database"
@@ -391,13 +391,27 @@ resource "kubernetes_deployment_v1" "api" {
             }
           }
 
+          # Startup probe - gives pod up to 2 minutes to start
+          startup_probe {
+            http_get {
+              path = "/health"
+              port = 8000
+            }
+            initial_delay_seconds = 10
+            period_seconds        = 10
+            timeout_seconds       = 5
+            failure_threshold     = 12 # 12 * 10s = 120s max startup time
+          }
+
+          # Liveness probe - very lenient to handle CPU-intensive operations
           liveness_probe {
             http_get {
               path = "/health"
               port = 8000
             }
-            initial_delay_seconds = 60
-            period_seconds        = 10
+            period_seconds    = 30 # Check every 30s instead of 10s
+            timeout_seconds   = 10 # Increased timeout to 10s
+            failure_threshold = 6  # 6 * 30s = 180s before restart
           }
 
           readiness_probe {
@@ -405,8 +419,9 @@ resource "kubernetes_deployment_v1" "api" {
               path = "/health"
               port = 8000
             }
-            initial_delay_seconds = 30
-            period_seconds        = 5
+            period_seconds    = 10
+            timeout_seconds   = 10
+            failure_threshold = 3
           }
         }
       }

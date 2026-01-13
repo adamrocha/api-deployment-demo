@@ -9,7 +9,7 @@
   
   vars:
     # Override default environment if not specified
-    target_env: "{{ environment | default('staging') }}"
+    target_env: "{{ environment | default('production') }}"
     
   pre_tasks:
     - name: Validate that we're targeting database servers

@@ -5,6 +5,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
 import os
 import sys
 import time
@@ -186,11 +187,20 @@ api_info.info({
     'environment': os.getenv('API_ENV', 'unknown')
 })
 
+# Lifespan event handler
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Create database tables
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Shutdown: cleanup if needed (currently none required)
+
 # FastAPI app
 app = FastAPI(
     title="API Deployment Demo",
     description="A sample API deployed with Docker, PostgreSQL, and Nginx",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Database dependency
@@ -412,7 +422,46 @@ async def get_products():
     http_request_duration_seconds.labels(method='GET', endpoint='/products').observe(time.time() - start_time)
     return result
 
-# Create tables
-@app.on_event("startup")
-async def startup_event():
-    Base.metadata.create_all(bind=engine)
+@app.get("/stress")
+def cpu_stress_test():
+    """CPU-intensive endpoint for load testing and autoscaling demo
+    
+    Note: Using sync def (not async def) so FastAPI runs this in a thread pool.
+    This prevents blocking the event loop with CPU-intensive operations.
+    """
+    start_time = time.time()
+    http_requests_total.labels(method='GET', endpoint='/stress', status='200').inc()
+    
+    # CPU-intensive computation: calculate prime numbers
+    def find_primes(n):
+        # Use Sieve of Eratosthenes for O(n log log n) complexity
+        if n < 2:
+            return []
+
+        # is_prime[i] indicates whether i is prime
+        is_prime = [True] * (n + 1)
+        is_prime[0] = False
+        is_prime[1] = False
+
+        limit = int(n ** 0.5) + 1
+        for p in range(2, limit):
+            if is_prime[p]:
+                # Start marking from p*p to avoid redundant work
+                for multiple in range(p * p, n + 1, p):
+                    is_prime[multiple] = False
+
+        # Original behavior: primes less than n
+        primes = [i for i in range(2, n) if is_prime[i]]
+        return primes
+    
+    # Generate load (adjust range to control CPU intensity)
+    # Increased from 10,000 to 75,000 for aggressive CPU usage and HPA testing
+    result = find_primes(75000)
+    
+    http_request_duration_seconds.labels(method='GET', endpoint='/stress').observe(time.time() - start_time)
+    return {
+        "status": "completed",
+        "primes_found": len(result),
+        "duration_seconds": round(time.time() - start_time, 3),
+        "message": "CPU stress test completed - use for HPA autoscaling demo"
+    }

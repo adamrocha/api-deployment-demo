@@ -107,7 +107,7 @@ monitor_pods() {
         iteration=$((iteration + 1))
         clear
         echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-        echo -e "${CYAN}║  HPA Autoscaling Demo - Live Monitoring  [Iteration: $iteration]     ║${NC}"
+        echo -e "${CYAN}║  HPA Autoscaling Demo - Live Monitoring  [Iteration: $(printf '%3d' "$iteration")]  ║${NC}"
         echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
         echo ""
         

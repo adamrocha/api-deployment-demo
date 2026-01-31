@@ -187,11 +187,39 @@ api_info.info({
     'environment': os.getenv('API_ENV', 'unknown')
 })
 
+# Database initialization with retries
+def initialize_database():
+    max_retries = 30
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"Database initialization attempt {attempt + 1}/{max_retries}")
+            # Test database connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            
+            # Create tables if connection successful
+            print("Creating database tables...")
+            Base.metadata.create_all(bind=engine)
+            print("Database tables created successfully!")
+            return True
+            
+        except Exception as e:
+            print(f"Database initialization failed (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                print(f"Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print("Max retries reached. Database initialization failed.")
+                raise e
+    return False
+
 # Lifespan event handler
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Create database tables
-    Base.metadata.create_all(bind=engine)
+    # Startup: Initialize database with retries
+    initialize_database()
     yield
     # Shutdown: cleanup if needed (currently none required)
 

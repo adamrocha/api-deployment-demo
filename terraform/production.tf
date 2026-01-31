@@ -320,6 +320,27 @@ resource "kubernetes_deployment_v1" "api" {
       }
 
       spec {
+        # Init container to wait for database to be ready
+        init_container {
+          name  = "wait-for-db"
+          image = "postgres:15-alpine"
+          
+          command = [
+            "sh", "-c",
+            "until pg_isready -h postgres -p 5432 -U postgres; do echo waiting for database; sleep 2; done;"
+          ]
+
+          env {
+            name = "PGPASSWORD"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret_v1.database[0].metadata[0].name
+                key  = "db-password"
+              }
+            }
+          }
+        }
+
         container {
           name              = "api"
           image             = "${var.docker_images.api.name}:${var.docker_images.api.tag}"

@@ -25,6 +25,9 @@ API_IMAGE := api-deployment-demo-api:latest
 NGINX_IMAGE := api-deployment-demo-nginx:latest
 IMAGES := $(API_IMAGE) $(NGINX_IMAGE)
 
+# Component settings
+COMPONENT ?= api
+
 # Terraform variables
 TF_VARS := -var="environment=$(ENV)" -var="enable_monitoring=true"
 
@@ -227,10 +230,10 @@ urls: ## Display access URLs
 	@echo "🌐 Access URLs"
 	@echo "=============="
 	@echo "  Web:        https://localhost"
-	@echo "  API:        http://localhost:$(API_PORT)"
-	@echo "  API Docs:   http://localhost:$(API_PORT)/docs"
-	@echo "  Grafana:    http://localhost:$(GRAFANA_PORT)"
-	@echo "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"
+	@echo "  API:        https://localhost:$(API_PORT)"
+	@echo "  API Docs:   https://localhost:$(API_PORT)/docs"
+	@echo "  Grafana:    https://localhost:$(GRAFANA_PORT)"
+	@echo "  Prometheus: https://localhost:$(PROMETHEUS_PORT)"
 
 # =============================================================================
 # Testing & Validation
@@ -308,7 +311,20 @@ restart: ## Restart all deployments
 	@echo "✅ All deployments restarted"
 
 scale: ## Scale deployments (usage: make scale COMPONENT=api REPLICAS=3)
-	@kubectl scale deployment/$(COMPONENT)-deployment -n $(NAMESPACE) --replicas=$(REPLICAS)
+	@if [ -z "$(REPLICAS)" ]; then \
+		echo "❌ REPLICAS parameter is required"; \
+		echo "Usage: make scale COMPONENT=<component-name> REPLICAS=<number>"; \
+		exit 1; \
+	fi
+	@echo "⚖️  Scaling $(COMPONENT) deployment to $(REPLICAS) replicas..."
+	@if kubectl get deployment $(COMPONENT)-deployment -n $(NAMESPACE) > /dev/null 2>&1; then \
+		kubectl scale deployment/$(COMPONENT)-deployment -n $(NAMESPACE) --replicas=$(REPLICAS); \
+	else \
+		echo "❌ Deployment $(COMPONENT)-deployment not found in namespace $(NAMESPACE)"; \
+		echo "Available deployments:"; \
+		kubectl get deployments -n $(NAMESPACE) --no-headers | awk '{print "  - " $$1}'; \
+		echo "Usage: make scale COMPONENT=<component-name> REPLICAS=<number>"; \
+	fi
 
 pods: ## List all pods
 	@kubectl get pods -A
@@ -320,7 +336,23 @@ watch-events: ## Watch cluster events continuously (Ctrl+C to exit)
 	@kubectl get events -n $(NAMESPACE) --sort-by='.lastTimestamp' -w
 
 describe: ## Describe deployment (usage: make describe COMPONENT=api)
-	@kubectl describe deployment $(COMPONENT)-deployment -n $(NAMESPACE)
+	@echo "📋 Describing $(COMPONENT) deployment..."
+	@if kubectl get deployment $(COMPONENT)-deployment -n $(NAMESPACE) > /dev/null 2>&1; then \
+		kubectl describe deployment $(COMPONENT)-deployment -n $(NAMESPACE); \
+	else \
+		echo "❌ Deployment $(COMPONENT)-deployment not found in namespace $(NAMESPACE)"; \
+		echo "Available deployments:"; \
+		kubectl get deployments -n $(NAMESPACE) --no-headers | awk '{print "  - " $$1}'; \
+		echo "Usage: make describe COMPONENT=<component-name>"; \
+	fi
 
 shell: ## Open shell in pod (usage: make shell COMPONENT=api)
-	@kubectl exec -it -n $(NAMESPACE) deployment/$(COMPONENT)-deployment -- sh
+	@echo "🐚 Opening shell in $(COMPONENT) pod..."
+	@if kubectl get deployment $(COMPONENT)-deployment -n $(NAMESPACE) > /dev/null 2>&1; then \
+		kubectl exec -it -n $(NAMESPACE) deployment/$(COMPONENT)-deployment -- sh; \
+	else \
+		echo "❌ Deployment $(COMPONENT)-deployment not found in namespace $(NAMESPACE)"; \
+		echo "Available deployments:"; \
+		kubectl get deployments -n $(NAMESPACE) --no-headers | awk '{print "  - " $$1}'; \
+		echo "Usage: make shell COMPONENT=<component-name>"; \
+	fi

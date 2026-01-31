@@ -101,7 +101,7 @@ services:
 networks:
   app_network:
     driver: bridge
-    name: ${COMPOSE_PROJECT_NAME:-api-deployment-demo}_staging_network
+    name: ${COMPOSE_PROJECT_NAME:-api-deployment-demo}_staging_network_v2
 
 volumes:
   postgres_data:

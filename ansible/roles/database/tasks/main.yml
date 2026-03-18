@@ -32,7 +32,7 @@
     state: directory
     owner: postgres
     group: postgres
-    mode: '0700'
+    mode: "0700"
     recurse: yes
 
 - name: Configure PostgreSQL main configuration
@@ -41,7 +41,7 @@
     dest: "{{ postgres_config_dir }}/postgresql.conf"
     owner: postgres
     group: postgres
-    mode: '0644'
+    mode: "0644"
     backup: yes
   notify: restart postgresql
 
@@ -51,7 +51,7 @@
     dest: "{{ postgres_config_dir }}/pg_hba.conf"
     owner: postgres
     group: postgres
-    mode: '0640'
+    mode: "0640"
     backup: yes
   notify: reload postgresql
 
@@ -98,14 +98,14 @@
     state: directory
     owner: postgres
     group: postgres
-    mode: '0750'
+    mode: "0750"
   when: backup_enabled | default(false)
 
 - name: Setup database backup script
   template:
     src: backup-database.sh.j2
     dest: /usr/local/bin/backup-database.sh
-    mode: '0750'
+    mode: "0750"
     owner: postgres
     group: postgres
   when: backup_enabled | default(false)
@@ -117,7 +117,7 @@
     minute: "{{ backup_minute | default('0') }}"
     hour: "{{ backup_hour | default('2') }}"
     day: "*"
-    month: "*" 
+    month: "*"
     weekday: "*"
     user: postgres
     job: "/usr/local/bin/backup-database.sh"
@@ -127,7 +127,7 @@
   template:
     src: postgresql-logrotate.j2
     dest: /etc/logrotate.d/postgresql
-    mode: '0644'
+    mode: "0644"
 
 - name: Configure PostgreSQL logging
   lineinfile:
@@ -136,12 +136,12 @@
     line: "{{ item.key }} = {{ item.value }}"
     backup: yes
   loop:
-    - { key: 'log_destination', value: "'syslog'" }
-    - { key: 'log_connections', value: 'on' }
-    - { key: 'log_disconnections', value: 'on' }
-    - { key: 'log_lock_waits', value: 'on' }
-    - { key: 'log_statement', value: "'mod'" }
-    - { key: 'log_min_duration_statement', value: '1000' }
+    - { key: "log_destination", value: "'syslog'" }
+    - { key: "log_connections", value: "on" }
+    - { key: "log_disconnections", value: "on" }
+    - { key: "log_lock_waits", value: "on" }
+    - { key: "log_statement", value: "'mod'" }
+    - { key: "log_min_duration_statement", value: "1000" }
   notify: reload postgresql
 
 - name: Ensure PostgreSQL is listening on configured addresses
@@ -154,7 +154,7 @@
 
 - name: Set PostgreSQL port
   lineinfile:
-    path: "{{ postgres_config_dir }}/postgresql.conf" 
+    path: "{{ postgres_config_dir }}/postgresql.conf"
     regexp: "^#?port"
     line: "port = {{ postgres_port }}"
     backup: yes
@@ -167,10 +167,16 @@
     line: "{{ item.key }} = {{ item.value }}"
     backup: yes
   loop:
-    - { key: 'shared_buffers', value: '{{ postgres_shared_buffers }}' }
-    - { key: 'effective_cache_size', value: '{{ postgres_effective_cache_size }}' }
-    - { key: 'work_mem', value: '{{ postgres_work_mem }}' }
-    - { key: 'maintenance_work_mem', value: '{{ postgres_maintenance_work_mem }}' }
+    - { key: "shared_buffers", value: "{{ postgres_shared_buffers }}" }
+    - {
+        key: "effective_cache_size",
+        value: "{{ postgres_effective_cache_size }}",
+      }
+    - { key: "work_mem", value: "{{ postgres_work_mem }}" }
+    - {
+        key: "maintenance_work_mem",
+        value: "{{ postgres_maintenance_work_mem }}",
+      }
   notify: restart postgresql
 
 - name: Configure connection limits

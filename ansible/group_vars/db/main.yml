@@ -7,7 +7,7 @@ postgresql_version: "15"
 postgres_port: 5432
 postgres_max_connections: 200
 postgres_listen_addresses:
-  - "localhost" 
+  - "localhost"
   - "{{ ansible_default_ipv4.address }}"
 
 # Memory settings based on server resources (adjust for production)
@@ -22,7 +22,7 @@ postgres_auth_method: "scram-sha-256"
 # Backup configuration
 backup_enabled: true
 backup_retention_days: 30
-backup_schedule: "0 2 * * *"  # Daily at 2 AM
+backup_schedule: "0 2 * * *" # Daily at 2 AM
 db_backup_dir: "/var/backups/postgresql"
 
 # Monitoring configuration

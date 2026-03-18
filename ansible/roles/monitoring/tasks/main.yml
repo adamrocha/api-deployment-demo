@@ -29,8 +29,8 @@
   get_url:
     url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
     dest: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
-    mode: '0644'
-  when: 
+    mode: "0644"
+  when:
     - node_exporter_enabled | default(true)
     - not node_exporter_binary.stat.exists
 
@@ -40,7 +40,7 @@
     dest: "/tmp"
     remote_src: yes
     creates: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
-  when: 
+  when:
     - node_exporter_enabled | default(true)
     - not node_exporter_binary.stat.exists
 
@@ -48,11 +48,11 @@
   copy:
     src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
     dest: "/usr/local/bin/node_exporter"
-    mode: '0755'
+    mode: "0755"
     owner: root
     group: root
     remote_src: yes
-  when: 
+  when:
     - node_exporter_enabled | default(true)
     - not node_exporter_binary.stat.exists
   notify: restart node_exporter
@@ -61,9 +61,9 @@
   template:
     src: node_exporter.service.j2
     dest: /etc/systemd/system/node_exporter.service
-    mode: '0644'
+    mode: "0644"
   when: node_exporter_enabled | default(true)
-  notify: 
+  notify:
     - reload systemd
     - restart node_exporter
 
@@ -82,7 +82,7 @@
       get_url:
         url: "https://github.com/prometheus-community/postgres_exporter/releases/download/v{{ postgres_exporter_version }}/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
         dest: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
-        mode: '0644'
+        mode: "0644"
 
     - name: Extract postgres_exporter
       unarchive:
@@ -94,7 +94,7 @@
       copy:
         src: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64/postgres_exporter"
         dest: "/usr/local/bin/postgres_exporter"
-        mode: '0755'
+        mode: "0755"
         owner: root
         group: root
         remote_src: yes
@@ -104,7 +104,7 @@
       template:
         src: postgres_exporter.env.j2
         dest: /etc/default/postgres_exporter
-        mode: '0640'
+        mode: "0640"
         owner: root
         group: monitoring
       notify: restart postgres_exporter
@@ -113,7 +113,7 @@
       template:
         src: postgres_exporter.service.j2
         dest: /etc/systemd/system/postgres_exporter.service
-        mode: '0644'
+        mode: "0644"
       notify:
         - reload systemd
         - restart postgres_exporter
@@ -124,7 +124,7 @@
         state: started
         enabled: yes
         daemon_reload: yes
-  when: 
+  when:
     - postgres_exporter_enabled | default(false)
     - "'db' in group_names or 'databases' in group_names"
 
@@ -133,9 +133,9 @@
   template:
     src: prometheus-targets.yml.j2
     dest: "{{ prometheus_targets_dir }}/{{ inventory_hostname }}.yml"
-    mode: '0644'
+    mode: "0644"
   delegate_to: "{{ prometheus_server }}"
-  when: 
+  when:
     - prometheus_server is defined
     - prometheus_targets_dir is defined
   notify: reload prometheus
@@ -145,13 +145,13 @@
   template:
     src: api-app-logrotate.j2
     dest: /etc/logrotate.d/api-app
-    mode: '0644'
+    mode: "0644"
 
 - name: Create monitoring script
   template:
     src: health-monitor.sh.j2
     dest: /usr/local/bin/health-monitor.sh
-    mode: '0755'
+    mode: "0755"
 
 - name: Create monitoring cron job
   cron:
@@ -172,11 +172,11 @@
   template:
     src: system-monitor.py.j2
     dest: /usr/local/bin/system-monitor.py
-    mode: '0755'
+    mode: "0755"
 
 - name: Setup system monitoring cron
   cron:
-    name: "System Resource Monitor"  
+    name: "System Resource Monitor"
     minute: "*/10"
     job: "/usr/bin/python3 /usr/local/bin/system-monitor.py"
     user: root
@@ -188,6 +188,6 @@
     port: "{{ item }}"
     proto: tcp
   loop:
-    - "9100"  # node_exporter
-    - "9187"  # postgres_exporter (if enabled)
+    - "9100" # node_exporter
+    - "9187" # postgres_exporter (if enabled)
   when: ufw_enabled | default(false)

@@ -6,11 +6,11 @@
   hosts: db
   become: true
   gather_facts: true
-  
+
   vars:
     # Override default environment if not specified
     target_env: "{{ environment | default('production') }}"
-    
+
   pre_tasks:
     - name: Validate that we're targeting database servers
       assert:
@@ -47,12 +47,12 @@
   roles:
     - role: database
       tags: [database, postgres]
-      
-    - role: monitoring  
+
+    - role: monitoring
       tags: [monitoring, prometheus]
       vars:
         postgres_exporter_enabled: true
-        
+
   post_tasks:
     - name: Verify PostgreSQL service is running
       systemd:
@@ -60,7 +60,7 @@
         state: started
       check_mode: yes
       register: postgres_status
-      
+
     - name: Verify database connectivity
       community.postgresql.postgresql_ping:
         db: "{{ vault_db_name }}"
@@ -76,8 +76,8 @@
         method: GET
         timeout: 10
       loop:
-        - 9100  # node_exporter
-        - 9187  # postgres_exporter
+        - 9100 # node_exporter
+        - 9187 # postgres_exporter
       register: monitoring_check
       failed_when: false
       tags: [verification]
@@ -86,7 +86,7 @@
       debug:
         msg: |
           ✅ Database Configuration Complete!
-          
+
           Database Details:
             - Server: {{ inventory_hostname }} ({{ ansible_default_ipv4.address }})
             - PostgreSQL: {{ postgres_status.status.ActiveState | default('Unknown') }}
@@ -110,7 +110,7 @@
         state: restarted
         daemon_reload: yes
 
-    - name: reload postgresql  
+    - name: reload postgresql
       systemd:
         name: postgresql
         state: reloaded

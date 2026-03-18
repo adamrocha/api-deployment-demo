@@ -4,32 +4,32 @@
   hosts: "{{ target_env | default('staging') }}"
   become: true
   gather_facts: true
-  
+
   vars:
     app_name: api-deployment-demo
     app_version: "{{ version | default('latest') }}"
     deploy_user: "{{ ansible_user }}"
     app_dir: "/opt/{{ app_name }}"
-    
+
   pre_tasks:
     - name: Update system packages
       package:
         update_cache: yes
       tags: [system, never]
-    
+
     - name: Create application directory
       file:
         path: "{{ app_dir }}"
         state: directory
         owner: "{{ deploy_user }}"
         group: "{{ deploy_user }}"
-        mode: '0755'
+        mode: "0755"
       tags: [setup]
 
   roles:
     - role: docker
       tags: [docker, infrastructure]
-    - role: ssl-certificates  
+    - role: ssl-certificates
       tags: [ssl, security]
       when: ssl_enabled | default(false) | bool
     - role: api-app
@@ -62,7 +62,7 @@
       service:
         name: docker
         state: restarted
-        
+
     - name: restart nginx
       service:
         name: nginx

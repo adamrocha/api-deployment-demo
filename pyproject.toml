@@ -2,14 +2,10 @@
 name = "api-deployment-demo"
 version = "0.1.0"
 description = "API Deployment Demo"
-authors = [
-    {name = "DevOps",email = "devops@example.com"}
-]
+authors = [{ name = "DevOps", email = "devops@example.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
-dependencies = [
-    "ansible-core (>=2.20.3,<3.0.0)"
-]
+dependencies = ["ansible-core (>=2.20.3,<3.0.0)"]
 
 [tool.poetry]
 package-mode = false

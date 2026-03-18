@@ -6,7 +6,7 @@ node_exporter_enabled: true
 node_exporter_version: "1.6.1"
 node_exporter_port: 9100
 
-# PostgreSQL Exporter configuration  
+# PostgreSQL Exporter configuration
 postgres_exporter_enabled: false
 postgres_exporter_version: "0.13.2"
 postgres_exporter_port: 9187

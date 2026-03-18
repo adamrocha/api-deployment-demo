@@ -14,7 +14,7 @@
     state: directory
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
-    mode: '0755'
+    mode: "0755"
   loop:
     - "{{ app_dir }}"
     - "{{ app_dir }}/logs"
@@ -39,7 +39,7 @@
     dest: "{{ app_dir }}/.env"
     owner: "{{ app_user }}"
     group: "{{ app_group }}"
-    mode: '0600'
+    mode: "0600"
 
 - name: Build and start application with Docker Compose
   community.docker.docker_compose_v2:
@@ -64,7 +64,7 @@
   template:
     src: api-app.service.j2
     dest: /etc/systemd/system/api-app.service
-    mode: '0644'
+    mode: "0644"
   notify:
     - reload systemd
     - restart api-app

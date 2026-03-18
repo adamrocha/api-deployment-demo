@@ -102,16 +102,16 @@ cp terraform.tfvars.example terraform.tfvars
 
 ### Variables Reference
 
-| Variable            | Type   | Default                 | Description                   |
-| ------------------- | ------ | ----------------------- | ----------------------------- |
-| `environment`       | string | `"production"`          | Deployment environment        |
-| `project_name`      | string | `"api-deployment-demo"` | Project identifier            |
-| `cluster_name`      | string | `"api-demo-cluster"`    | Kind cluster name             |
-| `replicas`          | number | `2`                     | Number of API replicas        |
-| `enable_monitoring` | bool   | `true`                  | Deploy Prometheus/Grafana     |
-| `db_password`       | string | *(required)*            | Database password             |
-| `secret_key`        | string | *(required)*            | API secret key                |
-| `grafana_password`  | string | *(required)*            | Grafana password              |
+| Variable            | Type   | Default                 | Description               |
+| ------------------- | ------ | ----------------------- | ------------------------- |
+| `environment`       | string | `"production"`          | Deployment environment    |
+| `project_name`      | string | `"api-deployment-demo"` | Project identifier        |
+| `cluster_name`      | string | `"api-demo-cluster"`    | Kind cluster name         |
+| `replicas`          | number | `2`                     | Number of API replicas    |
+| `enable_monitoring` | bool   | `true`                  | Deploy Prometheus/Grafana |
+| `db_password`       | string | _(required)_            | Database password         |
+| `secret_key`        | string | _(required)_            | API secret key            |
+| `grafana_password`  | string | _(required)_            | Grafana password          |
 
 ## Module Organization
 

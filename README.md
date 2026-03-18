@@ -25,7 +25,7 @@ make production
 4. [Architecture](#architecture)
 5. [Configuration](#configuration)
 6. [Troubleshooting](#troubleshooting)
-7. [Resources](#resources)
+7. [Documentation](#documentation)
 
 ---
 
@@ -73,23 +73,23 @@ make production
 
 ### Production Environment
 
-| Component | Count | Purpose |
-| --- | --- | --- |
-| **API** | 2 pods | FastAPI + Gunicorn (production workload) |
-| **Nginx** | 2 pods | Reverse proxy, SSL termination, load balancer |
-| **PostgreSQL** | 1 pod | Persistent database with metrics exporter |
-| **Prometheus** | 1 pod | Metrics collection and alerting |
-| **Grafana** | 1 pod | Dashboards with 4 auto-provisioned dashboards |
-| **Kube-State-Metrics** | 1 pod | Kubernetes cluster metrics |
+| Component              | Count  | Purpose                                       |
+| ---------------------- | ------ | --------------------------------------------- |
+| **API**                | 2 pods | FastAPI + Gunicorn (production workload)      |
+| **Nginx**              | 2 pods | Reverse proxy, SSL termination, load balancer |
+| **PostgreSQL**         | 1 pod  | Persistent database with metrics exporter     |
+| **Prometheus**         | 1 pod  | Metrics collection and alerting               |
+| **Grafana**            | 1 pod  | Dashboards with 4 auto-provisioned dashboards |
+| **Kube-State-Metrics** | 1 pod  | Kubernetes cluster metrics                    |
 
 ### Access Points
 
-| Service | URL | Port Mapping |
-| --- | --- | --- |
-| Web (HTTPS) | <https://localhost> | 443 → 30443 |
-| API Direct | <http://localhost:8000> | 8000 → 30800 |
-| Grafana | <http://localhost:3000> | 3000 → 30300 |
-| Prometheus | <http://localhost:9090> | 9090 → 30900 |
+| Service     | URL                     | Port Mapping |
+| ----------- | ----------------------- | ------------ |
+| Web (HTTPS) | <https://localhost>     | 443 → 30443  |
+| API Direct  | <http://localhost:8000> | 8000 → 30800 |
+| Grafana     | <http://localhost:3000> | 3000 → 30300 |
+| Prometheus  | <http://localhost:9090> | 9090 → 30900 |
 
 **Credentials**:
 
@@ -198,11 +198,11 @@ Internet/localhost → Kind Cluster → Nginx (:80/:443) → API (:8000) → Pos
 
 ### Deployment Comparison
 
-| Method | Use Case | State Tracking | Idempotent | Preview |
-| --- | --- | --- | --- | --- |
-| **Terraform** | Infrastructure provisioning | ✅ Yes | ✅ Yes | ✅ `terraform plan` |
-| **Ansible** | Configuration management | ❌ No | ✅ Yes | ⚠️ `--check` |
-| **kubectl** | Manual operations | ❌ No | ✅ Yes (apply) / ❌ No (create) | ❌ No |
+| Method        | Use Case                    | State Tracking | Idempotent                      | Preview             |
+| ------------- | --------------------------- | -------------- | ------------------------------- | ------------------- |
+| **Terraform** | Infrastructure provisioning | ✅ Yes         | ✅ Yes                          | ✅ `terraform plan` |
+| **Ansible**   | Configuration management    | ❌ No          | ✅ Yes                          | ⚠️ `--check`        |
+| **kubectl**   | Manual operations           | ❌ No          | ✅ Yes (apply) / ❌ No (create) | ❌ No               |
 
 ### Kubernetes Resources
 
@@ -397,33 +397,29 @@ kubectl rollout restart deployment <name> -n production
 
 ---
 
-## Resources
+## Documentation
 
-### Documentation
+### 📚 Complete Documentation Index
 
-- 📚 **[Quick Reference](docs/QUICK-REFERENCE.md)** - Command cheat sheet
-- 🏗️ **[Deployment Methods](docs/DEPLOYMENT-METHODS.md)** - Method comparison (Terraform, Ansible, kubectl)
-- 🔐 **[Secrets & Security](docs/SECRETS-SECURITY.md)** - Secrets management & security best practices
-- 📊 **[Monitoring Setup](docs/MONITORING-SETUP.md)** - Prometheus & Grafana configuration
-- 📈 **[Grafana Dashboards](docs/GRAFANA-DASHBOARDS.md)** - Dashboard documentation
-- 🔧 **[Terraform Guide](docs/TERRAFORM-GUIDE.md)** - Infrastructure as Code reference
-- 📝 **[Changelog](docs/CHANGELOG.md)** - Version history and updates
+**[View Full Documentation Index →](docs/INDEX.md)**
 
-### External Links
+| Document                                                | Purpose                               |
+| ------------------------------------------------------- | ------------------------------------- |
+| **[INDEX.md](docs/INDEX.md)**                           | Navigation guide to all documentation |
+| **[QUICK-REFERENCE.md](docs/QUICK-REFERENCE.md)**       | Command cheat sheet and workflows     |
+| **[DEPLOYMENT-METHODS.md](docs/DEPLOYMENT-METHODS.md)** | Terraform vs Ansible vs Make          |
+| **[MONITORING.md](docs/MONITORING.md)**                 | Prometheus + Grafana guide            |
+| **[TERRAFORM-GUIDE.md](docs/TERRAFORM-GUIDE.md)**       | Infrastructure as Code reference      |
+| **[SECRETS-SECURITY.md](docs/SECRETS-SECURITY.md)**     | Security best practices               |
+| **[CHANGELOG.md](docs/CHANGELOG.md)**                   | Version history and updates           |
 
-- [Terraform Docs](https://terraform.io/docs)
-- [Kubernetes Docs](https://kubernetes.io/docs)
-- [Kind Docs](https://kind.sigs.k8s.io)
-- [Ansible Docs](https://docs.ansible.com)
+### Quick Links
 
-### Support
-
-**Getting Help**:
-
-1. Check `make status` and `make health`
-2. Review logs with `make logs-api-once`
-3. Check events with `make events`
-4. Verify resources with `make pods`
+- 🚀 **New here?** Start with [Quick Start](#quick-start) above
+- 📖 **Learning?** See [How It Works](#how-it-works)
+- 🔧 **Deploying?** Check [DEPLOYMENT-METHODS.md](docs/DEPLOYMENT-METHODS.md)
+- 📊 **Monitoring?** Read [MONITORING.md](docs/MONITORING.md)
+- 🐛 **Debugging?** Review [Troubleshooting](#troubleshooting)
 
 ---
 

@@ -114,3 +114,5 @@ terraform.rc
 
 # Terraform lock file (optional - some teams commit this)
 .terraform.lock.hcl
+
+.trunk/

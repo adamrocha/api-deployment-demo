@@ -13,7 +13,7 @@
   systemd:
     name: postgres_exporter
     state: restarted
-    
+
 - name: reload prometheus
   systemd:
     name: prometheus

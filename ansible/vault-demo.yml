@@ -1,6 +1,6 @@
 ---
 # Vault decryption demonstration playbook
-# 
+#
 # NOTE: This playbook demonstrates Ansible Vault concepts but CANNOT run successfully
 # because:
 # 1. The vault password file is not included in the repository (for security)
@@ -17,7 +17,7 @@
 #
 # The encrypted files contain variables like:
 # - group_vars/staging/vault.yml: vault_staging_db_password, vault_staging_secret_key
-# - group_vars/production/vault.yml: vault_production_db_password, vault_production_secret_key  
+# - group_vars/production/vault.yml: vault_production_db_password, vault_production_secret_key
 # - group_vars/db/vault.yml: vault_db_name, vault_db_user, vault_db_password
 #
 # For actual deployments, this project uses:
@@ -32,7 +32,7 @@
   hosts: db
   connection: local
   gather_facts: false
-  
+
   tasks:
     - name: Show database vault variables (from group_vars/db/vault.yml)
       debug:
@@ -47,7 +47,7 @@
   hosts: staging
   connection: local
   gather_facts: false
-  
+
   tasks:
     - name: Show staging vault variables (from group_vars/staging/vault.yml)
       debug:
@@ -57,11 +57,11 @@
           Staging Slack Webhook: {{ vault_staging_monitoring_slack_webhook | default('not defined') }}
       when: vault_staging_db_password is defined
 
-- name: Demonstrate Production Vault Variables  
+- name: Demonstrate Production Vault Variables
   hosts: production
   connection: local
   gather_facts: false
-  
+
   tasks:
     - name: Show production vault variables (from group_vars/production/vault.yml)
       debug:

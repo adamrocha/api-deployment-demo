@@ -55,13 +55,13 @@ This guide outlines security best practices for managing secrets, credentials, a
 
 ### Current Secrets in Project
 
-| Secret Type | Location | Environments | Rotation Frequency |
-| --- | --- | --- | --- |
-| Database Password | `terraform.tfvars`, K8s secrets | All | 90 days |
-| API Secret Key | `terraform.tfvars`, K8s secrets | All | 90 days |
-| TLS Certificates | `nginx/ssl/`, K8s secrets | Production | 365 days |
-| Monitoring Passwords | Ansible Vault, K8s secrets | Production | 90 days |
-| SSH Keys | Ansible Vault | Production | 180 days |
+| Secret Type          | Location                        | Environments | Rotation Frequency |
+| -------------------- | ------------------------------- | ------------ | ------------------ |
+| Database Password    | `terraform.tfvars`, K8s secrets | All          | 90 days            |
+| API Secret Key       | `terraform.tfvars`, K8s secrets | All          | 90 days            |
+| TLS Certificates     | `nginx/ssl/`, K8s secrets       | Production   | 365 days           |
+| Monitoring Passwords | Ansible Vault, K8s secrets      | Production   | 90 days            |
+| SSH Keys             | Ansible Vault                   | Production   | 180 days           |
 
 ---
 
@@ -94,7 +94,7 @@ This guide outlines security best practices for managing secrets, credentials, a
    vault kv put secret/api/production \
      db_password="..." \
      secret_key="..."
-   
+
    # Retrieve in Terraform
    data "vault_generic_secret" "api" {
      path = "secret/api/production"
@@ -108,7 +108,7 @@ This guide outlines security best practices for managing secrets, credentials, a
    aws secretsmanager create-secret \
      --name api/production/db_password \
      --secret-string "..."
-   
+
    # Retrieve in application
    aws secretsmanager get-secret-value \
      --secret-id api/production/db_password
@@ -163,7 +163,7 @@ secret_key  = "..."
    resource "kubernetes_secret" "database" {
      # ...
      immutable = true  # Prevents accidental modification
-     
+
      lifecycle {
        prevent_destroy = false  # Set to true in production
        ignore_changes  = [metadata[0].annotations]
@@ -230,13 +230,13 @@ resource "kubernetes_secret" "database" {
    kind: EncryptionConfiguration
    resources:
      - resources:
-       - secrets
+         - secrets
        providers:
-       - aescbc:
-           keys:
-           - name: key1
-             secret: <base64-encoded-secret>
-       - identity: {}
+         - aescbc:
+             keys:
+               - name: key1
+                 secret: <base64-encoded-secret>
+         - identity: {}
    ```
 
 2. **RBAC Restrictions**
@@ -247,10 +247,10 @@ resource "kubernetes_secret" "database" {
    metadata:
      name: secret-reader
    rules:
-   - apiGroups: [""]
-     resources: ["secrets"]
-     resourceNames: ["database-credentials"]
-     verbs: ["get"]
+     - apiGroups: [""]
+       resources: ["secrets"]
+       resourceNames: ["database-credentials"]
+       verbs: ["get"]
    ```
 
 3. **Use Immutable Secrets**
@@ -261,7 +261,7 @@ resource "kubernetes_secret" "database" {
    metadata:
      name: database-credentials
    type: Opaque
-   immutable: true  # Requires replacement to update
+   immutable: true # Requires replacement to update
    data:
      db-password: <base64-encoded>
    ```
@@ -273,10 +273,10 @@ resource "kubernetes_secret" "database" {
    apiVersion: audit.k8s.io/v1
    kind: Policy
    rules:
-   - level: RequestResponse
-     resources:
-     - group: ""
-       resources: ["secrets"]
+     - level: RequestResponse
+       resources:
+         - group: ""
+           resources: ["secrets"]
    ```
 
 ### Scanning for Exposed Secrets
@@ -320,7 +320,7 @@ ansible-playbook site.yml --ask-vault-pass
    # Use password file (not in git)
    echo "your-vault-password" > ~/.ansible_vault_pass
    chmod 600 ~/.ansible_vault_pass
-   
+
    # Reference in ansible.cfg
    [defaults]
    vault_password_file = ~/.ansible_vault_pass
@@ -342,7 +342,7 @@ ansible-playbook site.yml --ask-vault-pass
    # group_vars/production/vault.yml
    vault_db_password: "..."
    vault_secret_key: "..."
-   
+
    # group_vars/production/vars.yml
    db_password: "{{ vault_db_password }}"
    secret_key: "{{ vault_secret_key }}"
@@ -452,13 +452,13 @@ done
 
 ### Rotation Schedule
 
-| Secret Type | Frequency | Automation | Priority |
-| --- | --- | --- | --- |
-| Database Passwords | 90 days | Recommended | High |
-| API Keys | 90 days | Recommended | High |
-| TLS Certificates | 365 days | Let's Encrypt | High |
-| Monitoring Passwords | 90 days | Manual | Medium |
-| SSH Keys | 180 days | Manual | Medium |
+| Secret Type          | Frequency | Automation    | Priority |
+| -------------------- | --------- | ------------- | -------- |
+| Database Passwords   | 90 days   | Recommended   | High     |
+| API Keys             | 90 days   | Recommended   | High     |
+| TLS Certificates     | 365 days  | Let's Encrypt | High     |
+| Monitoring Passwords | 90 days   | Manual        | Medium   |
+| SSH Keys             | 180 days  | Manual        | Medium   |
 
 ### Rotation Procedure
 
@@ -473,12 +473,12 @@ done
    ```bash
    # Terraform
    terraform apply -var="db_password=$NEW_PASSWORD"
-   
+
    # Kubernetes
    kubectl create secret generic database-credentials \
      --from-literal=db-password="$NEW_PASSWORD" \
      --dry-run=client -o yaml | kubectl apply -f -
-   
+
    # Ansible Vault
    ansible-vault edit group_vars/production/vault.yml
    ```
@@ -489,7 +489,7 @@ done
    # Kubernetes rolling update
    kubectl rollout restart deployment/postgres
    kubectl rollout restart deployment/api
-   
+
    # Verify
    kubectl rollout status deployment/api
    ```
@@ -520,19 +520,19 @@ from datetime import datetime, timedelta
 
 def rotate_secret(secret_name):
     client = boto3.client('secretsmanager')
-    
+
     # Generate new password
     new_password = client.get_random_password(
         PasswordLength=32,
         ExcludeCharacters='"\'\\',
     )['RandomPassword']
-    
+
     # Update secret
     client.update_secret(
         SecretId=secret_name,
         SecretString=new_password
     )
-    
+
     # Tag with rotation date
     client.tag_resource(
         SecretId=secret_name,
@@ -541,7 +541,7 @@ def rotate_secret(secret_name):
             'Value': datetime.now().isoformat()
         }]
     )
-    
+
     return new_password
 
 if __name__ == '__main__':
@@ -559,10 +559,10 @@ if __name__ == '__main__':
    ```bash
    # Rotate all potentially compromised secrets
    ./scripts/emergency-rotation.sh
-   
+
    # Revoke access for compromised credentials
    kubectl delete secret database-credentials
-   
+
    # Check access logs
    kubectl logs -l app=api --since=24h | grep -i auth
    ```
@@ -651,14 +651,14 @@ echo "🔐 Secret Key: $NEW_SECRET_KEY"
 
 ### Secret Management Solutions
 
-| Solution | Best For | Pricing | Integration |
-| --- | --- | --- | --- |
-| HashiCorp Vault | Multi-cloud, enterprise | Open source / Enterprise | Excellent |
-| AWS Secrets Manager | AWS environments | Pay per secret | Native AWS |
-| Azure Key Vault | Azure environments | Pay per operation | Native Azure |
-| Google Secret Manager | GCP environments | Pay per version | Native GCP |
-| Kubernetes External Secrets | K8s with external backend | Open source | K8s native |
-| SOPS | Git-based workflows | Open source | Good |
+| Solution                    | Best For                  | Pricing                  | Integration  |
+| --------------------------- | ------------------------- | ------------------------ | ------------ |
+| HashiCorp Vault             | Multi-cloud, enterprise   | Open source / Enterprise | Excellent    |
+| AWS Secrets Manager         | AWS environments          | Pay per secret           | Native AWS   |
+| Azure Key Vault             | Azure environments        | Pay per operation        | Native Azure |
+| Google Secret Manager       | GCP environments          | Pay per version          | Native GCP   |
+| Kubernetes External Secrets | K8s with external backend | Open source              | K8s native   |
+| SOPS                        | Git-based workflows       | Open source              | Good         |
 
 ### Commands Reference
 

@@ -14,7 +14,7 @@ enable_pod_disruption_budget: true
 pdb_min_available: 1
 
 # Network Tuning
-enable_network_policies: false  # Can cause connectivity issues in Kind
+enable_network_policies: false # Can cause connectivity issues in Kind
 service_mesh_enabled: false
 
 # Monitoring and Observability

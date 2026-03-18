@@ -12,7 +12,7 @@ api_memory_limit: "512Mi"
 api_log_level: "info"
 api_workers: 4
 
-# Nginx Configuration  
+# Nginx Configuration
 nginx_replicas: 2
 nginx_cpu_request: "100m"
 nginx_cpu_limit: "200m"

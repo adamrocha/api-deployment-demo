@@ -4,7 +4,7 @@
 db_password: "{{ vault_staging_db_password }}"
 db_host_auth_method: scram-sha-256
 
-# API configuration  
+# API configuration
 api_env: staging
 debug_mode: false
 secret_key: "{{ vault_staging_secret_key }}"
@@ -25,7 +25,7 @@ server_name: localhost
 # Backup configuration
 backup_enabled: true
 backup_retention_days: 7
-backup_schedule: "0 2 * * *"  # Daily at 2 AM
+backup_schedule: "0 2 * * *" # Daily at 2 AM
 
 # Monitoring
 monitoring_slack_webhook: "{{ vault_staging_monitoring_slack_webhook }}"

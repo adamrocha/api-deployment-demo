@@ -4,15 +4,15 @@ This project supports three deployment methods. Choose based on your needs:
 
 ## 🚀 Quick Decision Matrix
 
-| I want to... | Use |
-| --- | --- | --- |
-| Deploy infrastructure declaratively with state tracking | **Terraform** |
-| Automate configuration and sequential tasks | **Ansible** |
-| Quick manual operations and learning | **Make/Scripts** |
-| Work on fresh clones without setup | **Ansible** or **Terraform** |
-| Preview changes before applying | **Terraform** |
-| Manage cloud resources | **Terraform** |
-| Deploy on pre-configured systems | **Ansible** |
+| I want to...                                            | Use                          |
+| ------------------------------------------------------- | ---------------------------- |
+| Deploy infrastructure declaratively with state tracking | **Terraform**                |
+| Automate configuration and sequential tasks             | **Ansible**                  |
+| Quick manual operations and learning                    | **Make/Scripts**             |
+| Work on fresh clones without setup                      | **Ansible** or **Terraform** |
+| Preview changes before applying                         | **Terraform**                |
+| Manage cloud resources                                  | **Terraform**                |
+| Deploy on pre-configured systems                        | **Ansible**                  |
 
 ## 📖 Method Details
 
@@ -332,18 +332,18 @@ make --version
 
 ## 📊 Feature Matrix
 
-| Feature | Terraform | Ansible | Make/Scripts |
-| --- | --- | --- | --- |
-| State tracking | ✅ Yes | ❌ No | ❌ No |
-| Idempotency | ✅ Built-in | ✅ Task-level | ❌ Manual |
-| Preview changes | ✅ terraform plan | ⚠️ --check | ❌ No |
-| Rollback | ✅ Easy | ⚠️ Manual | ❌ Manual |
-| Dependency graph | ✅ Automatic | ⏱️ Sequential | 🔧 Manual |
-| Cloud resources | ✅ Excellent | ⚠️ Limited | ❌ No |
-| Configuration mgmt | ⚠️ Limited | ✅ Excellent | ⚠️ Manual |
-| Learning curve | Medium | Low-Medium | Low |
-| Team collaboration | ✅ Remote state | ⚠️ Git only | ⚠️ Git only |
-| Secret management | ⚠️ External | ✅ Ansible Vault | ⚠️ .env files |
+| Feature            | Terraform         | Ansible          | Make/Scripts  |
+| ------------------ | ----------------- | ---------------- | ------------- |
+| State tracking     | ✅ Yes            | ❌ No            | ❌ No         |
+| Idempotency        | ✅ Built-in       | ✅ Task-level    | ❌ Manual     |
+| Preview changes    | ✅ terraform plan | ⚠️ --check       | ❌ No         |
+| Rollback           | ✅ Easy           | ⚠️ Manual        | ❌ Manual     |
+| Dependency graph   | ✅ Automatic      | ⏱️ Sequential    | 🔧 Manual     |
+| Cloud resources    | ✅ Excellent      | ⚠️ Limited       | ❌ No         |
+| Configuration mgmt | ⚠️ Limited        | ✅ Excellent     | ⚠️ Manual     |
+| Learning curve     | Medium            | Low-Medium       | Low           |
+| Team collaboration | ✅ Remote state   | ⚠️ Git only      | ⚠️ Git only   |
+| Secret management  | ⚠️ External       | ✅ Ansible Vault | ⚠️ .env files |
 
 ## 🎓 Learning Resources
 
@@ -384,7 +384,7 @@ make production-logs
 deploy-staging:
   script:
     - terraform apply -var="environment=staging" -auto-approve
-    
+
 deploy-production:
   script:
     - ansible-playbook ansible/deploy-production.yml
@@ -409,6 +409,6 @@ Each method has detailed documentation:
 Choose based on your immediate need:
 
 - **"I want to manage infrastructure as code"** → Terraform
-- **"I want to automate deployment tasks"** → Ansible  
+- **"I want to automate deployment tasks"** → Ansible
 - **"I want quick manual control"** → Make/Scripts
 - **"I want all of the above"** → Use all three! 🚀

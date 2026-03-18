@@ -4,7 +4,7 @@
 # TLS Secret Generator for Kubernetes
 # =======================================================================
 # Generates kubernetes/tls-secret.yaml from SSL certificates
-# 
+#
 # Usage:
 #   ./scripts/generate-tls-secrets.sh [namespace] [secret-name]
 #
@@ -51,34 +51,34 @@ echo "  Output File: ${OUTPUT_FILE}"
 echo ""
 
 # Check if SSL certificates exist
-if [[ ! -f "$CERT_FILE" ]]; then
-    log_error "Certificate file not found: $CERT_FILE"
-    log_info "Generating SSL certificates first..."
-    
-    # Generate SSL certificates using the nginx script
-    if [[ -f "nginx/generate-ssl.sh" ]]; then
-        cd nginx
-        ./generate-ssl.sh
-        cd ..
-        log_success "SSL certificates generated"
-    else
-        log_error "SSL generation script not found: nginx/generate-ssl.sh"
-        exit 1
-    fi
+if [[ ! -f $CERT_FILE ]]; then
+	log_error "Certificate file not found: $CERT_FILE"
+	log_info "Generating SSL certificates first..."
+
+	# Generate SSL certificates using the nginx script
+	if [[ -f "nginx/generate-ssl.sh" ]]; then
+		cd nginx
+		./generate-ssl.sh
+		cd ..
+		log_success "SSL certificates generated"
+	else
+		log_error "SSL generation script not found: nginx/generate-ssl.sh"
+		exit 1
+	fi
 fi
 
-if [[ ! -f "$KEY_FILE" ]]; then
-    log_error "Private key file not found: $KEY_FILE"
-    exit 1
+if [[ ! -f $KEY_FILE ]]; then
+	log_error "Private key file not found: $KEY_FILE"
+	exit 1
 fi
 
 # Validate certificates
 log_info "Validating SSL certificates..."
 if openssl x509 -in "$CERT_FILE" -text -noout >/dev/null 2>&1; then
-    log_success "Certificate is valid"
+	log_success "Certificate is valid"
 else
-    log_error "Invalid certificate file: $CERT_FILE"
-    exit 1
+	log_error "Invalid certificate file: $CERT_FILE"
+	exit 1
 fi
 
 # Get certificate and key in base64 encoding
@@ -88,7 +88,7 @@ KEY_B64=$(base64 -i "$KEY_FILE" | tr -d '\n')
 
 # Generate the Kubernetes TLS secret YAML
 log_info "Generating TLS secret YAML..."
-cat > "$OUTPUT_FILE" << EOF
+cat >"$OUTPUT_FILE" <<EOF
 # =======================================================================
 # TLS Secret for Kubernetes
 # =======================================================================
@@ -126,20 +126,20 @@ openssl x509 -in "$CERT_FILE" -text -noout | grep -E "(Subject:|Issuer:|Not Befo
 echo ""
 
 # Apply to cluster if APPLY environment variable is set
-if [[ "${APPLY:-false}" == "true" ]]; then
-    log_info "Applying TLS secret to cluster..."
-    if kubectl get secret "${SECRET_NAME}" -n "${NAMESPACE}" >/dev/null 2>&1; then
-        log_warning "TLS secret ${SECRET_NAME} already exists in namespace ${NAMESPACE}"
-        echo "  Use 'kubectl delete secret ${SECRET_NAME} -n ${NAMESPACE}' to recreate"
-    else
-        if kubectl apply -f "${OUTPUT_FILE}" >/dev/null 2>&1; then
-            log_success "TLS secret applied to cluster successfully"
-        else
-            log_error "Failed to apply TLS secret to cluster"
-            exit 1
-        fi
-    fi
-    echo ""
+if [[ ${APPLY:-false} == "true" ]]; then
+	log_info "Applying TLS secret to cluster..."
+	if kubectl get secret "${SECRET_NAME}" -n "${NAMESPACE}" >/dev/null 2>&1; then
+		log_warning "TLS secret ${SECRET_NAME} already exists in namespace ${NAMESPACE}"
+		echo "  Use 'kubectl delete secret ${SECRET_NAME} -n ${NAMESPACE}' to recreate"
+	else
+		if kubectl apply -f "${OUTPUT_FILE}" >/dev/null 2>&1; then
+			log_success "TLS secret applied to cluster successfully"
+		else
+			log_error "Failed to apply TLS secret to cluster"
+			exit 1
+		fi
+	fi
+	echo ""
 fi
 
 # Usage instructions

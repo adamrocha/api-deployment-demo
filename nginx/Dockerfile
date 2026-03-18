@@ -15,9 +15,8 @@ RUN apk add --no-cache \
 # Copy entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Copy configuration files
+# Copy base nginx configuration (server blocks come from Kubernetes ConfigMaps)
 COPY nginx.conf /etc/nginx/nginx.conf
-COPY common-config.conf /etc/nginx/conf.d/
 
 # Copy scripts and static content
 COPY generate-ssl.sh /usr/local/bin/

@@ -1,0 +1,20 @@
+---
+# Ansible Galaxy Requirements
+# Install with: ansible-galaxy install -r requirements.yml
+
+collections:
+  # PostgreSQL database management
+  - name: community.postgresql
+    version: ">=4.0.0"
+
+  # General utilities and system management
+  - name: community.general
+    version: ">=8.0.0"
+
+  # Kubernetes management
+  - name: kubernetes.core
+    version: ">=3.0.0"
+
+  # Docker management
+  - name: community.docker
+    version: ">=3.0.0"

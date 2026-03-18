@@ -145,19 +145,23 @@ output: ## Show Terraform outputs
 # Ansible Configuration Management
 # =============================================================================
 
-config: ## Configure Kubernetes resources with Ansible
+install-collections: ## Install required Ansible collections
+	@echo "📦 Installing Ansible collections..."
+	@cd $(ANSIBLE_DIR) && ansible-galaxy collection install -r requirements.yml --force
+
+config: install-collections ## Configure Kubernetes resources with Ansible
 	@echo "🔧 Configuring with Ansible..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags config
 
-tune: ## Tune and optimize deployments (HPA, PDB, etc)
+tune: install-collections ## Tune and optimize deployments (HPA, PDB, etc)
 	@echo "⚡ Optimizing with Ansible..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags tuning
 
-ansible: ## Run all Ansible playbooks (config + tuning)
+ansible: install-collections ## Run all Ansible playbooks (config + tuning)
 	@echo "🚀 Running Ansible configuration..."
 	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)"
 
-validate-ansible: ## Validate Ansible configuration
+validate-ansible: install-collections ## Validate Ansible configuration
 	@cd $(ANSIBLE_DIR) && ./validate-ansible.sh
 
 # =============================================================================

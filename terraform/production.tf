@@ -579,12 +579,12 @@ resource "kubernetes_deployment_v1" "nginx" {
           image_pull_policy = "IfNotPresent"
 
           port {
-            container_port = 80
+            container_port = 8080
             name           = "http"
           }
 
           port {
-            container_port = 443
+            container_port = 8443
             name           = "https"
           }
 
@@ -619,8 +619,8 @@ resource "kubernetes_deployment_v1" "nginx" {
 
           liveness_probe {
             http_get {
-              path = "/"
-              port = 80
+              path = "/nginx-health"
+              port = 8080
             }
             initial_delay_seconds = 30
             period_seconds        = 30
@@ -628,8 +628,8 @@ resource "kubernetes_deployment_v1" "nginx" {
 
           readiness_probe {
             http_get {
-              path = "/"
-              port = 80
+              path = "/nginx-health"
+              port = 8080
             }
             initial_delay_seconds = 5
             period_seconds        = 10
@@ -638,10 +638,10 @@ resource "kubernetes_deployment_v1" "nginx" {
           security_context {
             allow_privilege_escalation = false
             read_only_root_filesystem  = false
-            run_as_user                = 0
+            run_as_user                = 10001
+            run_as_non_root            = true
             capabilities {
-              drop = ["NET_RAW"]
-              add  = ["CHOWN", "SETUID", "SETGID", "DAC_OVERRIDE", "FOWNER", "NET_BIND_SERVICE"]
+              drop = ["ALL"]
             }
           }
         }
@@ -731,7 +731,7 @@ resource "kubernetes_service_v1" "nginx" {
     port {
       name        = "http"
       port        = 80
-      target_port = 80
+      target_port = 8080
       node_port   = 30080
       protocol    = "TCP"
     }
@@ -739,7 +739,7 @@ resource "kubernetes_service_v1" "nginx" {
     port {
       name        = "https"
       port        = 443
-      target_port = 443
+      target_port = 8443
       node_port   = 30443
       protocol    = "TCP"
     }

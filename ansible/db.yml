@@ -16,8 +16,8 @@
       assert:
         that:
           - "'db' in group_names or 'databases' in group_names"
-        fail_msg: "This playbook should only run on database servers"
-        success_msg: "Confirmed target is a database server"
+        fail_msg: This playbook should only run on database servers
+        success_msg: Confirmed target is a database server
 
     - name: Update system packages
       package:

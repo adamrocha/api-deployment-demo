@@ -1,10 +1,11 @@
-FROM nginx:1.28.2-alpine-slim
+FROM nginx:1.29.6-alpine-slim
 
 # Install dependencies, create directories, and set up non-root user
 RUN apk add --no-cache \
-    openssl=3.5.5-r0 && \
+    openssl-dev=3.5.5-r0 && \
+    apk upgrade --no-cache && \
     # Remove default nginx configuration
-    rm /etc/nginx/conf.d/default.conf && \
+    rm /etc/nginx/nginx.conf && \
     # Create directories
     mkdir -p /var/cache/nginx /var/run /run /etc/nginx/ssl /var/log/nginx /var/www/static && \
     # Create non-root user and group
@@ -14,9 +15,8 @@ RUN apk add --no-cache \
 # Copy entrypoint script
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Copy configuration files
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY common-config.conf /etc/nginx/conf.d/
+# Copy base nginx configuration (server blocks come from Kubernetes ConfigMaps)
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copy scripts and static content
 COPY generate-ssl.sh /usr/local/bin/

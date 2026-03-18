@@ -652,7 +652,7 @@ resource "kubernetes_deployment_v1" "nginx" {
           image = "nginx/nginx-prometheus-exporter:latest"
 
           args = [
-            "--nginx.scrape-uri=http://localhost:80/stub_status"
+            "--nginx.scrape-uri=http://localhost:8080/stub_status"
           ]
 
           port {
@@ -679,6 +679,10 @@ resource "kubernetes_deployment_v1" "nginx" {
             items {
               key  = "nginx.conf"
               path = "default.conf"
+            }
+            items {
+              key  = "common-config.conf"
+              path = "common-config.conf"
             }
           }
         }

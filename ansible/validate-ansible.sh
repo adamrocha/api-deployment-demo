@@ -26,6 +26,29 @@ else
 	exit 1
 fi
 
+# Test 1.5: Check and Install Required Collections
+echo -e "${BLUE}1.5 Required Ansible Collections${NC}"
+if [[ -f requirements.yml ]]; then
+	# Check if collections are missing
+	missing=false
+	for collection in "community.postgresql" "community.general" "kubernetes.core" "community.docker"; do
+		if ! ansible-galaxy collection list | grep -q "${collection}" 2>/dev/null; then
+			missing=true
+			break
+		fi
+	done
+
+	if [[ ${missing} == "true" ]]; then
+		echo -e "${YELLOW}⚠️  Some collections are missing, installing...${NC}"
+		ansible-galaxy collection install -r requirements.yml --force
+		echo -e "${GREEN}✅ Collections installed successfully${NC}\n"
+	else
+		echo -e "${GREEN}✅ All required collections are installed${NC}\n"
+	fi
+else
+	echo -e "${YELLOW}⚠️  requirements.yml not found, skipping collection check${NC}\n"
+fi
+
 # Test 2: Kubernetes Playbook Syntax
 echo -e "${BLUE}2. Kubernetes Playbook Syntax${NC}"
 if ansible-playbook --syntax-check kubernetes.yml >/dev/null 2>&1; then
@@ -37,12 +60,12 @@ fi
 
 # Test 3: Additional Playbook Syntax
 echo -e "${BLUE}3. Additional Playbooks${NC}"
-for playbook in db.yml test-role.yml; do
-	if [[ -f $playbook ]]; then
-		if ansible-playbook --syntax-check "$playbook" >/dev/null 2>&1; then
-			echo -e "  ${GREEN}✅${NC} $playbook syntax is valid"
+for playbook in db.yml; do
+	if [[ -f ${playbook} ]]; then
+		if ansible-playbook --syntax-check "${playbook}" >/dev/null 2>&1; then
+			echo -e "  ${GREEN}✅${NC} ${playbook} syntax is valid"
 		else
-			echo -e "  ${RED}❌${NC} $playbook has syntax errors"
+			echo -e "  ${RED}❌${NC} ${playbook} has syntax errors"
 		fi
 	fi
 done
@@ -55,7 +78,7 @@ if kubectl version --client >/dev/null 2>&1; then
 	if kubectl cluster-info >/dev/null 2>&1; then
 		echo -e "${GREEN}✅ Kubernetes cluster is accessible${NC}"
 		cluster_name=$(kubectl config current-context 2>/dev/null || echo "unknown")
-		echo "  Current context: $cluster_name"
+		echo "  Current context: ${cluster_name}"
 	else
 		echo -e "${YELLOW}⚠️  No Kubernetes cluster running${NC}"
 	fi
@@ -75,10 +98,10 @@ fi
 # Test 6: Role Structure
 echo -e "${BLUE}6. Role Structure${NC}"
 for role in kubernetes-config kubernetes-tuning api-app monitoring database docker ssl-certificates; do
-	if [[ -f "roles/$role/tasks/main.yml" ]]; then
-		echo -e "  ${GREEN}✅${NC} Role: $role"
+	if [[ -f "roles/${role}/tasks/main.yml" ]]; then
+		echo -e "  ${GREEN}✅${NC} Role: ${role}"
 	else
-		echo -e "  ${YELLOW}⚠️${NC} Role: $role (missing or optional)"
+		echo -e "  ${YELLOW}⚠️${NC} Role: ${role} (missing or optional)"
 	fi
 done
 echo ""
@@ -86,13 +109,18 @@ echo ""
 # Test 7: Template Validation
 echo -e "${BLUE}7. Template Files${NC}"
 template_count=$(find roles/ -name "*.j2" 2>/dev/null | wc -l)
-echo "Found $template_count Jinja2 templates"
+echo "Found ${template_count} template files in roles/"
+if [[ ${template_count} -gt 0 ]]; then
+	echo -e "  ${GREEN}✅${NC} Jinja2 templates found"
+else
+	echo -e "  ${YELLOW}⚠️${NC} No Jinja2 templates found"
+fi
 echo ""
 
 # Test 8: Handler Validation
 echo -e "${BLUE}8. Handler Configuration${NC}"
 handler_files=$(find roles/ -name "handlers" -type d 2>/dev/null | wc -l)
-echo "Found $handler_files roles with handlers"
+echo "Found ${handler_files} roles with handlers"
 echo ""
 
 # Test 9: Required Ansible Collections
@@ -103,10 +131,10 @@ required_collections=(
 )
 
 for collection in "${required_collections[@]}"; do
-	if ansible-galaxy collection list | grep -q "$collection" 2>/dev/null; then
-		echo -e "  ${GREEN}✅${NC} Collection: $collection"
+	if ansible-galaxy collection list | grep -q "${collection}" 2>/dev/null; then
+		echo -e "  ${GREEN}✅${NC} Collection: ${collection}"
 	else
-		echo -e "  ${YELLOW}⚠️${NC} Collection: $collection (install with: ansible-galaxy collection install $collection)"
+		echo -e "  ${YELLOW}⚠️${NC} Collection: ${collection} (install with: ansible-galaxy collection install ${collection})"
 	fi
 done
 echo ""

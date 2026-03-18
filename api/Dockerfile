@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -11,18 +11,18 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        postgresql-client \
-        gcc \
-        python3-dev \
-        libpq-dev \
-        wget \
-        curl \
+        postgresql-client=17+278 \
+        gcc=4:14.2.0-1 \
+        python3-dev=3.13.5-1 \
+        libpq-dev=17.9-0+deb13u1 \
+        wget=1.25.0-2 \
+        curl=8.14.1-2+deb13u2 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip==24.0 \
+    && pip install --no-cache-dir --requirement requirements.txt
 
 # Copy project
 COPY . .

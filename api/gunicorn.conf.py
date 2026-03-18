@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-
-#import multiprocessing
-
-# Gunicorn configuration file
+"""
+Gunicorn configuration file
+"""
 
 # Server socket
 bind = "0.0.0.0:8000"
@@ -25,7 +24,7 @@ errorlog = "-"
 loglevel = "info"
 
 # Process naming
-proc_name = 'api_deployment_demo'
+proc_name = "api_deployment_demo"
 
 # Server mechanics
 daemon = False

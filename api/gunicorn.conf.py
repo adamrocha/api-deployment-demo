@@ -1,4 +1,6 @@
-import multiprocessing
+#!/usr/bin/env python3
+
+#import multiprocessing
 
 # Gunicorn configuration file
 
@@ -27,7 +29,7 @@ proc_name = 'api_deployment_demo'
 
 # Server mechanics
 daemon = False
-pidfile = '/tmp/gunicorn.pid'
+pidfile = None
 user = None
 group = None
 tmp_upload_dir = None

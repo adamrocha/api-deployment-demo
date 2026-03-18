@@ -168,16 +168,12 @@ deploy: build apply config ## Full production deployment
 	@echo "✅ Deployment complete!"
 	@$(MAKE) urls
 
-production: deploy ## Alias for deploy
-
 staging: ## Deploy staging environment (Docker Compose)
 	@echo "🐳 Starting staging with Docker Compose..."
 	@docker compose up -d
 	@echo "✅ Staging URLs:"
 	@echo "  HTTPS: https://localhost:30443"
 	@echo "  API:   http://localhost:30800"
-
-quick-start: deploy ## Complete setup from scratch
 
 # =============================================================================
 # Monitoring & Observability

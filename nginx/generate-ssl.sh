@@ -11,9 +11,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Use the SSL_DIR from environment or default to local ssl directory
 # (the container entrypoint sets SSL_DIR=/etc/nginx/ssl explicitly)
 SSL_DIR="${SSL_DIR:-${SCRIPT_DIR}/ssl}"
-CERT_FILE="${SSL_DIR}/nginx-selfsigned.crt"
-KEY_FILE="${SSL_DIR}/nginx-selfsigned.key"
-CSR_FILE="${SSL_DIR}/nginx-selfsigned.csr"
+# Use Kubernetes standard naming (tls.crt/tls.key)
+CERT_FILE="${SSL_DIR}/tls.crt"
+KEY_FILE="${SSL_DIR}/tls.key"
+CSR_FILE="${SSL_DIR}/tls.csr"
 DHPARAM_FILE="${SSL_DIR}/dhparam.pem"
 SSL_CONFIG_FILE="${SSL_DIR}/ssl-params.conf"
 
@@ -45,9 +46,9 @@ mkdir -p "${SSL_DIR}" 2>/dev/null || {
 	echo "Trying to use ./ssl directory instead..."
 	SSL_DIR="${SCRIPT_DIR}/ssl"
 	mkdir -p "${SSL_DIR}"
-	CERT_FILE="${SSL_DIR}/nginx-selfsigned.crt"
-	KEY_FILE="${SSL_DIR}/nginx-selfsigned.key"
-	CSR_FILE="${SSL_DIR}/nginx-selfsigned.csr"
+	CERT_FILE="${SSL_DIR}/tls.crt"
+	KEY_FILE="${SSL_DIR}/tls.key"
+	CSR_FILE="${SSL_DIR}/tls.csr"
 	DHPARAM_FILE="${SSL_DIR}/dhparam.pem"
 	SSL_CONFIG_FILE="${SSL_DIR}/ssl-params.conf"
 }

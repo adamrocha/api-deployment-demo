@@ -680,6 +680,10 @@ resource "kubernetes_deployment_v1" "nginx" {
               key  = "nginx.conf"
               path = "default.conf"
             }
+            items {
+              key  = "common-config.conf"
+              path = "common-config.conf"
+            }
           }
         }
 

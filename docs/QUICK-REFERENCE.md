@@ -4,8 +4,8 @@
 
 ```text
 ┌─────────────────────────────────────────────────┐
-│               MAKE (Orchestration)               │
-│  Simple commands for complex workflows           │
+│               MAKE (Orchestration)              │
+│  Simple commands for complex workflows          |
 └─────────────────────────────────────────────────┘
                       │
         ┌─────────────┴─────────────┐
@@ -19,8 +19,8 @@
         └─────────────┬─────────────┘
                       ▼
         ┌─────────────────────────────┐
-        │   Kubernetes / Docker        │
-        │    Running Applications      │
+        │   Kubernetes / Docker       │
+        │    Running Applications     │
         └─────────────────────────────┘
 ```
 
@@ -104,14 +104,14 @@ kubectl top pods -n api-deployment-demo
 
 ## Command Comparison
 
-| Task | Terraform | Ansible | Make |
-| --- | --- | --- | --- |
-| Deploy everything | `terraform apply` | N/A | `make deploy` |
-| Scale API to 3 | Change code + apply | `ansible-playbook ... -e api_replicas=3` | `make scale COMPONENT=api REPLICAS=3` |
-| Update env var | Change code + apply | `ansible-playbook ...` | `make config` |
-| Add new service | Add resource + apply | N/A | `make apply` |
-| Tune performance | N/A | `ansible-playbook --tags tuning` | `make tune` |
-| Destroy | `terraform destroy` | N/A | `make destroy` |
+| Task              | Terraform            | Ansible                                  | Make                                  |
+| ----------------- | -------------------- | ---------------------------------------- | ------------------------------------- |
+| Deploy everything | `terraform apply`    | N/A                                      | `make deploy`                         |
+| Scale API to 3    | Change code + apply  | `ansible-playbook ... -e api_replicas=3` | `make scale COMPONENT=api REPLICAS=3` |
+| Update env var    | Change code + apply  | `ansible-playbook ...`                   | `make config`                         |
+| Add new service   | Add resource + apply | N/A                                      | `make apply`                          |
+| Tune performance  | N/A                  | `ansible-playbook --tags tuning`         | `make tune`                           |
+| Destroy           | `terraform destroy`  | N/A                                      | `make destroy`                        |
 
 ## File Locations
 

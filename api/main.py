@@ -367,8 +367,10 @@ async def metrics():
 
 @app.post("/users", response_model=UserResponse)
 async def create_user(
+    user: UserCreate,
+    request: Request,
     # trunk-ignore(ruff/B008)
-    user: UserCreate, request: Request, db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     start_time = time.time()
 

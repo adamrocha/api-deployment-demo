@@ -1,10 +1,6 @@
 {
   "title": "API Performance Dashboard",
-  "tags": [
-    "api",
-    "performance",
-    "production"
-  ],
+  "tags": ["api", "performance", "production"],
   "timezone": "browser",
   "schemaVersion": 16,
   "version": 1,
@@ -172,20 +168,14 @@
         "conditions": [
           {
             "evaluator": {
-              "params": [
-                5
-              ],
+              "params": [5],
               "type": "gt"
             },
             "operator": {
               "type": "and"
             },
             "query": {
-              "params": [
-                "A",
-                "5m",
-                "now"
-              ]
+              "params": ["A", "5m", "now"]
             },
             "reducer": {
               "params": [],

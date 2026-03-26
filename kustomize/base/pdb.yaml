@@ -1,0 +1,50 @@
+# PodDisruptionBudgets for high availability
+# Ensures minimum number of pods remain available during voluntary disruptions
+# (e.g., node drains, cluster upgrades, kubectl drain)
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: api-demo
+      component: api
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nginx-pdb
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    component: nginx
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: api-demo
+      component: nginx
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+  namespace: api-deployment-demo
+  labels:
+    app: postgres
+    component: database
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: postgres
+      component: database

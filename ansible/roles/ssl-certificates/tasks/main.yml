@@ -27,9 +27,9 @@
         common_name: "{{ server_name | default(ansible_fqdn) }}"
         subject_alt_name:
           - "DNS:{{ server_name | default(ansible_fqdn) }}"
-          - "DNS:localhost"
+          - DNS:localhost
           - "IP:{{ ansible_default_ipv4.address }}"
-          - "IP:127.0.0.1"
+          - IP:127.0.0.1
 
     - name: Generate self-signed certificate
       openssl_certificate:
@@ -44,6 +44,11 @@
         path: "{{ ssl_cert_path }}/dhparam.pem"
         size: 2048
         mode: "0644"
+
+  rescue:
+    - name: Handle SSL generation failure
+      fail:
+        msg: Failed to generate self-signed SSL certificates. Please check OpenSSL installation and permissions.
 
   when: ssl_self_signed | default(true) | bool
 

@@ -9,7 +9,7 @@
   gather_facts: false
 
   vars:
-    k8s_namespace: api-deployment-demo
+    k8s_namespace: api-deployment-demo-ns
     k8s_context: kind-api-demo-cluster
     deploy_environment: "{{ environment | default('production') }}"
 
@@ -68,7 +68,7 @@
 
     - name: Verify API health
       uri:
-        url: "http://localhost:8000/health"
+        url: http://localhost:8000/health
         method: GET
         timeout: 10
       register: api_health
@@ -84,16 +84,16 @@
     - name: Summary
       debug:
         msg:
-          - "=========================================="
-          - "Kubernetes Configuration Complete"
-          - "=========================================="
+          - ==========================================
+          - "Kubernetes Configuration Completed for {{ inventory_hostname }}"
+          - ==========================================
           - "Namespace: {{ k8s_namespace }}"
           - "Context: {{ k8s_context }}"
           - "Environment: {{ deploy_environment }}"
-          - "=========================================="
-          - "Access URLs:"
+          - ==========================================
+          - Access URLs: "{% if deploy_environment == 'production' %}"
           - "  Web:        https://localhost:443"
           - "  API:        http://localhost:8000"
           - "  Grafana:    http://localhost:3000"
           - "  Prometheus: http://localhost:9090"
-          - "=========================================="
+          - ==========================================

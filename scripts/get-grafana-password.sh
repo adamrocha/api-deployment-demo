@@ -5,6 +5,9 @@
 
 set -euo pipefail
 
+# Configuration - can be overridden via environment variables
+MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-monitoring-ns}"
+
 echo "🔐 Grafana Password Retrieval"
 echo "============================="
 
@@ -16,14 +19,14 @@ if [ -f ".env" ] && grep -q "GRAFANA_ADMIN_PASSWORD" .env; then
 fi
 
 # Check if Kubernetes secret exists
-if kubectl get secret grafana-admin-secret -n monitoring >/dev/null 2>&1; then
+if kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" >/dev/null 2>&1; then
 	echo "🔒 From Kubernetes secret:"
-	kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d
+	kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-password}' | base64 -d
 	echo ""
 	echo ""
 	echo "👤 Login credentials:"
 	echo "   Username: admin"
-	echo "   Password: $(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.data.admin-password}' | base64 -d)"
+	echo "   Password: $(kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-password}' | base64 -d)"
 	echo ""
 	echo "🌐 Access URL: http://localhost:3000"
 else

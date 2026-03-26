@@ -5,7 +5,11 @@ description = "API Deployment Demo"
 authors = [{ name = "DevOps", email = "devops@example.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
-dependencies = ["ansible-core (>=2.20.3,<3.0.0)"]
+dependencies = [
+  "ansible-core>=2.20.3,<3.0.0",
+  "kubernetes (>=35.0.0,<36.0.0)",
+  "jsonpatch (>=1.33,<2.0)",
+]
 
 [tool.poetry]
 package-mode = false

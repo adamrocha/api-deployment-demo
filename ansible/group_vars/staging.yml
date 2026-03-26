@@ -25,8 +25,8 @@ server_name: localhost
 # Backup configuration
 backup_enabled: true
 backup_retention_days: 7
-backup_schedule: "0 2 * * *" # Daily at 2 AM
+backup_schedule: 0 2 * * * # Daily at 2 AM
 
 # Monitoring
 monitoring_slack_webhook: "{{ vault_staging_monitoring_slack_webhook }}"
-alert_email: "ops-staging@company.com"
+alert_email: ops-staging@company.com

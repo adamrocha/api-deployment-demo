@@ -5,6 +5,10 @@
 
 set -e
 
+# Configuration - can be overridden via environment variables
+APP_NAMESPACE="${APP_NAMESPACE:-api-deployment-demo-ns}"
+MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-api-deployment-demo-ns}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -104,7 +108,7 @@ test_ssl_certificates() {
 
 	# Check if SSL secret exists in Kubernetes
 	echo -n "  SSL secret in Kubernetes: "
-	if kubectl get secret nginx-ssl-certs -n api-deployment-demo >/dev/null 2>&1; then
+	if kubectl get secret nginx-ssl-certs -n "$APP_NAMESPACE" >/dev/null 2>&1; then
 		echo -e "${GREEN}✅ OK${NC}"
 	else
 		echo -e "${RED}❌ MISSING${NC}"
@@ -113,7 +117,7 @@ test_ssl_certificates() {
 
 	# Extract certificate from Kubernetes secret for validation
 	echo -n "  Certificate extraction: "
-	if kubectl get secret nginx-ssl-certs -n api-deployment-demo -o jsonpath='{.data.tls\.crt}' | base64 -d >/tmp/server.crt 2>/dev/null; then
+	if kubectl get secret nginx-ssl-certs -n "$APP_NAMESPACE" -o jsonpath='{.data.tls\.crt}' | base64 -d >/tmp/server.crt 2>/dev/null; then
 		echo -e "${GREEN}✅ OK${NC}"
 	else
 		echo -e "${RED}❌ FAILED${NC}"
@@ -181,7 +185,7 @@ wait_for_service "http://localhost:8000/health" "API (direct HTTP)" 60
 
 echo -e "${YELLOW}3.1. Testing SSL certificate setup in Kubernetes...${NC}"
 # Check if SSL secret exists in Kubernetes
-if kubectl get secret nginx-ssl-certs -n api-deployment-demo >/dev/null 2>&1; then
+if kubectl get secret nginx-ssl-certs -n "$APP_NAMESPACE" >/dev/null 2>&1; then
 	echo -e "${GREEN}✅ SSL certificate secret found in Kubernetes${NC}"
 
 	# Test HTTPS endpoints

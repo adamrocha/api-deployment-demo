@@ -22,13 +22,13 @@ enable_pod_annotations: true
 enable_metrics: true
 
 # Database Tuning
-db_shared_buffers: "256MB"
-db_effective_cache_size: "1GB"
-db_work_mem: "4MB"
-db_maintenance_work_mem: "64MB"
+db_shared_buffers: 256MB
+db_effective_cache_size: 1GB
+db_work_mem: 4MB
+db_maintenance_work_mem: 64MB
 
 # Nginx Tuning
-nginx_worker_processes: "auto"
+nginx_worker_processes: auto
 nginx_worker_connections: 1024
 nginx_keepalive_timeout: 65
-nginx_client_max_body_size: "10m"
+nginx_client_max_body_size: 10m

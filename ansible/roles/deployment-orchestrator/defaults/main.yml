@@ -1,0 +1,23 @@
+---
+# Default variables for deployment-orchestrator role
+
+# Deployment environment (production, staging, development)
+deployment_env: production
+
+# Kubernetes configuration
+k8s_namespace: api-deployment-demo-ns
+k8s_context: kind-api-demo-cluster
+
+# Deployment behavior
+dry_run: false
+wait_for_ready: true
+strict_context_check: false
+
+# List of deployments to wait for
+deployments_to_wait:
+  - api-deployment
+  - nginx-deployment
+  - postgres
+
+# Timeout for deployment readiness (seconds)
+deployment_timeout: 300

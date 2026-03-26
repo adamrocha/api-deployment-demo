@@ -5,6 +5,10 @@
 
 set -e
 
+# Configuration - can be overridden via environment variables
+MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-api-deployment-demo-ns}"
+APP_NAMESPACE="${APP_NAMESPACE:-api-deployment-demo-ns}"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -60,27 +64,25 @@ elif ! kubectl cluster-info &>/dev/null; then
 	echo -e "  ${YELLOW}⚠️  Kubernetes cluster not accessible${NC}"
 	echo -e "  ${YELLOW}Start cluster: make cluster${NC}"
 else
-	NAMESPACE="api-deployment-demo"
-
 	# Check if namespace exists
-	if ! kubectl get namespace "$NAMESPACE" &>/dev/null; then
-		echo -e "  ${YELLOW}⚠️  Namespace '$NAMESPACE' not found${NC}"
+	if ! kubectl get namespace "$APP_NAMESPACE" &>/dev/null; then
+		echo -e "  ${YELLOW}⚠️  Namespace '$APP_NAMESPACE' not found${NC}"
 		echo -e "  ${YELLOW}Deploy with: make deploy${NC}"
 	else
 		echo -e "${GREEN}Database Credentials:${NC}"
 		# Try postgres-secrets first (our new secret name), then fall back to database-credentials
-		if kubectl get secret postgres-secrets -n "$NAMESPACE" &>/dev/null; then
-			DB_USER=$(kubectl get secret postgres-secrets -n "$NAMESPACE" -o jsonpath='{.data.DB_USER}' 2>/dev/null | base64 -d 2>/dev/null || echo "postgres")
-			DB_NAME=$(kubectl get secret postgres-secrets -n "$NAMESPACE" -o jsonpath='{.data.DB_NAME}' 2>/dev/null | base64 -d 2>/dev/null || echo "api_db")
-			K8S_DB_PASS=$(kubectl get secret postgres-secrets -n "$NAMESPACE" -o jsonpath='{.data.DB_PASSWORD}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+		if kubectl get secret postgres-secrets -n "$APP_NAMESPACE" &>/dev/null; then
+			DB_USER=$(kubectl get secret postgres-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.DB_USER}' 2>/dev/null | base64 -d 2>/dev/null || echo "postgres")
+			DB_NAME=$(kubectl get secret postgres-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.DB_NAME}' 2>/dev/null | base64 -d 2>/dev/null || echo "api_db")
+			K8S_DB_PASS=$(kubectl get secret postgres-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.DB_PASSWORD}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 
 			echo -e "  User:     ${DB_USER}"
 			echo -e "  Database: ${DB_NAME}"
 			echo -e "  Password: ${K8S_DB_PASS}"
-		elif kubectl get secret database-credentials -n "$NAMESPACE" &>/dev/null; then
-			DB_USER=$(kubectl get secret database-credentials -n "$NAMESPACE" -o jsonpath='{.data.db-user}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
-			DB_NAME=$(kubectl get secret database-credentials -n "$NAMESPACE" -o jsonpath='{.data.db-name}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
-			K8S_DB_PASS=$(kubectl get secret database-credentials -n "$NAMESPACE" -o jsonpath='{.data.db-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+		elif kubectl get secret database-credentials -n "$APP_NAMESPACE" &>/dev/null; then
+			DB_USER=$(kubectl get secret database-credentials -n "$APP_NAMESPACE" -o jsonpath='{.data.db-user}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+			DB_NAME=$(kubectl get secret database-credentials -n "$APP_NAMESPACE" -o jsonpath='{.data.db-name}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+			K8S_DB_PASS=$(kubectl get secret database-credentials -n "$APP_NAMESPACE" -o jsonpath='{.data.db-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 
 			echo -e "  User:     ${DB_USER}"
 			echo -e "  Database: ${DB_NAME}"
@@ -91,11 +93,11 @@ else
 
 		echo ""
 		echo -e "${GREEN}API Secret:${NC}"
-		if kubectl get secret api-secrets -n "$NAMESPACE" &>/dev/null; then
+		if kubectl get secret api-secrets -n "$APP_NAMESPACE" &>/dev/null; then
 			# Try different possible field names
-			K8S_SECRET=$(kubectl get secret api-secrets -n "$NAMESPACE" -o jsonpath='{.data.SECRET_KEY}' 2>/dev/null | base64 -d 2>/dev/null)
+			K8S_SECRET=$(kubectl get secret api-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.SECRET_KEY}' 2>/dev/null | base64 -d 2>/dev/null)
 			if [[ -z $K8S_SECRET ]]; then
-				K8S_SECRET=$(kubectl get secret api-secrets -n "$NAMESPACE" -o jsonpath='{.data.secret-key}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+				K8S_SECRET=$(kubectl get secret api-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.secret-key}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 			fi
 			echo -e "  Secret Key: ${K8S_SECRET}"
 		else
@@ -104,41 +106,41 @@ else
 
 		echo ""
 		echo -e "${GREEN}Grafana (Monitoring):${NC}"
-		if kubectl get namespace monitoring &>/dev/null; then
+		if kubectl get namespace "$MONITORING_NAMESPACE" &>/dev/null; then
 			# Try different possible Grafana secret names and field names
-			if kubectl get secret grafana-admin-secret -n monitoring &>/dev/null 2>&1; then
+			if kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" &>/dev/null 2>&1; then
 				# Try with 'admin-user' and 'admin-password' fields (hyphenated)
-				GRAFANA_USER=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d 2>/dev/null)
-				GRAFANA_PASS=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null)
+				GRAFANA_USER=$(kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d 2>/dev/null)
+				GRAFANA_PASS=$(kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null)
 
 				# If that didn't work, try with underscores
 				if [[ -z $GRAFANA_USER ]]; then
-					GRAFANA_USER=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.data.admin_user}' 2>/dev/null | base64 -d 2>/dev/null || echo "admin")
+					GRAFANA_USER=$(kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin_user}' 2>/dev/null | base64 -d 2>/dev/null || echo "admin")
 				fi
 				if [[ -z $GRAFANA_PASS ]]; then
-					GRAFANA_PASS=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.data.admin_password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+					GRAFANA_PASS=$(kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin_password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 				fi
 
 				echo -e "  Username: ${GRAFANA_USER:-admin}"
 				echo -e "  Password: ${GRAFANA_PASS}"
-			elif kubectl get secret grafana-admin-credentials -n monitoring &>/dev/null 2>&1; then
-				GRAFANA_USER=$(kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d 2>/dev/null || echo "admin")
-				GRAFANA_PASS=$(kubectl get secret grafana-admin-credentials -n monitoring -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+			elif kubectl get secret grafana-admin-credentials -n "$MONITORING_NAMESPACE" &>/dev/null 2>&1; then
+				GRAFANA_USER=$(kubectl get secret grafana-admin-credentials -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d 2>/dev/null || echo "admin")
+				GRAFANA_PASS=$(kubectl get secret grafana-admin-credentials -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 				echo -e "  Username: ${GRAFANA_USER}"
 				echo -e "  Password: ${GRAFANA_PASS}"
-			elif kubectl get secret grafana -n monitoring &>/dev/null 2>&1; then
-				GRAFANA_PASS=$(kubectl get secret grafana -n monitoring -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
+			elif kubectl get secret grafana -n "$MONITORING_NAMESPACE" &>/dev/null 2>&1; then
+				GRAFANA_PASS=$(kubectl get secret grafana -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 				echo -e "  Username: admin"
 				echo -e "  Password: ${GRAFANA_PASS}"
-			elif kubectl get deployment grafana -n monitoring &>/dev/null 2>&1; then
+			elif kubectl get deployment grafana -n "$MONITORING_NAMESPACE" &>/dev/null 2>&1; then
 				# Extract from deployment environment variables
-				GRAFANA_PASS=$(kubectl get deployment grafana -n monitoring -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="GF_SECURITY_ADMIN_PASSWORD")].value}' 2>/dev/null || echo "N/A")
+				GRAFANA_PASS=$(kubectl get deployment grafana -n "$MONITORING_NAMESPACE" -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="GF_SECURITY_ADMIN_PASSWORD")].value}' 2>/dev/null || echo "N/A")
 				if [[ $GRAFANA_PASS != "N/A" && -n $GRAFANA_PASS ]]; then
 					echo -e "  Username: admin"
 					echo -e "  Password: ${GRAFANA_PASS}"
 				else
 					echo -e "  ${YELLOW}⚠️  Could not extract Grafana password${NC}"
-					echo -e "  ${YELLOW}Try: kubectl get secret -n monitoring | grep grafana${NC}"
+					echo -e "  ${YELLOW}Try: kubectl get secret -n "$MONITORING_NAMESPACE" | grep grafana${NC}"
 				fi
 			else
 				echo -e "  ${YELLOW}⚠️  Grafana not found in monitoring namespace${NC}"
@@ -158,12 +160,12 @@ echo -e "${BLUE}🔗 Connection Information${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
 # Use Kubernetes secret values if available, otherwise fall back to terraform.tfvars
-if kubectl cluster-info &>/dev/null && kubectl get namespace api-deployment-demo &>/dev/null; then
+if kubectl cluster-info &>/dev/null && kubectl get namespace "$APP_NAMESPACE" &>/dev/null; then
 	# Get from Kubernetes secrets
-	if kubectl get secret postgres-secrets -n api-deployment-demo &>/dev/null; then
-		DB_USER_CONN=$(kubectl get secret postgres-secrets -n api-deployment-demo -o jsonpath='{.data.DB_USER}' 2>/dev/null | base64 -d 2>/dev/null || echo "postgres")
-		DB_NAME_CONN=$(kubectl get secret postgres-secrets -n api-deployment-demo -o jsonpath='{.data.DB_NAME}' 2>/dev/null | base64 -d 2>/dev/null || echo "api_db")
-		DB_PASS_CONN=$(kubectl get secret postgres-secrets -n api-deployment-demo -o jsonpath='{.data.DB_PASSWORD}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+	if kubectl get secret postgres-secrets -n "$APP_NAMESPACE" &>/dev/null; then
+		DB_USER_CONN=$(kubectl get secret postgres-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.DB_USER}' 2>/dev/null | base64 -d 2>/dev/null || echo "postgres")
+		DB_NAME_CONN=$(kubectl get secret postgres-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.DB_NAME}' 2>/dev/null | base64 -d 2>/dev/null || echo "api_db")
+		DB_PASS_CONN=$(kubectl get secret postgres-secrets -n "$APP_NAMESPACE" -o jsonpath='{.data.DB_PASSWORD}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
 
 		if [[ -n $DB_PASS_CONN ]]; then
 			echo -e "${GREEN}Database Connection String (from Kubernetes):${NC}"

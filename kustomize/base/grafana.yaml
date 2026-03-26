@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: api-deployment-demo-ns
+  labels:
+    app: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-admin-secret
+                  key: admin-password
+            - name: GF_PATHS_PROVISIONING
+              value: /etc/grafana/provisioning
+          volumeMounts:
+            - name: dashboards-provisioning
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: dashboard-api-performance
+              mountPath: /var/lib/grafana/dashboards/api-performance.json
+              subPath: api-performance.json
+            - name: dashboard-infrastructure
+              mountPath: /var/lib/grafana/dashboards/infrastructure.json
+              subPath: infrastructure.json
+            - name: dashboard-database
+              mountPath: /var/lib/grafana/dashboards/database.json
+              subPath: database.json
+            - name: dashboard-nginx-traffic
+              mountPath: /var/lib/grafana/dashboards/nginx-traffic.json
+              subPath: nginx-traffic.json
+            - name: datasource-provisioning
+              mountPath: /etc/grafana/provisioning/datasources
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 250m
+      volumes:
+        - name: dashboards-provisioning
+          configMap:
+            name: grafana-dashboards-provisioning
+        - name: dashboard-api-performance
+          configMap:
+            name: grafana-dashboard-api-performance
+        - name: dashboard-infrastructure
+          configMap:
+            name: grafana-dashboard-infrastructure
+        - name: dashboard-database
+          configMap:
+            name: grafana-dashboard-database
+        - name: dashboard-nginx-traffic
+          configMap:
+            name: grafana-dashboard-nginx-traffic
+        - name: datasource-provisioning
+          configMap:
+            name: grafana-datasource-provisioning
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: api-deployment-demo-ns
+  labels:
+    app: grafana
+spec:
+  selector:
+    app: grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30300
+  type: NodePort

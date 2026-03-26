@@ -19,11 +19,12 @@ Complete guide to Prometheus and Grafana monitoring with **automated dashboard d
 
 ```bash
 # One-command deployment (recommended)
-make production
+make deploy
 
 # Or step-by-step
-make apply    # Terraform deploys monitoring stack
-make config   # Ansible configures resources
+make build       # Build images
+make cluster     # Create cluster
+make deploy      # Deploy with Kustomize + Ansible
 ```
 
 ### Access Services
@@ -46,7 +47,7 @@ make config   # Ansible configures resources
 
 ## What Gets Deployed
 
-When `enable_monitoring=true` (default), Terraform automatically provisions:
+The monitoring stack is automatically provisioned via Kustomize manifests:
 
 ### Components
 
@@ -232,13 +233,13 @@ histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
 **CPU usage by pod:**
 
 ```promql
-sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="api-deployment-demo"}[5m])) * 100
+sum by (pod) (rate(container_cpu_usage_seconds_total{namespace="api-deployment-demo-ns"}[5m])) * 100
 ```
 
 **Memory usage by pod (MB):**
 
 ```promql
-sum by (pod) (container_memory_usage_bytes{namespace="api-deployment-demo"}) / 1024 / 1024
+sum by (pod) (container_memory_usage_bytes{namespace="api-deployment-demo-ns"}) / 1024 / 1024
 ```
 
 ---
@@ -280,20 +281,20 @@ curl 'http://localhost:9090/api/v1/query?query=up'
 **Check Grafana pod:**
 
 ```bash
-kubectl get pods -n monitoring
-kubectl logs -n monitoring -l app=grafana
+kubectl get pods -n api-deployment-demo-ns
+kubectl logs -n api-deployment-demo-ns -l app=grafana
 ```
 
 **Verify ConfigMaps:**
 
 ```bash
-kubectl get configmaps -n monitoring | grep grafana
+kubectl get configmaps -n api-deployment-demo-ns | grep grafana
 ```
 
 **Check mounted dashboard files:**
 
 ```bash
-kubectl exec -n monitoring $(kubectl get pod -n monitoring -l app=grafana -o jsonpath='{.items[0].metadata.name}') -- \
+kubectl exec -n api-deployment-demo-ns $(kubectl get pod -n api-deployment-demo-ns -l app=grafana -o jsonpath='{.items[0].metadata.name}') -- \
   ls -la /var/lib/grafana/dashboards/
 ```
 
@@ -320,15 +321,17 @@ open http://localhost:9090/targets
 After modifying dashboard JSON files in `monitoring/dashboards/`:
 
 ```bash
-# Terraform detects changes and updates ConfigMaps
-cd terraform
-terraform apply -auto-approve
+# Update ConfigMaps in Kustomize
+# Dashboards are stored in kustomize/base/grafana-dashboards.yaml
+
+# Redeploy to apply changes
+make deploy
 
 # Restart Grafana to reload
-kubectl rollout restart deployment/grafana -n monitoring
+kubectl rollout restart deployment/grafana -n api-deployment-demo-ns
 
 # Wait for ready
-kubectl wait --for=condition=ready pod -l app=grafana -n monitoring --timeout=60s
+kubectl wait --for=condition=ready pod -l app=grafana -n api-deployment-demo-ns --timeout=60s
 ```
 
 ### Exporting Modified Dashboards
@@ -340,31 +343,26 @@ If you customize dashboards in the UI:
 3. Click **Export** tab
 4. Click **Save to file**
 5. Replace original JSON in `monitoring/dashboards/`
-6. Re-apply Terraform to persist changes
+6. Update ConfigMaps in Kustomize base (see `kustomize/base/grafana-dashboards.yaml`)
+7. Redeploy: `make deploy`
 
 ### Changing Grafana Password
 
-## Method 1: Environment variable (Terraform)
+## Method 1: Environment variable (Kustomize)
 
-Edit `terraform/monitoring.tf`:
-
-```hcl
-env {
-  name  = "GF_SECURITY_ADMIN_PASSWORD"
-  value = "your-secure-password"
-}
-```
+Edit `kustomize/base/grafana-secret.yaml` and update the password value.
 
 ## Method 2: Kubernetes Secret (Recommended)
 
 ```bash
 # Create secret
 kubectl create secret generic grafana-admin-secret \
-  -n monitoring \
-  --from-literal=admin-password=your-secure-password
+  -n api-deployment-demo-ns \
+  --from-literal=admin-password=your-secure-password \
+  --dry-run=client -o yaml | kubectl apply -f -
 
-# Update deployment to use secret
-# (See terraform/monitoring.tf for secret reference example)
+# Restart Grafana to apply
+kubectl rollout restart deployment/grafana -n api-deployment-demo-ns
 ```
 
 ### Required Metrics

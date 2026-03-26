@@ -1,0 +1,54 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Common base resources for all environments
+namespace: api-deployment-demo
+
+resources:
+  # Core infrastructure
+  - namespace.yaml
+  - secrets.yaml
+  - configmaps.yaml
+  - nginx-html-configmap.yaml
+  - postgres-init-configmap.yaml
+
+  # Database
+  - postgres-deployment.yaml
+  - postgres-service.yaml
+
+  # API
+  - api-deployment.yaml
+  - api-service.yaml
+
+  # Nginx
+  - nginx-deployment.yaml
+  - nginx-service.yaml
+
+  # Autoscaling
+  - hpa.yaml
+
+  # Availability
+  - pdb.yaml
+
+  # Monitoring (keep in their namespace)
+  - grafana-secret.yaml
+  - prometheus-config.yaml
+  - grafana-config.yaml
+  - grafana-dashboards.yaml
+  - metrics-server.yaml
+  - prometheus.yaml
+  - kube-state-metrics.yaml
+  - grafana.yaml
+
+# Common labels for all resources
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: api-deployment-demo
+
+# Images with configurable tags
+images:
+  - name: api-deployment-demo-api
+    newTag: latest
+  - name: api-deployment-demo-nginx
+    newTag: latest

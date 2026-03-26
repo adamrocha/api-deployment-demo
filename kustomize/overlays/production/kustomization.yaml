@@ -1,0 +1,74 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Production overlay
+namespace: api-deployment-demo-ns
+
+resources:
+  - ../../base
+
+# Production-specific labels
+labels:
+  - pairs:
+      environment: production
+      deployment-method: kustomize
+
+# Production annotations
+commonAnnotations:
+  contact: ops-team@example.com
+  deployed-by: kustomize
+
+# Replica count adjustments for production
+replicas:
+  - name: api-deployment
+    count: 2
+  - name: nginx-deployment
+    count: 2
+  - name: postgres
+    count: 1
+
+# Resource limits for production
+patches:
+  # Increase API resources for production load
+  - target:
+      kind: Deployment
+      name: api-deployment
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/memory
+        value: "1Gi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+        value: "1000m"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/memory
+        value: "512Mi"
+      - op: replace
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+        value: "500m"
+
+  # HPA settings for production
+  - target:
+      kind: HorizontalPodAutoscaler
+      name: api-deployment
+    patch: |-
+      - op: replace
+        path: /spec/maxReplicas
+        value: 10
+      - op: replace
+        path: /spec/metrics/0/resource/target/averageUtilization
+        value: 50
+
+# ConfigMap generators for environment-specific configs
+configMapGenerator:
+  - name: env-config
+    literals:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      - DEBUG=false
+
+# Secret generators (production secrets should use sealed-secrets or external secrets)
+secretGenerator:
+  - name: production-secrets
+    literals:
+      - ADMIN_EMAIL=admin@example.com

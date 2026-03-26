@@ -1,106 +1,152 @@
 # Documentation Index
 
-📚 **Complete guide to the API Deployment Demo project**
+📚 **Streamlined guide to the API Deployment Demo**
 
-## 🚀 Getting Started
+## 🚀 Start Here
 
-**New to this project?** Start here:
+**New to this project?**
 
-1. **[../README.md](../README.md)** - Project overview, quick start, and key commands
-2. **[QUICK-REFERENCE.md](QUICK-REFERENCE.md)** - Cheat sheet for common tasks
-3. **[DEPLOYMENT-METHODS.md](DEPLOYMENT-METHODS.md)** - Choose your deployment approach
+1. **[../README.md](../README.md)** - Project overview and architecture
+2. **[QUICK-START.md](QUICK-START.md)** - Get deployed in 3 commands
 
 ## 📖 Core Documentation
 
-### Infrastructure & Deployment
+| Document                                   | Purpose                              | When to Read          |
+| ------------------------------------------ | ------------------------------------ | --------------------- |
+| [QUICK-START.md](QUICK-START.md)           | Commands, workflows, troubleshooting | Day-to-day operations |
+| [MONITORING.md](MONITORING.md)             | Prometheus + Grafana dashboards      | Setting up monitoring |
+| [SECRETS-SECURITY.md](SECRETS-SECURITY.md) | Security best practices              | Handling credentials  |
 
-| Document                                       | Purpose                                         | When to Read                 |
-| ---------------------------------------------- | ----------------------------------------------- | ---------------------------- |
-| [DEPLOYMENT-METHODS.md](DEPLOYMENT-METHODS.md) | Compare Terraform, Ansible, and Make approaches | Choosing deployment strategy |
-| [TERRAFORM-GUIDE.md](TERRAFORM-GUIDE.md)       | Deep dive into IaC with Terraform               | Working with infrastructure  |
-| [QUICK-REFERENCE.md](QUICK-REFERENCE.md)       | Command cheat sheet and workflows               | Day-to-day operations        |
+## 🗺️ Quick Navigation
 
-### Monitoring & Observability
+### I want to...
 
-| Document                       | Purpose                                                | When to Read          |
-| ------------------------------ | ------------------------------------------------------ | --------------------- |
-| [MONITORING.md](MONITORING.md) | Complete monitoring stack guide (Prometheus + Grafana) | Setting up monitoring |
+| Goal                            | Start Here                                             |
+| ------------------------------- | ------------------------------------------------------ |
+| **Deploy the application**      | [QUICK-START.md](QUICK-START.md#-deploy-in-3-commands) |
+| **View monitoring dashboards**  | [MONITORING.md](MONITORING.md#quick-start)             |
+| **Manage secrets securely**     | [SECRETS-SECURITY.md](SECRETS-SECURITY.md)             |
+| **Troubleshoot issues**         | [QUICK-START.md](QUICK-START.md#-troubleshooting)      |
+| **Understand the architecture** | [../README.md](../README.md#architecture)              |
+| **Scale the application**       | [QUICK-START.md](QUICK-START.md#change-replicas)       |
+| **Update configuration**        | [QUICK-START.md](QUICK-START.md#update-configuration)  |
+| **Access Grafana dashboards**   | [MONITORING.md](MONITORING.md#grafana-dashboards)      |
 
-### Security
+## 🏗️ Current Architecture
 
-| Document                                   | Purpose                                       | When to Read         |
-| ------------------------------------------ | --------------------------------------------- | -------------------- |
-| [SECRETS-SECURITY.md](SECRETS-SECURITY.md) | Security best practices and secret management | Handling credentials |
-
-### Project History
-
-| Document                     | Purpose                              | When to Read                 |
-| ---------------------------- | ------------------------------------ | ---------------------------- |
-| [CHANGELOG.md](CHANGELOG.md) | Project evolution and recent changes | Understanding what's changed |
-
-## 🗺️ Navigation Guide
-
-### I want to
-
-| Goal                                 | Start Here                                                   |
-| ------------------------------------ | ------------------------------------------------------------ |
-| **Deploy quickly**                   | [../README.md](../README.md#quick-start) → `make production` |
-| **Understand the architecture**      | [../README.md](../README.md#architecture)                    |
-| **Choose between Terraform/Ansible** | [DEPLOYMENT-METHODS.md](DEPLOYMENT-METHODS.md)               |
-| **Set up monitoring**                | [MONITORING.md](MONITORING.md)                               |
-| **Scale applications**               | [QUICK-REFERENCE.md](QUICK-REFERENCE.md#common-workflows)    |
-| **Manage secrets securely**          | [SECRETS-SECURITY.md](SECRETS-SECURITY.md)                   |
-| **Troubleshoot issues**              | [../README.md](../README.md#troubleshooting)                 |
-| **View metrics/dashboards**          | [MONITORING.md](MONITORING.md#grafana-dashboards)            |
-| **Run Terraform**                    | [TERRAFORM-GUIDE.md](TERRAFORM-GUIDE.md)                     |
-| **Customize configuration**          | [TERRAFORM-GUIDE.md](TERRAFORM-GUIDE.md#configuration)       |
-
-## 📁 Documentation Structure
+The project uses **Kustomize + Ansible** for a declarative, reproducible deployment:
 
 ```text
-docs/
-├── INDEX.md                   ← You are here!
-├── CHANGELOG.md               ← Version history
-├── DEPLOYMENT-METHODS.md      ← Terraform vs Ansible vs Make
-├── MONITORING.md              ← Prometheus + Grafana guide
-├── QUICK-REFERENCE.md         ← Command cheat sheet
-├── SECRETS-SECURITY.md        ← Security best practices
-└── TERRAFORM-GUIDE.md         ← Infrastructure as Code guide
+┌──────────────────────────────────────┐
+│    Make (Simple Commands)            │
+└──────────────┬───────────────────────┘
+               │
+    ┌──────────┴─────────────┐
+    ▼                        ▼
+┌─────────┐           ┌─────────────┐
+│Kustomize│──apply──▶ │   Ansible   │
+│Manifests│           │ Orchestrator│
+└─────────┘           └─────────────┘
+    (Source of Truth)        │
+                             ▼
+                   ┌──────────────────┐
+                   │  Kind Cluster    │
+                   │  • API           │
+                   │  • Nginx         │
+                   │  • PostgreSQL    │
+                   │  • Monitoring    │
+                   └──────────────────┘
 ```
 
-## 🔍 Quick Links by Role
+## 📁 Project Structure
 
-### For Developers
+```text
+api-deployment-demo/
+├── kustomize/              # Kubernetes manifests (SOURCE OF TRUTH)
+│   ├── base/               # Common resources
+│   └── overlays/
+│       ├── production/     # Production config
+│       └── staging/        # Staging config
+│
+├── ansible/                # Deployment orchestration
+│   ├── deploy.yml          # Main playbook
+│   └── roles/
+│       └── deployment-orchestrator/
+│
+├── api/                    # FastAPI application
+├── nginx/                  # Reverse proxy
+├── database/               # PostgreSQL setup
+├── scripts/                # Utility scripts
+├── docs/                   # This documentation
+└── Makefile                # Command interface
+```
 
-- [Quick Start](../README.md#quick-start) - Get up and running
-- [Key Commands](../README.md#key-commands) - Essential commands
-- [API Documentation](../api/main.py) - API endpoints
+## 🔄 Common Workflows
 
-### For DevOps Engineers
+### Quick Commands
 
-- [Architecture](../README.md#architecture) - System design
-- [Terraform Guide](TERRAFORM-GUIDE.md) - IaC reference
-- [Deployment Methods](DEPLOYMENT-METHODS.md) - Implementation options
+```bash
+make deploy      # Full deployment
+make status      # Check health
+make logs-api    # View API logs
+make urls        # Show access URLs
+make destroy     # Remove deployment
+```
 
-### For SREs
+### Development Workflow
 
-- [Monitoring](MONITORING.md) - Observability stack
-- [Troubleshooting](../README.md#troubleshooting) - Common issues
-- [Scaling](QUICK-REFERENCE.md#scaling) - Autoscaling and manual scaling
+1. Make code changes
+2. `make build` - Build new images
+3. `make load-images` - Load into cluster
+4. `make restart COMPONENT=api` - Restart pods
 
-### For Security Teams
+### Configuration Updates
 
-- [Secrets Management](SECRETS-SECURITY.md) - Credential handling
-- [Security Best Practices](SECRETS-SECURITY.md#security-principles) - Core principles
-- [TLS/SSL Setup](SECRETS-SECURITY.md#tlsssl-certificates) - Certificate management
+1. Edit `kustomize/base/` or `kustomize/overlays/`
+2. `make deploy` - Apply changes
+3. `make status` - Verify deployment
 
-## 💡 Tips
+## 📊 Monitoring Stack
 
-- **Start simple**: Run `make production` first, then explore the docs
-- **Use the Makefile**: It wraps all complex operations (see [QUICK-REFERENCE.md](QUICK-REFERENCE.md))
-- **Bookmark this index**: Return here when you need to find specific information
-- **Check CHANGELOG**: See what's new in [CHANGELOG.md](CHANGELOG.md)
+- **Prometheus**: Metrics collection at http://localhost:30900
+- **Grafana**: Dashboards at http://localhost:30300 (admin/admin)
+- **4 Pre-configured dashboards**: API, Infrastructure, Database, Nginx
+- **Auto-provisioned**: No manual import needed
 
----
+See [MONITORING.md](MONITORING.md) for details.
 
-**Need help?** Check the [Troubleshooting section](../README.md#troubleshooting) or review logs with `make logs-api` / `make logs-nginx`.
+## 🔐 Security
+
+- Secrets generated via `./scripts/generate-secrets.sh`
+- TLS certificates auto-generated and applied
+- Network policies available (optional)
+- Ansible Vault supported for sensitive data
+
+See [SECRETS-SECURITY.md](SECRETS-SECURITY.md) for best practices.
+
+## 🆘 Getting Help
+
+```bash
+make help        # List all commands
+make validate    # Run all validations
+make get-secrets # Display credentials
+```
+
+## 📚 Legacy Documentation
+
+Historical reference materials are available in [archive/](archive/):
+
+- Alternative deployment methods (deprecated)
+- Deployment method comparisons
+- Project consolidation planning
+
+These documents reflect previous project states and are kept for reference only.
+
+## 🔗 External Resources
+
+- [Kustomize Documentation](https://kustomize.io/)
+- [Ansible Kubernetes Collection](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Kind Documentation](https://kind.sigs.k8s.io/)
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [Grafana Documentation](https://grafana.com/docs/)

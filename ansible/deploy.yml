@@ -1,0 +1,124 @@
+---
+# Kubernetes Deployment Playbook - Consolidated Kustomize Approach
+# Uses Kustomize overlays as single source of truth for K8s resources
+# Ansible handles orchestration, pre/post tasks, and verification
+
+- name: Deploy API Demo to Kubernetes with Kustomize
+  hosts: localhost
+  connection: local
+  gather_facts: true
+
+  vars:
+    k8s_namespace: api-deployment-demo-ns
+    monitoring_namespace: api-deployment-demo-ns
+    k8s_context: kind-api-demo-cluster
+    deployment_env: "{{ deployment_env | default('production') }}"
+
+  pre_tasks:
+    - name: Display deployment plan
+      debug:
+        msg:
+          - 🚀 API Deployment Demo - Consolidated Deployment
+          - ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          - "Environment: {{ deployment_env }}"
+          - "Namespace: {{ k8s_namespace }}"
+          - "Context: {{ k8s_context }}"
+          - "Deployment Method: Kustomize (overlays/{{ deployment_env }})"
+          - ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    - name: Verify kubectl is available
+      command: kubectl version --client
+      changed_when: false
+      register: kubectl_version
+      failed_when: kubectl_version.rc != 0
+
+    - name: Display kubectl version
+      debug:
+        msg: "{{ kubectl_version.stdout }}"
+
+    # =================================================================
+    # Pre-Deployment Tasks
+    # =================================================================
+    - name: Generate TLS certificates (if script exists)
+      block:
+        - name: Check if TLS secret script exists
+          stat:
+            path: "{{ playbook_dir }}/../scripts/generate-tls-secrets.sh"
+          register: tls_script
+
+        - name: Generate TLS certificates for Nginx
+          command: >
+            bash {{ playbook_dir }}/../scripts/generate-tls-secrets.sh 
+            {{ k8s_namespace }} 
+            nginx-ssl-certs
+          when: tls_script.stat.exists
+          register: tls_gen
+          changed_when: true
+
+        - name: Display TLS generation result
+          debug:
+            msg: "{{ tls_gen.stdout_lines }}"
+          when: tls_gen is defined and tls_gen.stdout_lines is defined
+      rescue:
+        - name: Handle TLS generation failure
+          debug:
+            msg: ⚠️  TLS certificate generation failed. Deployment will continue, but Nginx HTTPS might be unavailable.
+
+  roles:
+    # Main deployment using Kustomize overlays
+    - role: deployment-orchestrator
+
+  post_tasks:
+    # =================================================================
+    # Post-Deployment Verification
+    # =================================================================
+    - name: Verify monitoring stack
+      block:
+        - name: Check Prometheus is running
+          command: kubectl get pods -n {{ monitoring_namespace }} -l app=prometheus
+          register: prometheus_check
+          changed_when: false
+
+        - name: Check Grafana is running
+          command: kubectl get pods -n {{ monitoring_namespace }} -l app=grafana
+          register: grafana_check
+          changed_when: false
+
+        - name: Display monitoring status
+          debug:
+            msg:
+              - "Prometheus: {{ 'Running' if 'Running' in prometheus_check.stdout else 'Not Ready' }}"
+              - "Grafana: {{ 'Running' if 'Running' in grafana_check.stdout else 'Not Ready' }}"
+      tags: [monitoring, verification]
+
+    - name: Get service access information
+      command: kubectl get services -n {{ k8s_namespace }} -o wide
+      register: services
+      changed_when: false
+
+    - name: Display service access URLs
+      debug:
+        msg:
+          - ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          - 📡 Service Endpoints
+          - ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          - "{{ services.stdout_lines }}"
+          - ""
+          - "🎯 Access Points:"
+          - "  • Web: https://localhost (or http://localhost)"
+          - "  • API: http://localhost:8000"
+          - "  • API Docs: http://localhost:8000/docs"
+          - "  • Grafana: http://localhost:3000"
+          - "  • Prometheus: http://localhost:9090"
+          - ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    - name: Final deployment summary
+      debug:
+        msg:
+          - ✅ Deployment Complete!
+          - ""
+          - "Next steps:"
+          - "  1. Verify services: make status"
+          - "  2. Check logs: make logs"
+          - "  3. Run verification: make verify-metrics"
+          - "  4. Generate traffic: make generate-traffic"

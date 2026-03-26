@@ -77,7 +77,7 @@
     name: "{{ vault_db_user }}"
     password: "{{ vault_db_password }}"
     db: "{{ vault_db_name }}"
-    priv: "ALL"
+    priv: ALL
     role_attr_flags: CREATEDB,NOSUPERUSER
     state: present
   become_user: postgres
@@ -112,7 +112,7 @@
 
 - name: Schedule database backups
   cron:
-    name: "PostgreSQL database backup"
+    name: PostgreSQL database backup
     cron_file: postgres-backup
     minute: "{{ backup_minute | default('0') }}"
     hour: "{{ backup_hour | default('2') }}"
@@ -120,7 +120,7 @@
     month: "*"
     weekday: "*"
     user: postgres
-    job: "/usr/local/bin/backup-database.sh"
+    job: /usr/local/bin/backup-database.sh
   when: backup_enabled | default(false)
 
 - name: Setup log rotation for PostgreSQL
@@ -136,26 +136,26 @@
     line: "{{ item.key }} = {{ item.value }}"
     backup: yes
   loop:
-    - { key: "log_destination", value: "'syslog'" }
-    - { key: "log_connections", value: "on" }
-    - { key: "log_disconnections", value: "on" }
-    - { key: "log_lock_waits", value: "on" }
-    - { key: "log_statement", value: "'mod'" }
-    - { key: "log_min_duration_statement", value: "1000" }
+    - { key: log_destination, value: "'syslog'" }
+    - { key: log_connections, value: on }
+    - { key: log_disconnections, value: on }
+    - { key: log_lock_waits, value: on }
+    - { key: log_statement, value: "'mod'" }
+    - { key: log_min_duration_statement, value: 1000 }
   notify: reload postgresql
 
 - name: Ensure PostgreSQL is listening on configured addresses
   lineinfile:
     path: "{{ postgres_config_dir }}/postgresql.conf"
-    regexp: "^#?listen_addresses"
-    line: "listen_addresses = '{{ postgres_listen_addresses | join(',') }}'"
+    regexp: ^#?listen_addresses
+    line: listen_addresses = '{{ postgres_listen_addresses | join(',') }}'
     backup: yes
   notify: restart postgresql
 
 - name: Set PostgreSQL port
   lineinfile:
     path: "{{ postgres_config_dir }}/postgresql.conf"
-    regexp: "^#?port"
+    regexp: ^#?port
     line: "port = {{ postgres_port }}"
     backup: yes
   notify: restart postgresql
@@ -167,14 +167,14 @@
     line: "{{ item.key }} = {{ item.value }}"
     backup: yes
   loop:
-    - { key: "shared_buffers", value: "{{ postgres_shared_buffers }}" }
+    - { key: shared_buffers, value: "{{ postgres_shared_buffers }}" }
     - {
-        key: "effective_cache_size",
+        key: effective_cache_size,
         value: "{{ postgres_effective_cache_size }}",
       }
-    - { key: "work_mem", value: "{{ postgres_work_mem }}" }
+    - { key: work_mem, value: "{{ postgres_work_mem }}" }
     - {
-        key: "maintenance_work_mem",
+        key: maintenance_work_mem,
         value: "{{ postgres_maintenance_work_mem }}",
       }
   notify: restart postgresql
@@ -182,7 +182,7 @@
 - name: Configure connection limits
   lineinfile:
     path: "{{ postgres_config_dir }}/postgresql.conf"
-    regexp: "^#?max_connections"
+    regexp: ^#?max_connections
     line: "max_connections = {{ postgres_max_connections }}"
     backup: yes
   notify: restart postgresql

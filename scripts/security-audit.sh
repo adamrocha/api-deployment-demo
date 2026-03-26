@@ -5,6 +5,10 @@
 
 set -e
 
+# Configuration - can be overridden via environment variables
+APP_NAMESPACE="${APP_NAMESPACE:-api-deployment-demo-ns}"
+MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-api-deployment-demo-ns}"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -113,9 +117,9 @@ echo -e "\n${BLUE}4. Checking Kubernetes Secrets Configuration${NC}"
 # Check if kubectl is available
 if command -v kubectl &>/dev/null; then
 	if kubectl cluster-info &>/dev/null; then
-		# Check for secrets in api-deployment-demo namespace
-		if kubectl get namespace api-deployment-demo &>/dev/null; then
-			secret_count=$(kubectl get secrets -n api-deployment-demo 2>/dev/null | grep -v "default-token" | tail -n +2 | wc -l | tr -d ' ')
+		# Check for secrets in $APP_NAMESPACE namespace
+		if kubectl get namespace $APP_NAMESPACE &>/dev/null; then
+			secret_count=$(kubectl get secrets -n "$APP_NAMESPACE" 2>/dev/null | grep -v "default-token" | tail -n +2 | wc -l | tr -d ' ')
 
 			if [[ $secret_count -gt 0 ]]; then
 				echo -e "   ${GREEN}✅${NC} Found $secret_count Kubernetes secret(s)"
@@ -123,18 +127,18 @@ if command -v kubectl &>/dev/null; then
 				# Check for required secrets
 				required_secrets=("api-secrets" "db-secrets" "tls-secret")
 				for secret in "${required_secrets[@]}"; do
-					if kubectl get secret "$secret" -n api-deployment-demo &>/dev/null; then
+					if kubectl get secret "$secret" -n "$APP_NAMESPACE" &>/dev/null; then
 						echo -e "   ${GREEN}✅${NC} Secret '$secret' exists"
 					else
 						echo -e "   ${YELLOW}⚠️  Secret '$secret' not found${NC}"
 					fi
 				done
 			else
-				echo -e "   ${YELLOW}⚠️  No secrets found in api-deployment-demo namespace${NC}"
+				echo -e "   ${YELLOW}⚠️  No secrets found in $APP_NAMESPACE namespace${NC}"
 				echo -e "   ${YELLOW}   Deploy with: make deploy${NC}"
 			fi
 		else
-			echo -e "   ${YELLOW}⚠️  Namespace 'api-deployment-demo' not found${NC}"
+			echo -e "   ${YELLOW}⚠️  Namespace '$APP_NAMESPACE' not found${NC}"
 			echo -e "   ${YELLOW}   Deploy with: make deploy${NC}"
 		fi
 	else

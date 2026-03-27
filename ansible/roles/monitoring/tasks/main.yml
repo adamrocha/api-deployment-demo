@@ -37,7 +37,7 @@
 - name: Extract node_exporter
   unarchive:
     src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
-    dest: "/tmp"
+    dest: /tmp
     remote_src: yes
     creates: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
   when:
@@ -47,7 +47,7 @@
 - name: Install node_exporter binary
   copy:
     src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
-    dest: "/usr/local/bin/node_exporter"
+    dest: /usr/local/bin/node_exporter
     mode: "0755"
     owner: root
     group: root
@@ -87,13 +87,13 @@
     - name: Extract postgres_exporter
       unarchive:
         src: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
-        dest: "/tmp"
+        dest: /tmp
         remote_src: yes
 
     - name: Install postgres_exporter binary
       copy:
         src: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64/postgres_exporter"
-        dest: "/usr/local/bin/postgres_exporter"
+        dest: /usr/local/bin/postgres_exporter
         mode: "0755"
         owner: root
         group: root
@@ -124,6 +124,11 @@
         state: started
         enabled: yes
         daemon_reload: yes
+  rescue:
+    - name: Handle postgres_exporter installation failure
+      debug:
+        msg: "Failed to install postgres_exporter on {{ inventory_hostname }}. Check network connectivity or version variables."
+      failed_when: true
   when:
     - postgres_exporter_enabled | default(false)
     - "'db' in group_names or 'databases' in group_names"
@@ -155,9 +160,9 @@
 
 - name: Create monitoring cron job
   cron:
-    name: "API Health Monitor"
+    name: API Health Monitor
     minute: "*/5"
-    job: "/usr/local/bin/health-monitor.sh"
+    job: /usr/local/bin/health-monitor.sh
     user: root
 
 - name: Install Docker system monitoring
@@ -176,9 +181,9 @@
 
 - name: Setup system monitoring cron
   cron:
-    name: "System Resource Monitor"
+    name: System Resource Monitor
     minute: "*/10"
-    job: "/usr/bin/python3 /usr/local/bin/system-monitor.py"
+    job: /usr/bin/python3 /usr/local/bin/system-monitor.py
     user: root
 
 # Firewall rules for monitoring

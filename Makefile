@@ -1,5 +1,5 @@
 # API Deployment Demo Makefile
-# Terraform-driven Infrastructure as Code with Ansible Configuration Management
+# Kubernetes Manifest-driven Infrastructure with Ansible Configuration Management
 
 .PHONY: help
 .DEFAULT_GOAL := help
@@ -10,8 +10,8 @@
 
 ENV ?= production
 CLUSTER_NAME := api-demo-cluster
-NAMESPACE := api-deployment-demo
-MONITORING_NS := monitoring
+NAMESPACE := api-deployment-demo-ns
+MONITORING_NS := api-deployment-demo-ns
 TF_DIR := terraform
 ANSIBLE_DIR := ansible
 
@@ -40,15 +40,15 @@ help: ## Show this help message
 	@echo "============================================"
 	@echo ""
 	@echo "📋 Quick Start:"
-	@echo "  make deploy               # Full deployment (build + terraform + config)"
+	@echo "  make deploy               # Deploy with Kustomize + Ansible"
+	@echo "  make deploy ENV=staging   # Deploy to staging"
 	@echo "  make status               # Check deployment status"
 	@echo "  make urls                 # Show access URLs"
+	@echo "  make destroy              # Remove deployment"
 	@echo ""
 	@echo "🔨 Build & Infrastructure:"
 	@echo "  make build                # Build Docker images"
 	@echo "  make cluster              # Create Kind cluster"
-	@echo "  make apply                # Deploy with Terraform"
-	@echo "  make config               # Apply Ansible configuration"
 	@echo ""
 	@echo "📊 Monitoring & Logs:"
 	@echo "  make logs                 # Show all logs"
@@ -62,9 +62,9 @@ help: ## Show this help message
 	@echo ""
 	@echo "🧹 Cleanup:"
 	@echo "  make clean                # Remove deployments"
-	@echo "  make clean-all            # Nuclear cleanup"
+	@echo "  make clean-all            # Complete cleanup"
 	@echo ""
-	@echo "💡 More commands: make help-all"
+	@echo "💡 More: make help-all"
 
 help-all: ## Show all available commands
 	@echo "🚀 API Deployment Demo - All Commands"
@@ -109,75 +109,44 @@ cluster-info: ## Show cluster information
 	@kubectl get nodes
 
 # =============================================================================
-# Terraform Infrastructure
+# Primary Deployment Method (Kustomize + Ansible)
 # =============================================================================
 
-init: ## Initialize Terraform
-	@echo "🔧 Initializing Terraform..."
-	@cd $(TF_DIR) && terraform init
-
-plan: init ## Plan infrastructure changes
-	@echo "📋 Planning Terraform changes..."
-	@cd $(TF_DIR) && terraform plan $(TF_VARS)
-
-apply: init cluster ## Apply Terraform infrastructure
-	@echo "� Generating TLS certificates..."
-	@./scripts/generate-tls-secrets.sh $(NAMESPACE) nginx-ssl-certs || echo "⚠️  TLS generation skipped"
-	@echo "�🚀 Deploying infrastructure with Terraform..."
-	@cd $(TF_DIR) && terraform apply $(TF_VARS) -auto-approve
-	@echo "✅ Infrastructure deployed"
-	@echo "🔐 Ensuring secrets are up to date..."
-	@$(MAKE) secrets
-	@echo "✅ Secrets synchronized"
-
-destroy: ## Destroy Terraform infrastructure
-	@echo "🗑️  Destroying infrastructure..."
-	@docker compose down -v 2>/dev/null || true
-	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
-	@echo "🧹 Cleaning up Terraform state..."
-	@cd $(TF_DIR) && rm -rf .terraform.lock.hcl .terraform/ terraform.tfstate terraform.tfstate.backup 2>/dev/null || true
-	@echo "✅ Infrastructure destroyed"
-
-output: ## Show Terraform outputs
-	@cd $(TF_DIR) && terraform output -json | jq -r '"🏗️  Cluster: " + .cluster_name.value, "🌐 Environment: " + .environment.value, "📦 Namespace: " + .namespace.value, "", "🌐 URLs:", "  Web:       https://localhost", "  API:       http://localhost:$(API_PORT)", "  Docs:      http://localhost:$(API_PORT)/docs", "  Grafana:   http://localhost:$(GRAFANA_PORT) ", "  Prometheus: http://localhost:$(PROMETHEUS_PORT)"'
+deploy: build load-images install-collections ## Deploy with Kustomize + Ansible orchestration
+	@echo "🚀 Deploying API Demo (Environment: $(ENV))"
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml -e "deployment_env=$(ENV)"
+	@echo "✅ Deployment complete!"
+	@$(MAKE) urls
 
 # =============================================================================
-# Ansible Configuration Management
+# Ansible Support
 # =============================================================================
 
 install-collections: ## Install required Ansible collections
 	@echo "📦 Installing Ansible collections..."
 	@cd $(ANSIBLE_DIR) && ansible-galaxy collection install -r requirements.yml --force
 
-config: install-collections ## Configure Kubernetes resources with Ansible
-	@echo "🔧 Configuring with Ansible..."
-	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags config
-
-tune: install-collections ## Tune and optimize deployments (HPA, PDB, etc)
-	@echo "⚡ Optimizing with Ansible..."
-	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)" --tags tuning
-
-ansible: install-collections ## Run all Ansible playbooks (config + tuning)
-	@echo "🚀 Running Ansible configuration..."
-	@cd $(ANSIBLE_DIR) && ansible-playbook kubernetes.yml -e "environment=$(ENV)"
-
-validate-ansible: install-collections ## Validate Ansible configuration
-	@cd $(ANSIBLE_DIR) && ./validate-ansible.sh
-
 # =============================================================================
-# Deployment Workflows
+# Deployment Cleanup
 # =============================================================================
 
-deploy: build apply config ## Full production deployment
-	@echo "✅ Deployment complete!"
-	@$(MAKE) urls
+destroy: install-collections ## Destroy deployment using Ansible
+	@echo "🗑️  Destroying with Ansible..."
+	@cd $(ANSIBLE_DIR) && ansible-playbook destroy.yml
+	@echo "✅ Deployment destroyed"
 
-staging: ## Deploy staging environment (Docker Compose)
-	@echo "🐳 Starting staging with Docker Compose..."
-	@docker compose up -d
-	@echo "✅ Staging URLs:"
-	@echo "  HTTPS: https://localhost:30443"
-	@echo "  API:   http://localhost:30800"
+# =============================================================================
+# Kustomize Utilities
+# =============================================================================
+
+kustomize-preview: ## Preview Kustomize output for current environment
+	@echo "👀 Previewing Kustomize $(ENV) overlay..."
+	@kubectl kustomize kustomize/overlays/$(ENV)
+
+kustomize-diff: ## Show diff for current environment
+	@echo "🔍 Checking diff for $(ENV) environment..."
+	@kubectl diff -k kustomize/overlays/$(ENV) || true
 
 # =============================================================================
 # Monitoring & Observability
@@ -230,10 +199,10 @@ urls: ## Display access URLs
 	@echo "🌐 Access URLs"
 	@echo "=============="
 	@echo "  Web:        https://localhost"
-	@echo "  API:        https://localhost:$(API_PORT)"
-	@echo "  API Docs:   https://localhost:$(API_PORT)/docs"
-	@echo "  Grafana:    https://localhost:$(GRAFANA_PORT)"
-	@echo "  Prometheus: https://localhost:$(PROMETHEUS_PORT)"
+	@echo "  API:        https://localhost:8000"
+	@echo "  API Docs:   https://localhost:8000/docs"
+	@echo "  Grafana:    https://localhost:3000"
+	@echo "  Prometheus: https://localhost:9090"
 
 # =============================================================================
 # Testing & Validation
@@ -254,7 +223,9 @@ verify-metrics: ## Verify metrics server and HPA status
 validate: ## Validate all configurations
 	@echo "✅ Validating..."
 	@docker compose config >/dev/null && echo "  ✅ Docker Compose"
-	@cd $(ANSIBLE_DIR) && ./validate-ansible.sh
+	@kubectl kustomize kustomize/overlays/production >/dev/null && echo "  ✅ Kustomize production" || echo "  ❌ Kustomize production"
+	@kubectl kustomize kustomize/overlays/staging >/dev/null && echo "  ✅ Kustomize staging" || echo "  ❌ Kustomize staging"
+	@cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml --syntax-check && echo "  ✅ Ansible deploy.yml"
 	@for script in scripts/*.sh; do bash -n "$$script" 2>/dev/null && echo "  ✅ $$script"; done
 
 # =============================================================================
@@ -283,21 +254,15 @@ clean: ## Clean deployments (keep cluster and images)
 clean-staging: ## Clean staging environment
 	@docker compose down -v
 
-clean-tf: ## Clean Terraform state files
-	@echo "🧹 Cleaning Terraform state..."
-	@rm -rf $(TF_DIR)/.terraform $(TF_DIR)/.terraform.lock.hcl
-	@rm -f $(TF_DIR)/terraform.tfstate $(TF_DIR)/terraform.tfstate.backup
-
 clean-all: ## Complete cleanup - remove everything
 	@echo "💥 Complete cleanup..."
-	@echo "⚠️  This removes: deployments, cluster, images, terraform state"
+	@echo "⚠️  This removes: deployments, cluster, and images"
 	@read -p "Continue? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
 	@docker compose down -v 2>/dev/null || true
 	@kind delete cluster --name $(CLUSTER_NAME) 2>/dev/null || true
 	@docker images "api-deployment-demo*" -q | xargs -r docker rmi -f 2>/dev/null || true
 	@docker rmi -f postgres:15-alpine prometheuscommunity/postgres-exporter:latest nginx/nginx-prometheus-exporter:latest 2>/dev/null || true
 	@docker image prune -f >/dev/null 2>&1
-	@$(MAKE) clean-tf
 	@echo "✅ Complete cleanup finished"
 
 # =============================================================================

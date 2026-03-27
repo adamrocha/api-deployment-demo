@@ -23,15 +23,15 @@
 
 - name: Copy application source code
   synchronize:
-    src: "../../../"
+    src: ../../../
     dest: "{{ app_dir }}/"
     delete: true
     rsync_opts:
-      - "--exclude=ansible/"
-      - "--exclude=.git/"
-      - "--exclude=__pycache__/"
-      - "--exclude=*.pyc"
-      - "--exclude=.env"
+      - --exclude=ansible/
+      - --exclude=.git/
+      - --exclude=__pycache__/
+      - --exclude=*.pyc
+      - --exclude=.env
 
 - name: Create environment file from template
   template:
@@ -52,7 +52,8 @@
 
 - name: Wait for API to be ready
   uri:
-    url: "http://localhost:{{ api_port }}/health"
+    url: "https://localhost:{{ https_port }}/health"
+    validate_certs: true
     method: GET
     timeout: 30
   register: api_health

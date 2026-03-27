@@ -9,17 +9,27 @@
 #   ./scripts/generate-tls-secrets.sh [namespace] [secret-name]
 #
 # Examples:
-#   ./scripts/generate-tls-secrets.sh                                    # Default: api-deployment-demo/nginx-tls-secret
+#   ./scripts/generate-tls-secrets.sh                                    # Default: api-deployment-demo-ns/nginx-tls-secret
 #   ./scripts/generate-tls-secrets.sh monitoring grafana-tls-secret      # Custom namespace/name
 # =======================================================================
 
 set -euo pipefail
 
+# Configuration - can be overridden via environment variables
+DEFAULT_APP_NS="${APP_NAMESPACE:-api-deployment-demo-ns}"
+
+# Detect script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# Change to project root for consistent paths
+cd "${PROJECT_ROOT}"
+
 # Configuration
-NAMESPACE=${1:-api-deployment-demo}
+NAMESPACE=${1:-$DEFAULT_APP_NS}
 SECRET_NAME=${2:-nginx-ssl-certs}
-CERT_FILE="nginx/ssl/nginx-selfsigned.crt"
-KEY_FILE="nginx/ssl/nginx-selfsigned.key"
+CERT_FILE="nginx/ssl/tls.crt"
+KEY_FILE="nginx/ssl/tls.key"
 OUTPUT_FILE="kubernetes/tls-secret.yaml"
 
 # Colors for output

@@ -4,7 +4,7 @@ app_user: appuser
 app_group: appuser
 
 # Docker configuration
-docker_compose_version: "2.21.0"
+docker_compose_version: 2.21.0
 docker_users:
   - "{{ ansible_user }}"
 
@@ -17,7 +17,7 @@ https_port: 443
 db_name: api_production
 db_user: postgres
 db_port: 5432
-postgres_data_dir: "/var/lib/postgresql/15/main"
+postgres_data_dir: /var/lib/postgresql/15/main
 
 # SSL configuration
 ssl_enabled: false
@@ -28,7 +28,7 @@ ssl_days_valid: 365
 # Monitoring configuration
 monitoring_enabled: true
 log_retention_days: 30
-prometheus_server_url: "http://monitoring.local:9090"
+prometheus_server_url: http://monitoring.local:9090
 
 # Firewall rules
 firewall_rules:

@@ -4,6 +4,9 @@
 
 set -e
 
+# Configuration - can be overridden via environment variables
+MONITORING_NAMESPACE="${MONITORING_NAMESPACE:-api-deployment-demo-ns}"
+
 echo "🔍 Monitoring Stack Verification"
 echo "================================"
 echo ""
@@ -16,7 +19,7 @@ NC='\033[0m' # No Color
 
 # Check monitoring namespace
 echo "1. Checking monitoring namespace..."
-if kubectl get namespace monitoring &>/dev/null; then
+if kubectl get namespace "$MONITORING_NAMESPACE" &>/dev/null; then
 	echo -e "${GREEN}✓${NC} Monitoring namespace exists"
 else
 	echo -e "${RED}✗${NC} Monitoring namespace not found"
@@ -26,7 +29,7 @@ fi
 # Check Prometheus pod
 echo ""
 echo "2. Checking Prometheus deployment..."
-PROM_READY=$(kubectl get pods -n monitoring -l app=prometheus -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+PROM_READY=$(kubectl get pods -n "$MONITORING_NAMESPACE" -l app=prometheus -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
 if [ "$PROM_READY" == "True" ]; then
 	echo -e "${GREEN}✓${NC} Prometheus pod is ready"
 else
@@ -36,7 +39,7 @@ fi
 # Check Grafana pod
 echo ""
 echo "3. Checking Grafana deployment..."
-GRAFANA_READY=$(kubectl get pods -n monitoring -l app=grafana -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+GRAFANA_READY=$(kubectl get pods -n "$MONITORING_NAMESPACE" -l app=grafana -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
 if [ "$GRAFANA_READY" == "True" ]; then
 	echo -e "${GREEN}✓${NC} Grafana pod is ready"
 else
@@ -46,10 +49,10 @@ fi
 # Check ConfigMaps
 echo ""
 echo "4. Checking dashboard ConfigMaps..."
-CONFIGMAPS=$(kubectl get configmaps -n monitoring -o name | grep grafana | wc -l)
+CONFIGMAPS=$(kubectl get configmaps -n "$MONITORING_NAMESPACE" -o name | grep grafana | wc -l)
 if [ "$CONFIGMAPS" -ge 6 ]; then
 	echo -e "${GREEN}✓${NC} All $CONFIGMAPS Grafana ConfigMaps present"
-	kubectl get configmaps -n monitoring | grep grafana | sed 's/^/  /'
+	kubectl get configmaps -n "$MONITORING_NAMESPACE" | grep grafana | sed 's/^/  /'
 else
 	echo -e "${YELLOW}⚠${NC} Expected 6 ConfigMaps, found $CONFIGMAPS"
 fi

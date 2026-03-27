@@ -5,6 +5,10 @@
 
 set -e
 
+# Detect script directory and change to project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -14,7 +18,7 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}🔍 Git Security Audit for Ansible Vault${NC}\n"
 
-cd /opt/github/api-deployment-demo
+cd "$PROJECT_ROOT"
 
 # Check 1: Verify sensitive files are ignored
 echo -e "${BLUE}1. Checking Sensitive Files are Ignored${NC}"

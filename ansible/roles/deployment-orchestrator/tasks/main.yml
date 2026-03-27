@@ -1,0 +1,181 @@
+---
+# Deployment Orchestrator Role - Main Tasks
+# Uses Kustomize as the single source of truth for Kubernetes resources
+# Handles deployment workflow, pre/post tasks, and verification
+
+- name: Display deployment information
+  debug:
+    msg:
+      - 🚀 Starting deployment orchestration
+      - "Environment: {{ deployment_env }}"
+      - "Namespace: {{ k8s_namespace }}"
+      - "Context: {{ k8s_context }}"
+
+- name: Verify kubectl is available
+  command: kubectl version --client
+  register: kubectl_version
+  changed_when: false
+  failed_when: kubectl_version.rc != 0
+
+- name: Display kubectl version
+  debug:
+    msg: "{{ kubectl_version.stdout }}"
+
+- name: Verify current kubectl context
+  command: kubectl config current-context
+  register: current_context
+  changed_when: false
+
+- name: Confirm deployment context
+  debug:
+    msg: "Deploying to context: {{ current_context.stdout }}"
+
+- name: Fail if wrong context
+  fail:
+    msg: "Current context '{{ current_context.stdout }}' does not match expected '{{ k8s_context }}'"
+  when: current_context.stdout != k8s_context and strict_context_check | default(false)
+
+- name: Check if Kustomize overlay exists
+  stat:
+    path: "{{ playbook_dir }}/../kustomize/overlays/{{ deployment_env }}"
+  register: kustomize_overlay
+
+- name: Fail if overlay doesn't exist
+  fail:
+    msg: "Kustomize overlay for environment '{{ deployment_env }}' not found at {{ playbook_dir }}/../kustomize/overlays/{{ deployment_env }}"
+  when: not kustomize_overlay.stat.exists
+
+- name: Build Kustomize manifests (dry-run)
+  command: kubectl kustomize {{ playbook_dir }}/../kustomize/overlays/{{ deployment_env }}
+  register: kustomize_build
+  changed_when: false
+  failed_when: kustomize_build.rc != 0
+
+- name: Display build summary
+  debug:
+    msg: "✅ Kustomize build successful ({{ kustomize_build.stdout_lines | length }} lines of YAML)"
+
+- name: Apply Kustomize manifests
+  command: kubectl apply -k {{ playbook_dir }}/../kustomize/overlays/{{ deployment_env }}
+  register: kubectl_apply
+  when: not dry_run | default(false)
+
+- name: Display apply results
+  debug:
+    var: kubectl_apply.stdout_lines
+  when: kubectl_apply is defined and kubectl_apply.stdout_lines is defined
+
+- name: Wait for namespace to be ready
+  command: kubectl get namespace {{ k8s_namespace }}
+  register: namespace_check
+  retries: 5
+  delay: 2
+  until: namespace_check.rc == 0
+  changed_when: false
+  when: not dry_run | default(false)
+
+- name: Apply TLS secret (after namespace exists)
+  block:
+    - name: Check if TLS secret YAML exists
+      stat:
+        path: "{{ playbook_dir }}/../kubernetes/tls-secret.yaml"
+      register: tls_secret_file
+
+    - name: Apply TLS secret to cluster
+      command: kubectl apply -f {{ playbook_dir }}/../kubernetes/tls-secret.yaml
+      when: tls_secret_file.stat.exists
+      register: tls_secret_apply
+      changed_when: "'created' in tls_secret_apply.stdout or 'configured' in tls_secret_apply.stdout"
+
+    - name: Display TLS secret result
+      debug:
+        msg: "✅ TLS secret applied: {{ tls_secret_apply.stdout }}"
+      when: tls_secret_apply is defined and tls_secret_apply.stdout is defined
+  rescue:
+    - name: TLS secret application failed
+      debug:
+        msg: ⚠️ TLS secret not applied - nginx HTTPS may not work
+  when: not dry_run | default(false)
+
+- name: Wait for deployments to be ready
+  command: >
+    kubectl wait --for=condition=available --timeout=300s
+    deployment/{{ item }}
+    -n {{ k8s_namespace }}
+  loop: "{{ deployments_to_wait | default(['api-deployment', 'nginx-deployment', 'postgres']) }}"
+  when:
+    - not dry_run | default(false)
+    - wait_for_ready | default(true)
+  register: deployment_wait
+  failed_when: false
+
+- name: Display deployment wait results
+  debug:
+    msg: "{{ item.item }}: {{ 'Ready' if item.rc == 0 else 'Failed' }}"
+  loop: "{{ deployment_wait.results }}"
+  when: deployment_wait.results is defined
+
+- name: Get deployment status
+  command: kubectl get deployments -n {{ k8s_namespace }}
+  register: deployment_status
+  changed_when: false
+  when: not dry_run | default(false)
+
+- name: Display deployment status
+  debug:
+    var: deployment_status.stdout_lines
+  when: deployment_status.stdout_lines is defined
+
+- name: Get pod status
+  command: kubectl get pods -n {{ k8s_namespace }}
+  register: pod_status
+  changed_when: false
+  when: not dry_run | default(false)
+
+- name: Display pod status
+  debug:
+    var: pod_status.stdout_lines
+  when: pod_status.stdout_lines is defined
+
+- name: Verify HPA is configured
+  command: kubectl get hpa -n {{ k8s_namespace }}
+  register: hpa_status
+  changed_when: false
+  failed_when: false
+  when: not dry_run | default(false)
+
+- name: Display HPA status
+  debug:
+    var: hpa_status.stdout_lines
+  when: hpa_status.stdout_lines is defined and hpa_status.rc == 0
+
+- name: Verify PodDisruptionBudgets are configured
+  command: kubectl get pdb -n {{ k8s_namespace }}
+  register: pdb_status
+  changed_when: false
+  failed_when: false
+  when: not dry_run | default(false)
+
+- name: Display PDB status
+  debug:
+    var: pdb_status.stdout_lines
+  when: pdb_status.stdout_lines is defined and pdb_status.rc == 0
+
+- name: Get service endpoints
+  command: kubectl get services -n {{ k8s_namespace }}
+  register: service_status
+  changed_when: false
+  when: not dry_run | default(false)
+
+- name: Display service endpoints
+  debug:
+    var: service_status.stdout_lines
+  when: service_status.stdout_lines is defined
+
+- name: Deployment summary
+  debug:
+    msg:
+      - ✅ Deployment orchestration complete
+      - "Environment: {{ deployment_env }}"
+      - "Namespace: {{ k8s_namespace }}"
+      - "Deployments are {{ 'ready' if deployment_wait.results | default([]) | selectattr('rc', 'equalto', 0) | list | length > 0 else 'pending' }}"

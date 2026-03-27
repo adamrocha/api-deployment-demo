@@ -1,6 +1,10 @@
 #!/bin/bash
 
 # Traffic Generator for Dashboard Demo
+
+# Configuration - can be overridden via environment variables
+APP_NAMESPACE="${APP_NAMESPACE:-api-deployment-demo-ns}"
+
 echo "🚦 Starting traffic generation for dashboard demo..."
 
 # Function to generate random traffic
@@ -21,7 +25,7 @@ generate_traffic() {
 		esac
 
 		# Execute request
-		kubectl exec deployment/api-deployment -n api-deployment-demo -- \
+		kubectl exec deployment/api-deployment -n "$APP_NAMESPACE" -- \
 			curl -s http://localhost:8000"$ENDPOINT" >/dev/null 2>&1
 
 		endpoint_count=$((endpoint_count + 1))
@@ -45,7 +49,7 @@ create_db_activity() {
 
 	# Create a few test users with consistent names
 	for i in {1..3}; do
-		kubectl exec deployment/api-deployment -n api-deployment-demo -- \
+		kubectl exec deployment/api-deployment -n "$APP_NAMESPACE" -- \
 			curl -s -X POST http://localhost:8000/users \
 			-H "Content-Type: application/json" \
 			-d "{\"name\":\"TestUser${i}\",\"email\":\"testuser${i}@example.com\"}" >/dev/null 2>&1

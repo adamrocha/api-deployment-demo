@@ -9,7 +9,7 @@
 #   ./scripts/generate-secrets.sh [environment] [namespace]
 #     - Generates Kubernetes secrets from .env file
 #     - environment: development|staging|production (default: development)
-#     - namespace: kubernetes namespace (default: api-deployment-demo)
+#     - namespace: kubernetes namespace (default: api-deployment-demo-ns)
 #
 #   ./scripts/generate-secrets.sh terraform
 #     - Generates terraform.tfvars with secure random passwords
@@ -18,9 +18,13 @@
 
 set -euo pipefail
 
+# Configuration - can be overridden via environment variables
+DEFAULT_MONITORING_NS="${MONITORING_NAMESPACE:-api-deployment-demo-ns}"
+DEFAULT_APP_NS="${APP_NAMESPACE:-api-deployment-demo-ns}"
+
 # Default values
 ENVIRONMENT="${1:-development}"
-NAMESPACE="${2:-api-deployment-demo}"
+NAMESPACE="${2:-$DEFAULT_APP_NS}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
@@ -285,7 +289,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: grafana-admin-secret
-  namespace: monitoring
+  namespace: $MONITORING_NAMESPACE
   labels:
     app: grafana
     component: monitoring
@@ -332,9 +336,9 @@ apply_secrets() {
 			log_info "Creating namespace: $NAMESPACE"
 			kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 		fi
-		if ! kubectl get namespace monitoring &>/dev/null; then
-			log_info "Creating namespace: monitoring"
-			kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+		if ! kubectl get namespace "$MONITORING_NAMESPACE" &>/dev/null; then
+			log_info "Creating namespace: $MONITORING_NAMESPACE"
+			kubectl create namespace "$MONITORING_NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 		fi
 
 		# Check for and delete immutable secrets before applying
@@ -352,13 +356,13 @@ apply_secrets() {
 		done
 
 		# Check monitoring namespace for grafana secret
-		if kubectl get namespace monitoring &>/dev/null; then
-			if kubectl get secret grafana-admin-secret -n monitoring &>/dev/null; then
+		if kubectl get namespace "$MONITORING_NAMESPACE" &>/dev/null; then
+			if kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" &>/dev/null; then
 				local is_immutable
-				is_immutable=$(kubectl get secret grafana-admin-secret -n monitoring -o jsonpath='{.immutable}' 2>/dev/null)
+				is_immutable=$(kubectl get secret grafana-admin-secret -n "$MONITORING_NAMESPACE" -o jsonpath='{.immutable}' 2>/dev/null)
 				if [[ $is_immutable == "true" ]]; then
 					log_warning "Secret grafana-admin-secret is immutable, deleting before recreating..."
-					kubectl delete secret grafana-admin-secret -n monitoring
+					kubectl delete secret grafana-admin-secret -n "$MONITORING_NAMESPACE"
 				fi
 			fi
 		fi
@@ -391,7 +395,7 @@ show_usage() {
 	echo ""
 	echo "Arguments:"
 	echo "  mode           terraform | development | staging | production"
-	echo "  namespace      Kubernetes namespace (default: api-deployment-demo)"
+	echo "  namespace      Kubernetes namespace (default: api-deployment-demo-ns)"
 	echo ""
 	echo "Environment variables:"
 	echo "  APPLY=true     Automatically apply secrets to cluster"

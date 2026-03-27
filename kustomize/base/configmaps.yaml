@@ -76,7 +76,7 @@ data:
 
   nginx.conf: |
     upstream api_backend {
-        server api-service.api-deployment-demo.svc.cluster.local:8000;
+        server api-service.api-deployment-demo-ns.svc.cluster.local:8000;
         keepalive 32;
     }
 

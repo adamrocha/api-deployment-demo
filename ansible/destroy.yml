@@ -1,0 +1,82 @@
+---
+# Ansible Playbook to Destroy/Undeploy Kubernetes Resources
+# Replaces 'make destroy'
+
+- name: Destroy API Demo Kubernetes Deployment
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    k8s_namespace: api-deployment-demo-ns
+    monitoring_namespace: api-deployment-demo-ns
+    manifests_dir: "{{ playbook_dir }}/../kubernetes"
+
+  tasks:
+    - name: Delete HPA
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ manifests_dir }}/hpa.yaml"
+      ignore_errors: yes
+
+    - name: Delete Nginx resources
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ item }}"
+      loop:
+        - "{{ manifests_dir }}/nginx-service.yaml"
+        - "{{ manifests_dir }}/nginx-deployment.yaml"
+      ignore_errors: yes
+
+    - name: Delete API resources
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ item }}"
+      loop:
+        - "{{ manifests_dir }}/api-service.yaml"
+        - "{{ manifests_dir }}/api-deployment.yaml"
+      ignore_errors: yes
+
+    - name: Delete PostgreSQL resources
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ item }}"
+      loop:
+        - "{{ manifests_dir }}/postgres-service.yaml"
+        - "{{ manifests_dir }}/postgres-deployment.yaml"
+      ignore_errors: yes
+
+    - name: Delete monitoring resources
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ item }}"
+      loop:
+        - "{{ manifests_dir }}/monitoring/grafana.yaml"
+        - "{{ manifests_dir }}/monitoring/kube-state-metrics.yaml"
+        - "{{ manifests_dir }}/monitoring/prometheus.yaml"
+        - "{{ manifests_dir }}/monitoring/metrics-server.yaml"
+      ignore_errors: yes
+
+    - name: Delete NetworkPolicies
+      kubernetes.core.k8s:
+        state: absent
+        src: "{{ item }}"
+      loop:
+        - "{{ manifests_dir }}/network-policy.yaml"
+        - "{{ manifests_dir }}/monitoring/network-policy.yaml"
+      ignore_errors: yes
+
+    - name: Delete namespaces
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Namespace
+        name: "{{ item }}"
+      loop:
+        - "{{ k8s_namespace }}"
+        - "{{ monitoring_namespace }}"
+      ignore_errors: yes
+
+    - name: Display completion message
+      debug:
+        msg: ✅ All Kubernetes resources have been deleted. The cluster is now clean.

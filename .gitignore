@@ -45,11 +45,20 @@ ansible/.ansible/
 # =======================================================================
 # Kubernetes Secrets (SECURITY CRITICAL)
 # =======================================================================
+kubernetes/secrets.yaml
 kubernetes/secrets-*.yaml
 kubernetes/configmap-*.yaml
 kubernetes/monitoring-secrets.yaml
 kubernetes/tls-secret.yaml
 !kubernetes/*-example.yaml
+
+# Kustomize Secrets (SECURITY CRITICAL)
+kustomize/**/secrets.yaml
+kustomize/**/secrets-*.yaml
+kustomize/**/grafana-secret.yaml
+kustomize/**/*-secret.yaml
+kustomize/**/*.env
+!kustomize/**/*.env.example
 
 # =======================================================================
 # Logs and Temporary Files

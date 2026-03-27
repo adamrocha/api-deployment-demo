@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  namespace: api-deployment-demo
+  labels:
+    app: api-demo
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api-demo
+      component: api
+  template:
+    metadata:
+      labels:
+        app: api-demo
+        component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: /metrics
+    spec:
+      # Init container to wait for database
+      initContainers:
+        - name: wait-for-db
+          image: postgres:15-alpine
+          command:
+            - sh
+            - -c
+            - until pg_isready -h postgres -p 5432 -U postgres; do echo waiting for database; sleep 2; done;
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: db-password
+
+      containers:
+        - name: api
+          image: api-deployment-demo-api:latest
+          imagePullPolicy: Never # Use local images in Kind
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: db-password
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: db-name
+            - name: SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: SECRET_KEY
+            - name: API_ENV
+              value: production
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+
+          # Startup probe - gives pod up to 2 minutes to start
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12 # 12 * 10s = 120s max startup time
+
+          # Liveness probe - very lenient to handle CPU-intensive operations
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 30 # Check every 30s
+            timeoutSeconds: 10 # Increased timeout to 10s
+            failureThreshold: 6 # 6 * 30s = 180s before restart
+
+          # Readiness probe
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            periodSeconds: 10
+            timeoutSeconds: 10
+            failureThreshold: 3

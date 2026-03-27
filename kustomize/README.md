@@ -21,7 +21,19 @@ kustomize/
 
 ## Quick Start
 
-### Deploy Production
+### 1. Generate Secrets (First Time Setup)
+
+```bash
+# Generate secure secrets for your environment
+./scripts/generate-kustomize-secrets.sh staging    # For staging
+./scripts/generate-kustomize-secrets.sh production # For production
+
+# Or use default placeholder passwords for local testing
+```
+
+See [SECRET-MANAGEMENT.md](./SECRET-MANAGEMENT.md) for detailed secret management documentation.
+
+### 2. Deploy Production
 
 ```bash
 # Preview what will be deployed
@@ -34,7 +46,7 @@ kubectl apply -k kustomize/overlays/production
 kustomize build kustomize/overlays/production | kubectl apply -f -
 ```
 
-### Deploy Staging
+### 3. Deploy Staging
 
 ```bash
 kubectl apply -k kustomize/overlays/staging

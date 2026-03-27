@@ -28,8 +28,8 @@ cd "${PROJECT_ROOT}"
 # Configuration
 NAMESPACE=${1:-$DEFAULT_APP_NS}
 SECRET_NAME=${2:-nginx-ssl-certs}
-CERT_FILE="nginx/ssl/nginx-selfsigned.crt"
-KEY_FILE="nginx/ssl/nginx-selfsigned.key"
+CERT_FILE="nginx/ssl/tls.crt"
+KEY_FILE="nginx/ssl/tls.key"
 OUTPUT_FILE="kubernetes/tls-secret.yaml"
 
 # Colors for output

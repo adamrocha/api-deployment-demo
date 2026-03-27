@@ -7,7 +7,6 @@ namespace: api-deployment-demo
 resources:
   # Core infrastructure
   - namespace.yaml
-  - secrets.yaml
   - configmaps.yaml
   - nginx-html-configmap.yaml
   - postgres-init-configmap.yaml
@@ -31,7 +30,6 @@ resources:
   - pdb.yaml
 
   # Monitoring (keep in their namespace)
-  - grafana-secret.yaml
   - prometheus-config.yaml
   - grafana-config.yaml
   - grafana-dashboards.yaml

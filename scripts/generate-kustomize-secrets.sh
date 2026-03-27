@@ -54,6 +54,15 @@ escape_sed_replacement() {
 	printf '%s' "$1" | sed -e 's/[&|]/\\&/g'
 }
 
+# Portable sed -i for both BSD/macOS and GNU/Linux
+sed_inplace() {
+	if [[ "$(uname)" == "Darwin" ]]; then
+		sed -i '' "$@"
+	else
+		sed -i "$@"
+	fi
+}
+
 set_or_append_env() {
 	local key="$1"
 	local value="$2"
@@ -62,7 +71,7 @@ set_or_append_env() {
 	escaped="$(escape_sed_replacement "${value}")"
 
 	if grep -q "^${key}=" "${file}"; then
-		sed -i '' -e "s|^${key}=.*$|${key}=${escaped}|" "${file}"
+		sed_inplace "s|^${key}=.*$|${key}=${escaped}|" "${file}"
 	else
 		printf '\n%s=%s\n' "${key}" "${value}" >>"${file}"
 	fi
@@ -76,7 +85,7 @@ echo -e "${NC}"
 
 # Validate overlay
 if [[ ! -f ${KUSTOMIZE_FILE} ]]; then
-	log_error "Kustomization file not found: $KUSTOMIZE_FILE"
+	log_error "Kustomization file not found: ${KUSTOMIZE_FILE}"
 	log_info "Available overlays:"
 	ls -1 "${PROJECT_ROOT}/kustomize/overlays/" | sed 's/^/  - /'
 	exit 1

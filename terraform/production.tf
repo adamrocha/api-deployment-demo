@@ -515,26 +515,6 @@ resource "kubernetes_service_v1" "api_alias" {
   }
 }
 
-# Apply Kubernetes ConfigMaps from manifests
-resource "null_resource" "apply_configmaps" {
-  count = var.environment == "production" ? 1 : 0
-
-  provisioner "local-exec" {
-    command = <<-EOT
-      kubectl apply -f ${path.module}/../kubernetes/configmaps.yaml --validate=false
-      kubectl apply -f ${path.module}/../kubernetes/nginx-html-configmap.yaml --validate=false
-      kubectl apply -f ${path.module}/../kubernetes/tls-secret.yaml --validate=false
-    EOT
-  }
-
-  depends_on = [kubernetes_namespace_v1.app]
-
-  triggers = {
-    configmaps_hash = filesha1("${path.module}/../kubernetes/configmaps.yaml")
-    html_hash       = filesha1("${path.module}/../kubernetes/nginx-html-configmap.yaml")
-    tls_hash        = try(filesha1("${path.module}/../kubernetes/tls-secret.yaml"), "not-generated")
-  }
-}
 
 # Nginx Deployment (Enhanced to match Make method)
 resource "kubernetes_deployment_v1" "nginx" {
@@ -710,7 +690,7 @@ resource "kubernetes_deployment_v1" "nginx" {
     update = "10m"
   }
 
-  depends_on = [kubernetes_deployment_v1.api, null_resource.ssl_certs, null_resource.apply_configmaps]
+  depends_on = [kubernetes_deployment_v1.api, null_resource.ssl_certs]
 }
 
 # Nginx Service (LoadBalancer type to match Make method)

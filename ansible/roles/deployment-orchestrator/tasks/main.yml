@@ -65,7 +65,24 @@
     var: kubectl_apply.stdout_lines
   when: kubectl_apply is defined and kubectl_apply.stdout_lines is defined
 
-- name: Wait for namespace to be ready
+- name: Check if monitoring Kustomize overlay exists
+  stat:
+    path: "{{ playbook_dir }}/../kustomize/monitoring/overlays/{{ deployment_env }}"
+  register: monitoring_overlay
+
+- name: Apply monitoring Kustomize manifests
+  command: kubectl apply -k {{ playbook_dir }}/../kustomize/monitoring/overlays/{{ deployment_env }}
+  register: kubectl_apply_monitoring
+  when:
+    - not dry_run | default(false)
+    - monitoring_overlay.stat.exists
+
+- name: Display monitoring apply results
+  debug:
+    var: kubectl_apply_monitoring.stdout_lines
+  when: kubectl_apply_monitoring is defined and kubectl_apply_monitoring.stdout_lines is defined
+
+- name: Wait for app namespace to be ready
   command: kubectl get namespace {{ k8s_namespace }}
   register: namespace_check
   retries: 5
@@ -74,28 +91,16 @@
   changed_when: false
   when: not dry_run | default(false)
 
-- name: Apply TLS secret (after namespace exists)
-  block:
-    - name: Check if TLS secret YAML exists
-      stat:
-        path: "{{ playbook_dir }}/../kubernetes/tls-secret.yaml"
-      register: tls_secret_file
-
-    - name: Apply TLS secret to cluster
-      command: kubectl apply -f {{ playbook_dir }}/../kubernetes/tls-secret.yaml
-      when: tls_secret_file.stat.exists
-      register: tls_secret_apply
-      changed_when: "'created' in tls_secret_apply.stdout or 'configured' in tls_secret_apply.stdout"
-
-    - name: Display TLS secret result
-      debug:
-        msg: "✅ TLS secret applied: {{ tls_secret_apply.stdout }}"
-      when: tls_secret_apply is defined and tls_secret_apply.stdout is defined
-  rescue:
-    - name: TLS secret application failed
-      debug:
-        msg: ⚠️ TLS secret not applied - nginx HTTPS may not work
-  when: not dry_run | default(false)
+- name: Wait for monitoring namespace to be ready
+  command: kubectl get namespace {{ monitoring_namespace }}
+  register: monitoring_namespace_check
+  retries: 5
+  delay: 2
+  until: monitoring_namespace_check.rc == 0
+  changed_when: false
+  when:
+    - not dry_run | default(false)
+    - monitoring_overlay.stat.exists | default(false)
 
 - name: Wait for deployments to be ready
   command: >

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-monitoring-staging-ns
+  labels:
+    name: api-monitoring-staging-ns
+    environment: staging

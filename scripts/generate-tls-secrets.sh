@@ -3,7 +3,7 @@
 # =======================================================================
 # TLS Secret Generator for Kubernetes
 # =======================================================================
-# Generates kubernetes/tls-secret.yaml from SSL certificates
+# Generates kustomize/base/nginx-tls-secret.yaml from SSL certificates
 #
 # Usage:
 #   ./scripts/generate-tls-secrets.sh [namespace] [secret-name]
@@ -30,7 +30,7 @@ NAMESPACE=${1:-$DEFAULT_APP_NS}
 SECRET_NAME=${2:-nginx-ssl-certs}
 CERT_FILE="nginx/ssl/tls.crt"
 KEY_FILE="nginx/ssl/tls.key"
-OUTPUT_FILE="kubernetes/tls-secret.yaml"
+OUTPUT_FILE="kustomize/base/nginx-tls-secret.yaml"
 
 # Colors for output
 RED='\033[0;31m'

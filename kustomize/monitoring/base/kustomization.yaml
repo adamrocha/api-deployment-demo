@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Monitoring base resources - namespace is set by each overlay
+# Production default: api-monitoring-ns
+# Staging default:    api-monitoring-staging-ns
+
+resources:
+  - prometheus.yaml
+  - prometheus-config.yaml
+  - grafana.yaml
+  - grafana-config.yaml
+  - kube-state-metrics.yaml
+
+configMapGenerator:
+  - name: grafana-dashboard-api-performance
+    files:
+      - api-performance.json=dashboards/api-performance.json
+  - name: grafana-dashboard-infrastructure
+    files:
+      - infrastructure.json=dashboards/infrastructure.json
+  - name: grafana-dashboard-database
+    files:
+      - database.json=dashboards/database.json
+  - name: grafana-dashboard-nginx-traffic
+    files:
+      - nginx-traffic.json=dashboards/nginx-traffic.json
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: kustomize
+      app.kubernetes.io/part-of: api-deployment-demo
+      component: monitoring

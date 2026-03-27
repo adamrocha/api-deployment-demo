@@ -25,20 +25,20 @@ make get-secrets
 ```bash
 make status
 make verify-metrics
-kubectl get pods -n api-deployment-demo-ns -l app=prometheus
-kubectl get pods -n api-deployment-demo-ns -l app=grafana
+kubectl get pods -n api-monitoring-ns -l app=prometheus
+kubectl get pods -n api-monitoring-ns -l app=grafana
 ```
 
 ## Dashboards
 
 Dashboard JSON lives under:
 
-- `monitoring/dashboards/`
+- `kustomize/monitoring/base/dashboards/`
 
 Provisioning manifests live under:
 
-- `kustomize/base/grafana-config.yaml`
-- `kustomize/base/grafana-dashboards.yaml`
+- `kustomize/monitoring/base/grafana-config.yaml`
+- `kustomize/monitoring/base/kustomization.yaml` (via `configMapGenerator`)
 
 ## Troubleshooting
 
@@ -57,5 +57,5 @@ make logs-prometheus
 Check service endpoints:
 
 ```bash
-kubectl get svc -n api-deployment-demo-ns
+kubectl get svc -n api-monitoring-ns
 ```

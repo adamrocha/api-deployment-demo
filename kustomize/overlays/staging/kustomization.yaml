@@ -62,7 +62,3 @@ secretGenerator:
   - name: api-secrets
     envs:
       - api-secrets.env
-
-  - name: grafana-admin-secret
-    envs:
-      - grafana-secrets.env

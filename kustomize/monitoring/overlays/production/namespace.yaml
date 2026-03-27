@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-monitoring-ns
+  labels:
+    name: api-monitoring-ns
+    environment: production

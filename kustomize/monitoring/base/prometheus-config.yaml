@@ -19,7 +19,7 @@ data:
           - role: pod
             namespaces:
               names:
-                - api-deployment-demo
+                - api-deployment-demo-ns
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_label_app]
             regex: api-demo
@@ -41,7 +41,7 @@ data:
           - role: pod
             namespaces:
               names:
-                - api-deployment-demo
+                - api-deployment-demo-ns
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_label_app]
             regex: postgres
@@ -60,7 +60,7 @@ data:
           - role: pod
             namespaces:
               names:
-                - api-deployment-demo
+                - api-deployment-demo-ns
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_label_app]
             regex: api-demo
@@ -79,4 +79,4 @@ data:
 
       - job_name: 'kube-state-metrics'
         static_configs:
-          - targets: ['kube-state-metrics.api-deployment-demo-ns.svc.cluster.local:8080']
+          - targets: ['kube-state-metrics.api-monitoring-ns.svc.cluster.local:8080']

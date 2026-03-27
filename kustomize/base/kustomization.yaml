@@ -28,15 +28,10 @@ resources:
 
   # Availability
   - pdb.yaml
+  - nginx-tls-secret.yaml
 
-  # Monitoring (keep in their namespace)
-  - prometheus-config.yaml
-  - grafana-config.yaml
-  - grafana-dashboards.yaml
+  # Metrics server (kube-system - required for HPA)
   - metrics-server.yaml
-  - prometheus.yaml
-  - kube-state-metrics.yaml
-  - grafana.yaml
 
 # Common labels for all resources
 labels:

@@ -26,9 +26,9 @@ resolve_secret_name() {
 		return 0
 	fi
 
-	kubectl get secrets -n "${namespace}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null \
-		| grep -E "^${base_name}-" \
-		| head -n 1
+	kubectl get secrets -n "${namespace}" -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null |
+		grep -E "^${base_name}-" |
+		head -n 1
 }
 
 echo -e "${BLUE}🔐 Password Extraction Tool${NC}\n"
@@ -87,7 +87,7 @@ else
 		GRAFANA_SECRET_NAME="$(resolve_secret_name "$MONITORING_NAMESPACE" "grafana-admin-secret")"
 
 		echo -e "${GREEN}Database Credentials:${NC}"
-		if [[ -n "$DB_SECRET_NAME" ]]; then
+		if [[ -n $DB_SECRET_NAME ]]; then
 			DB_USER=$(kubectl get secret "$DB_SECRET_NAME" -n "$APP_NAMESPACE" -o jsonpath='{.data.db-user}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 			DB_NAME=$(kubectl get secret "$DB_SECRET_NAME" -n "$APP_NAMESPACE" -o jsonpath='{.data.db-name}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
 			K8S_DB_PASS=$(kubectl get secret "$DB_SECRET_NAME" -n "$APP_NAMESPACE" -o jsonpath='{.data.db-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
@@ -102,7 +102,7 @@ else
 
 		echo ""
 		echo -e "${GREEN}API Secret:${NC}"
-		if [[ -n "$API_SECRET_NAME" ]]; then
+		if [[ -n $API_SECRET_NAME ]]; then
 			K8S_SECRET=$(kubectl get secret "$API_SECRET_NAME" -n "$APP_NAMESPACE" -o jsonpath='{.data.SECRET_KEY}' 2>/dev/null | base64 -d 2>/dev/null)
 			if [[ -z $K8S_SECRET ]]; then
 				K8S_SECRET=$(kubectl get secret "$API_SECRET_NAME" -n "$APP_NAMESPACE" -o jsonpath='{.data.secret-key}' 2>/dev/null | base64 -d 2>/dev/null || echo "N/A")
@@ -116,7 +116,7 @@ else
 		echo ""
 		echo -e "${GREEN}Grafana (Monitoring):${NC}"
 		if kubectl get namespace "$MONITORING_NAMESPACE" &>/dev/null; then
-			if [[ -n "$GRAFANA_SECRET_NAME" ]]; then
+			if [[ -n $GRAFANA_SECRET_NAME ]]; then
 				GRAFANA_USER=$(kubectl get secret "$GRAFANA_SECRET_NAME" -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-user}' 2>/dev/null | base64 -d 2>/dev/null)
 				GRAFANA_PASS=$(kubectl get secret "$GRAFANA_SECRET_NAME" -n "$MONITORING_NAMESPACE" -o jsonpath='{.data.admin-password}' 2>/dev/null | base64 -d 2>/dev/null)
 
@@ -167,7 +167,7 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 
 if kubectl cluster-info &>/dev/null && kubectl get namespace "$APP_NAMESPACE" &>/dev/null; then
 	DB_SECRET_NAME_CONN="$(resolve_secret_name "$APP_NAMESPACE" "database-credentials")"
-	if [[ -n "$DB_SECRET_NAME_CONN" ]]; then
+	if [[ -n $DB_SECRET_NAME_CONN ]]; then
 		DB_USER_CONN=$(kubectl get secret "$DB_SECRET_NAME_CONN" -n "$APP_NAMESPACE" -o jsonpath='{.data.db-user}' 2>/dev/null | base64 -d 2>/dev/null || echo "postgres")
 		DB_NAME_CONN=$(kubectl get secret "$DB_SECRET_NAME_CONN" -n "$APP_NAMESPACE" -o jsonpath='{.data.db-name}' 2>/dev/null | base64 -d 2>/dev/null || echo "api_db")
 		DB_PASS_CONN=$(kubectl get secret "$DB_SECRET_NAME_CONN" -n "$APP_NAMESPACE" -o jsonpath='{.data.db-password}' 2>/dev/null | base64 -d 2>/dev/null || echo "")

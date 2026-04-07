@@ -206,18 +206,18 @@ status: ## Show deployment status
 
 health: ## Check application health
 	@printf "API:        "; curl -sf http://localhost:$(API_PORT)/health >/dev/null 2>&1 && echo "✅" || echo "❌"
-	@printf "Web:        "; curl -sfk https://localhost >/dev/null 2>&1 && echo "✅" || echo "❌"
+	@printf "Web:        "; curl -sfk https://localhost:$(WEB_PORT) >/dev/null 2>&1 && echo "✅" || echo "❌"
 	@printf "Grafana:    "; curl -sf http://localhost:$(GRAFANA_PORT)/api/health >/dev/null 2>&1 && echo "✅" || echo "❌"
 	@printf "Prometheus: "; curl -sf http://localhost:$(PROMETHEUS_PORT)/-/healthy >/dev/null 2>&1 && echo "✅" || echo "❌"
 
 urls: ## Display access URLs
 	@echo "🌐 Access URLs"
 	@echo "=============="
-	@echo "Web:        https://localhost:8443"
-	@echo "API:        http://localhost:8000"
-	@echo "API Docs:   http://localhost:8000/docs"
-	@echo "Grafana:    http://localhost:3000"
-	@echo "Prometheus: http://localhost:9090"
+	@echo "Web:        https://localhost:$(WEB_PORT)"
+	@echo "API:        http://localhost:$(API_PORT)"
+	@echo "API Docs:   http://localhost:$(API_PORT)/docs"
+	@echo "Grafana:    http://localhost:$(GRAFANA_PORT)"
+	@echo "Prometheus: http://localhost:$(PROMETHEUS_PORT)"
 
 # =============================================================================
 # Testing & Validation

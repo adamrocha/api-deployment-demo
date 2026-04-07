@@ -14,11 +14,11 @@ make get-secrets
 
 Access URLs:
 
-- Web: https://localhost:8443
-- API: https://localhost:8000
-- API Docs: https://localhost:8000/docs
-- Grafana: https://localhost:3000
-- Prometheus: https://localhost:9090
+- Web: <https://localhost:8443>
+- API: <http://localhost:8000>
+- API Docs: <http://localhost:8000/docs>
+- Grafana: <http://localhost:3000>
+- Prometheus: <http://localhost:9090>
 
 ## Deployment Model
 

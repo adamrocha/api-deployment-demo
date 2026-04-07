@@ -213,11 +213,11 @@ health: ## Check application health
 urls: ## Display access URLs
 	@echo "🌐 Access URLs"
 	@echo "=============="
-	@echo "  Web:        https://localhost:8443"
-	@echo "  API:        https://localhost:8000"
-	@echo "  API Docs:   https://localhost:8000/docs"
-	@echo "  Grafana:    https://localhost:3000"
-	@echo "  Prometheus: https://localhost:9090"
+	@echo "Web:        https://localhost:8443"
+	@echo "API:        http://localhost:8000"
+	@echo "API Docs:   http://localhost:8000/docs"
+	@echo "Grafana:    http://localhost:3000"
+	@echo "Prometheus: http://localhost:9090"
 
 # =============================================================================
 # Testing & Validation

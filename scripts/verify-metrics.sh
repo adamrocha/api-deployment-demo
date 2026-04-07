@@ -67,36 +67,36 @@ else
 fi
 echo ""
 
-# Try to get pod metrics in $APP_NAMESPACE namespace
-echo -e "${YELLOW}5. Testing Pod Metrics ($APP_NAMESPACE):${NC}"
-if kubectl top pods -n "$APP_NAMESPACE" 2>/dev/null | grep -q .; then
+# Try to get pod metrics in ${APP_NAMESPACE} namespace
+echo -e "${YELLOW}5. Testing Pod Metrics (${APP_NAMESPACE}):${NC}"
+if kubectl top pods -n "${APP_NAMESPACE}" 2>/dev/null | grep -q .; then
 	echo -e "${GREEN}✓ Pod metrics are available${NC}"
-	kubectl top pods -n "$APP_NAMESPACE"
+	kubectl top pods -n "${APP_NAMESPACE}"
 else
 	echo -e "${RED}✗ Cannot retrieve pod metrics${NC}"
 	echo "This is normal if pods just started - wait 30-60 seconds for metrics collection"
-	kubectl top pods -n "$APP_NAMESPACE" 2>&1 || true
+	kubectl top pods -n "${APP_NAMESPACE}" 2>&1 || true
 fi
 echo ""
 
 # Check HPA status
 echo -e "${YELLOW}6. Checking HPA Status:${NC}"
-if kubectl get hpa -n "$APP_NAMESPACE" 2>/dev/null | grep -q .; then
-	kubectl get hpa -n "$APP_NAMESPACE"
+if kubectl get hpa -n "${APP_NAMESPACE}" 2>/dev/null | grep -q .; then
+	kubectl get hpa -n "${APP_NAMESPACE}"
 	echo ""
 
 	# Get detailed HPA information
 	echo -e "${YELLOW}7. HPA Detailed Status:${NC}"
-	kubectl describe hpa -n "$APP_NAMESPACE" 2>/dev/null | tail -30
+	kubectl describe hpa -n "${APP_NAMESPACE}" 2>/dev/null | tail -30
 else
-	echo -e "${RED}✗ No HPA found in $APP_NAMESPACE namespace${NC}"
+	echo -e "${RED}✗ No HPA found in ${APP_NAMESPACE} namespace${NC}"
 fi
 echo ""
 
 # Check if API pods have resource requests defined
 echo -e "${YELLOW}8. Verifying API Pod Resource Requests:${NC}"
-if kubectl get pods -n "$APP_NAMESPACE" -l app=api-demo,component=api -o jsonpath='{.items[0].spec.containers[0].resources.requests.cpu}' 2>/dev/null | grep -q .; then
-	CPU_REQUEST=$(kubectl get pods -n "$APP_NAMESPACE" -l app=api-demo,component=api -o jsonpath='{.items[0].spec.containers[0].resources.requests.cpu}' 2>/dev/null)
+if kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api -o jsonpath='{.items[0].spec.containers[0].resources.requests.cpu}' 2>/dev/null | grep -q .; then
+	CPU_REQUEST=$(kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api -o jsonpath='{.items[0].spec.containers[0].resources.requests.cpu}' 2>/dev/null)
 	echo -e "${GREEN}✓ API pods have CPU requests defined: ${CPU_REQUEST}${NC}"
 else
 	echo -e "${RED}✗ API pods missing CPU requests (required for HPA percentage-based scaling)${NC}"
@@ -111,7 +111,7 @@ echo ""
 # Check if everything is healthy
 METRICS_WORKING=true
 
-if ! kubectl get pods -n "$MONITORING_NAMESPACE" -l app=metrics-server 2>/dev/null | grep -q Running; then
+if ! kubectl get pods -n "${MONITORING_NAMESPACE}" -l app=metrics-server 2>/dev/null | grep -q Running; then
 	METRICS_WORKING=false
 	echo -e "${RED}• Metrics Server is not running - deploy it first${NC}"
 fi
@@ -126,7 +126,7 @@ if ! kubectl top nodes 2>/dev/null | grep -q .; then
 	echo -e "${YELLOW}• Node metrics not available - metrics server may still be starting${NC}"
 fi
 
-if $METRICS_WORKING; then
+if ${METRICS_WORKING}; then
 	echo -e "${GREEN}✓ Metrics system is working correctly${NC}"
 	echo -e "${GREEN}✓ HPA should be able to read CPU metrics${NC}"
 	echo ""
@@ -138,7 +138,7 @@ else
 	echo ""
 	echo -e "${CYAN}Troubleshooting steps:${NC}"
 	echo "  1. Check metrics server logs:"
-	echo "     kubectl logs -n $MONITORING_NAMESPACE -l app=metrics-server"
+	echo "     kubectl logs -n ${MONITORING_NAMESPACE} -l app=metrics-server"
 	echo ""
 	echo "  2. Verify metrics server has correct permissions:"
 	echo "     kubectl get clusterrole system:metrics-server"

@@ -7,7 +7,7 @@ set -e
 
 # Detect script directory and change to project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
 
 # Colors for output
 RED='\033[0;31m'
@@ -18,7 +18,7 @@ NC='\033[0m' # No Color
 
 echo -e "${BLUE}🔍 Git Security Audit for Ansible Vault${NC}\n"
 
-cd "$PROJECT_ROOT"
+cd "${PROJECT_ROOT}"
 
 # Check 1: Verify sensitive files are ignored
 echo -e "${BLUE}1. Checking Sensitive Files are Ignored${NC}"
@@ -36,11 +36,11 @@ ignored_count=0
 total_count=${#sensitive_files[@]}
 
 for file in "${sensitive_files[@]}"; do
-	if git check-ignore "$file" >/dev/null 2>&1; then
-		echo -e "   ${GREEN}✅${NC} $file is properly ignored"
+	if git check-ignore "${file}" >/dev/null 2>&1; then
+		echo -e "   ${GREEN}✅${NC} ${file} is properly ignored"
 		((ignored_count++))
 	else
-		echo -e "   ${RED}❌${NC} $file would be tracked (SECURITY RISK)"
+		echo -e "   ${RED}❌${NC} ${file} would be tracked (SECURITY RISK)"
 	fi
 done
 
@@ -56,15 +56,15 @@ vault_files=(
 
 tracked_count=0
 for file in "${vault_files[@]}"; do
-	if [[ -f $file ]]; then
-		if git check-ignore "$file" >/dev/null 2>&1; then
-			echo -e "   ${RED}❌${NC} $file is ignored (should be tracked since it's encrypted)"
+	if [[ -f ${file} ]]; then
+		if git check-ignore "${file}" >/dev/null 2>&1; then
+			echo -e "   ${RED}❌${NC} ${file} is ignored (should be tracked since it's encrypted)"
 		else
-			echo -e "   ${GREEN}✅${NC} $file is trackable (correct - it's encrypted)"
+			echo -e "   ${GREEN}✅${NC} ${file} is trackable (correct - it's encrypted)"
 			((tracked_count++))
 		fi
 	else
-		echo -e "   ${YELLOW}⚠️${NC} $file does not exist"
+		echo -e "   ${YELLOW}⚠️${NC} ${file} does not exist"
 	fi
 done
 
@@ -79,9 +79,9 @@ fi
 # Check 4: Current git status check
 echo -e "\n${BLUE}4. Current Git Status Security Check${NC}"
 untracked_sensitive=$(git status --porcelain | grep "^??" | grep -E "(password|secret|\.key|\.pem|vault_pass)" || true)
-if [[ -n $untracked_sensitive ]]; then
+if [[ -n ${untracked_sensitive} ]]; then
 	echo -e "   ${RED}❌${NC} Untracked sensitive files detected:"
-	echo "$untracked_sensitive" | sed 's/^/     /'
+	echo "${untracked_sensitive}" | sed 's/^/     /'
 else
 	echo -e "   ${GREEN}✅${NC} No untracked sensitive files detected"
 fi
@@ -104,10 +104,10 @@ fi
 echo -e "\n${BLUE}6. Vault Password File Permissions${NC}"
 if [[ -f "ansible/.vault_pass" ]]; then
 	perms=$(ls -l ansible/.vault_pass | cut -d' ' -f1)
-	if [[ $perms == "-rw-------" ]]; then
+	if [[ ${perms} == "-rw-------" ]]; then
 		echo -e "   ${GREEN}✅${NC} ansible/.vault_pass has secure permissions (600)"
 	else
-		echo -e "   ${RED}❌${NC} ansible/.vault_pass permissions are insecure: $perms"
+		echo -e "   ${RED}❌${NC} ansible/.vault_pass permissions are insecure: ${perms}"
 	fi
 else
 	echo -e "   ${YELLOW}⚠️${NC} ansible/.vault_pass not found"

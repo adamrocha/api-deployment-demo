@@ -11,8 +11,8 @@ Monitoring is deployed with the main stack using Kustomize + Ansible.
 
 ## Access
 
-- Grafana: http://localhost:3000
-- Prometheus: http://localhost:9090
+- Grafana: <http://localhost:3000>
+- Prometheus: <http://localhost:9090>
 
 Get Grafana credentials:
 

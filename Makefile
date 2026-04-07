@@ -213,7 +213,7 @@ health: ## Check application health
 urls: ## Display access URLs
 	@echo "🌐 Access URLs"
 	@echo "=============="
-	@echo "  Web:        https://localhost"
+	@echo "  Web:        https://localhost:8443"
 	@echo "  API:        https://localhost:8000"
 	@echo "  API Docs:   https://localhost:8000/docs"
 	@echo "  Grafana:    https://localhost:3000"

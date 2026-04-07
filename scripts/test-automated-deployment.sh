@@ -26,17 +26,17 @@ wait_for_service() {
 	local name=$2
 	local max_attempts=${3:-30}
 
-	echo -e "${YELLOW}⏳ Waiting for $name to be ready...${NC}"
+	echo -e "${YELLOW}⏳ Waiting for ${name} to be ready...${NC}"
 	for ((i = 1; i <= max_attempts; i++)); do
-		if curl -s --max-time 3 "$url" >/dev/null 2>&1; then
-			echo -e "${GREEN}✅ $name is ready!${NC}"
+		if curl -s --max-time 3 "${url}" >/dev/null 2>&1; then
+			echo -e "${GREEN}✅ ${name} is ready!${NC}"
 			return 0
 		fi
-		if [ "$i" -eq "$max_attempts" ]; then
-			echo -e "${RED}❌ $name failed to start within $max_attempts attempts${NC}"
+		if [[ "${i}" -eq "${max_attempts}" ]]; then
+			echo -e "${RED}❌ ${name} failed to start within ${max_attempts} attempts${NC}"
 			return 1
 		fi
-		echo "  Attempt $i/$max_attempts..."
+		echo "  Attempt ${i}/${max_attempts}..."
 		sleep 2
 	done
 }
@@ -108,7 +108,7 @@ test_ssl_certificates() {
 
 	# Check if SSL secret exists in Kubernetes
 	echo -n "  SSL secret in Kubernetes: "
-	if kubectl get secret nginx-ssl-certs -n "$APP_NAMESPACE" >/dev/null 2>&1; then
+	if kubectl get secret nginx-ssl-certs -n "${APP_NAMESPACE}" >/dev/null 2>&1; then
 		echo -e "${GREEN}✅ OK${NC}"
 	else
 		echo -e "${RED}❌ MISSING${NC}"
@@ -117,7 +117,7 @@ test_ssl_certificates() {
 
 	# Extract certificate from Kubernetes secret for validation
 	echo -n "  Certificate extraction: "
-	if kubectl get secret nginx-ssl-certs -n "$APP_NAMESPACE" -o jsonpath='{.data.tls\.crt}' | base64 -d >/tmp/server.crt 2>/dev/null; then
+	if kubectl get secret nginx-ssl-certs -n "${APP_NAMESPACE}" -o jsonpath='{.data.tls\.crt}' | base64 -d >/tmp/server.crt 2>/dev/null; then
 		echo -e "${GREEN}✅ OK${NC}"
 	else
 		echo -e "${RED}❌ FAILED${NC}"
@@ -185,7 +185,7 @@ wait_for_service "http://localhost:8000/health" "API (direct HTTP)" 60
 
 echo -e "${YELLOW}3.1. Testing SSL certificate setup in Kubernetes...${NC}"
 # Check if SSL secret exists in Kubernetes
-if kubectl get secret nginx-ssl-certs -n "$APP_NAMESPACE" >/dev/null 2>&1; then
+if kubectl get secret nginx-ssl-certs -n "${APP_NAMESPACE}" >/dev/null 2>&1; then
 	echo -e "${GREEN}✅ SSL certificate secret found in Kubernetes${NC}"
 
 	# Test HTTPS endpoints

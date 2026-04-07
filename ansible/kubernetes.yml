@@ -92,7 +92,7 @@
           - "Environment: {{ deploy_environment }}"
           - ==========================================
           - Access URLs: "{% if deploy_environment == 'production' %}"
-          - "  Web:        https://localhost:443"
+          - "  Web:        https://localhost:8443"
           - "  API:        http://localhost:8000"
           - "  Grafana:    http://localhost:3000"
           - "  Prometheus: http://localhost:9090"

@@ -14,7 +14,7 @@ make get-secrets
 
 Access URLs:
 
-- Web: https://localhost
+- Web: https://localhost:8443
 - API: https://localhost:8000
 - API Docs: https://localhost:8000/docs
 - Grafana: https://localhost:3000

@@ -19,7 +19,7 @@ NC='\033[0m' # No Color
 
 # Check monitoring namespace
 echo "1. Checking monitoring namespace..."
-if kubectl get namespace "$MONITORING_NAMESPACE" &>/dev/null; then
+if kubectl get namespace "${MONITORING_NAMESPACE}" &>/dev/null; then
 	echo -e "${GREEN}✓${NC} Monitoring namespace exists"
 else
 	echo -e "${RED}✗${NC} Monitoring namespace not found"
@@ -29,8 +29,8 @@ fi
 # Check Prometheus pod
 echo ""
 echo "2. Checking Prometheus deployment..."
-PROM_READY=$(kubectl get pods -n "$MONITORING_NAMESPACE" -l app=prometheus -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
-if [ "$PROM_READY" == "True" ]; then
+PROM_READY=$(kubectl get pods -n "${MONITORING_NAMESPACE}" -l app=prometheus -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+if [[ "${PROM_READY}" == "True" ]]; then
 	echo -e "${GREEN}✓${NC} Prometheus pod is ready"
 else
 	echo -e "${RED}✗${NC} Prometheus pod is not ready"
@@ -39,8 +39,8 @@ fi
 # Check Grafana pod
 echo ""
 echo "3. Checking Grafana deployment..."
-GRAFANA_READY=$(kubectl get pods -n "$MONITORING_NAMESPACE" -l app=grafana -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
-if [ "$GRAFANA_READY" == "True" ]; then
+GRAFANA_READY=$(kubectl get pods -n "${MONITORING_NAMESPACE}" -l app=grafana -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' 2>/dev/null || echo "False")
+if [[ "${GRAFANA_READY}" == "True" ]]; then
 	echo -e "${GREEN}✓${NC} Grafana pod is ready"
 else
 	echo -e "${RED}✗${NC} Grafana pod is not ready"
@@ -49,12 +49,12 @@ fi
 # Check ConfigMaps
 echo ""
 echo "4. Checking dashboard ConfigMaps..."
-CONFIGMAPS=$(kubectl get configmaps -n "$MONITORING_NAMESPACE" -o name | grep grafana | wc -l)
-if [ "$CONFIGMAPS" -ge 6 ]; then
-	echo -e "${GREEN}✓${NC} All $CONFIGMAPS Grafana ConfigMaps present"
-	kubectl get configmaps -n "$MONITORING_NAMESPACE" | grep grafana | sed 's/^/  /'
+CONFIGMAPS=$(kubectl get configmaps -n "${MONITORING_NAMESPACE}" -o name | grep grafana | wc -l)
+if [[ "${CONFIGMAPS}" -ge 6 ]]; then
+	echo -e "${GREEN}✓${NC} All ${CONFIGMAPS} Grafana ConfigMaps present"
+	kubectl get configmaps -n "${MONITORING_NAMESPACE}" | grep grafana | sed 's/^/  /'
 else
-	echo -e "${YELLOW}⚠${NC} Expected 6 ConfigMaps, found $CONFIGMAPS"
+	echo -e "${YELLOW}⚠${NC} Expected 6 ConfigMaps, found ${CONFIGMAPS}"
 fi
 
 # Check Grafana accessibility
@@ -79,10 +79,10 @@ fi
 echo ""
 echo "7. Checking loaded dashboards..."
 DASHBOARDS=$(curl -s -u admin:admin "http://localhost:3000/api/search?type=dash-db" 2>/dev/null | jq -r '.[].title' 2>/dev/null || echo "")
-if [ -n "$DASHBOARDS" ]; then
-	DASHBOARD_COUNT=$(echo "$DASHBOARDS" | wc -l)
-	echo -e "${GREEN}✓${NC} $DASHBOARD_COUNT dashboards loaded:"
-	echo "$DASHBOARDS" | sed 's/^/  - /'
+if [[ -n "${DASHBOARDS}" ]]; then
+	DASHBOARD_COUNT=$(echo "${DASHBOARDS}" | wc -l)
+	echo -e "${GREEN}✓${NC} ${DASHBOARD_COUNT} dashboards loaded:"
+	echo "${DASHBOARDS}" | sed 's/^/  - /'
 else
 	echo -e "${RED}✗${NC} No dashboards found"
 fi
@@ -91,7 +91,7 @@ fi
 echo ""
 echo "8. Checking Prometheus data source..."
 DATASOURCE=$(curl -s -u admin:admin "http://localhost:3000/api/datasources/name/Prometheus" 2>/dev/null | jq -r '.name' 2>/dev/null || echo "")
-if [ "$DATASOURCE" == "Prometheus" ]; then
+if [[ "${DATASOURCE}" == "Prometheus" ]]; then
 	echo -e "${GREEN}✓${NC} Prometheus data source configured"
 else
 	echo -e "${RED}✗${NC} Prometheus data source not found"

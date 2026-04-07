@@ -16,7 +16,7 @@ output "staging_urls" {
 output "production_urls" {
   description = "Production environment access URLs"
   value = var.environment == "production" ? {
-    web           = "http://localhost:80 (redirects to HTTPS)"
+    web           = "http://localhost:8080 (redirects to HTTPS)"
     web_https     = "https://localhost:443"
     api           = "http://localhost:8000/health"
     api_docs      = "http://localhost:8000/docs"

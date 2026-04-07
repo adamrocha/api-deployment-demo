@@ -207,7 +207,7 @@ sensitive_files=(
 )
 
 for file in "${sensitive_files[@]}"; do
-	if [[ -f "${file}" ]]; then
+	if [[ -f ${file} ]]; then
 		perms=$(ls -l "${file}" | awk '{print $1}')
 		if [[ ${perms} =~ ^-rw------- ]]; then
 			echo -e "   ${GREEN}✅${NC} ${file} has secure permissions"

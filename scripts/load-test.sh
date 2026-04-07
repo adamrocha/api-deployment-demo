@@ -73,7 +73,7 @@ run_load_test() {
 	# Function to run in each worker
 	worker() {
 		local end_time=$1
-		while [[ "$(date +%s)" -lt "${end_time}" ]]; do
+		while [[ "$(date +%s)" -lt ${end_time} ]]; do
 			# Use CPU-intensive /stress endpoint to trigger autoscaling
 			curl -s "${API_URL}/stress" >/dev/null &
 
@@ -84,7 +84,7 @@ run_load_test() {
 			while :; do
 				local job_count
 				job_count=$(jobs -r | wc -l)
-				if [[ "${job_count}" -lt "${max_background_jobs}" ]]; then
+				if [[ ${job_count} -lt ${max_background_jobs} ]]; then
 					break
 				fi
 				# Wait for at least one background job to finish before spawning more
@@ -203,7 +203,7 @@ echo "  • Load test ran for 5 minutes with 75 concurrent workers targeting CPU
 POD_COUNT=$(kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api --no-headers 2>/dev/null | grep -c Running || echo 0)
 if [[ -n ${POD_COUNT} && ${POD_COUNT} =~ ^[0-9]+$ && ${POD_COUNT} -gt 0 ]]; then
 	echo "  • Scaled to ${POD_COUNT} pod(s) during load test"
-	if [[ "${POD_COUNT}" -gt 2 ]]; then
+	if [[ ${POD_COUNT} -gt 2 ]]; then
 		echo -e "  • ${GREEN}✅ HPA successfully triggered autoscaling!${NC}"
 	else
 		echo -e "  • ${YELLOW}⚠️  HPA did not scale up (load may not have been sufficient)${NC}"

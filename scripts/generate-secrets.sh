@@ -248,60 +248,60 @@ metadata:
   namespace: ${NAMESPACE}
   labels:
     app: api-demo
-    environment: $ENVIRONMENT
+    environment: ${ENVIRONMENT}
     generated-by: generate-secrets.sh
   annotations:
     generated-at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    source-file: "$source_file"
+    source-file: "${source_file}"
 type: Opaque
 stringData:
-  SECRET_KEY: "$SECRET_KEY"
-  DB_PASSWORD: "$DB_PASSWORD"
-  DATABASE_URL: "$DATABASE_URL"
-  API_ENV: "$API_ENV"
-  DEBUG: "$DEBUG"
-  LOG_LEVEL: "$LOG_LEVEL"
-  CORS_ORIGINS: "$CORS_ORIGINS"
-  ALLOWED_HOSTS: "$ALLOWED_HOSTS"
+  SECRET_KEY: "${SECRET_KEY}"
+  DB_PASSWORD: "${DB_PASSWORD}"
+  DATABASE_URL: "${DATABASE_URL}"
+  API_ENV: "${API_ENV}"
+  DEBUG: "${DEBUG}"
+  LOG_LEVEL: "${LOG_LEVEL}"
+  CORS_ORIGINS: "${CORS_ORIGINS}"
+  ALLOWED_HOSTS: "${ALLOWED_HOSTS}"
 
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: postgres-secrets
-  namespace: $NAMESPACE
+  namespace: ${NAMESPACE}
   labels:
     app: api-demo
     component: database
-    environment: $ENVIRONMENT
+    environment: ${ENVIRONMENT}
     generated-by: generate-secrets.sh
   annotations:
     generated-at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    source-file: "$source_file"
+    source-file: "${source_file}"
 type: Opaque
 stringData:
-  DB_PASSWORD: "$DB_PASSWORD"
-  DB_NAME: "$DB_NAME"
-  DB_USER: "$DB_USER"
+  DB_PASSWORD: "${DB_PASSWORD}"
+  DB_NAME: "${DB_NAME}"
+  DB_USER: "${DB_USER}"
 
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: grafana-admin-secret
-  namespace: $MONITORING_NAMESPACE
+  namespace: ${MONITORING_NAMESPACE}
   labels:
     app: grafana
     component: monitoring
-    environment: $ENVIRONMENT
+    environment: ${ENVIRONMENT}
     generated-by: generate-secrets.sh
   annotations:
     generated-at: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-    source-file: "$source_file"
+    source-file: "${source_file}"
 type: Opaque
 stringData:
-  admin-password: "$GRAFANA_ADMIN_PASSWORD"
-  admin-user: "$GRAFANA_ADMIN_USER"
+  admin-password: "${GRAFANA_ADMIN_PASSWORD}"
+  admin-user: "${GRAFANA_ADMIN_USER}"
 EOF
 
 	log_success "Generated secrets file: ${output_file}"
@@ -406,9 +406,9 @@ show_usage() {
 	echo "  APPLY=true $0 production   # Generate and apply secrets"
 	echo ""
 	echo "Available files:"
-	if [[ -f "$PROJECT_ROOT/.env" ]]; then
+	if [[ -f "${PROJECT_ROOT}/.env" ]]; then
 		echo "  ✅ .env (ready to use)"
-	elif [[ -f "$PROJECT_ROOT/.env.example" ]]; then
+	elif [[ -f "${PROJECT_ROOT}/.env.example" ]]; then
 		echo "  📋 .env.example (copy to .env first)"
 	fi
 

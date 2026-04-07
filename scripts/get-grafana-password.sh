@@ -12,7 +12,7 @@ echo "🔐 Grafana Password Retrieval"
 echo "============================="
 
 # Check if .env file exists and has the password
-if [ -f ".env" ] && grep -q "GRAFANA_ADMIN_PASSWORD" .env; then
+if [[ -f ".env" ]] && grep -q "GRAFANA_ADMIN_PASSWORD" .env; then
 	echo "📝 From .env file:"
 	grep "GRAFANA_ADMIN_PASSWORD" .env | cut -d'=' -f2 | tr -d '"'
 	echo ""

@@ -118,7 +118,7 @@ echo -e "\n${BLUE}4. Checking Kubernetes Secrets Configuration${NC}"
 if command -v kubectl &>/dev/null; then
 	if kubectl cluster-info &>/dev/null; then
 		# Check for secrets in ${APP_NAMESPACE} namespace
-		if kubectl get namespace ${APP_NAMESPACE} &>/dev/null; then
+		if kubectl get namespace "${APP_NAMESPACE}" &>/dev/null; then
 			secret_count=$(kubectl get secrets -n "${APP_NAMESPACE}" 2>/dev/null | grep -v "default-token" | tail -n +2 | wc -l | tr -d ' ')
 
 			if [[ ${secret_count} -gt 0 ]]; then
@@ -192,7 +192,7 @@ done
 if [[ ${#missing_patterns[@]} -gt 0 ]]; then
 	echo -e "\n   ${YELLOW}Add to .gitignore:${NC}"
 	for pattern in "${missing_patterns[@]}"; do
-		echo -e "      $pattern"
+		echo -e "      ${pattern}"
 	done
 fi
 
@@ -207,7 +207,7 @@ sensitive_files=(
 )
 
 for file in "${sensitive_files[@]}"; do
-	if [[ -f ${file} ]]; then
+	if [[ -f "${file}" ]]; then
 		perms=$(ls -l "${file}" | awk '{print $1}')
 		if [[ ${perms} =~ ^-rw------- ]]; then
 			echo -e "   ${GREEN}✅${NC} ${file} has secure permissions"
@@ -240,4 +240,4 @@ echo -e "   • Check git history: ${YELLOW}git log --all --full-history -- '*tf
 echo -e "   • Rotate secrets regularly and use strong random passwords"
 echo -e "   • Never commit terraform.tfvars, .vault_pass, or private keys${NC}\n"
 
-exit $ISSUES_FOUND
+exit "${ISSUES_FOUND}"

@@ -10,7 +10,8 @@
   vars:
     k8s_namespace: api-deployment-demo-ns
     monitoring_namespace: api-deployment-demo-ns
-    manifests_dir: "{{ playbook_dir }}/../kubernetes"
+    manifests_dir: "{{ playbook_dir }}/../kustomize/base"
+    monitoring_manifests_dir: "{{ playbook_dir }}/../kustomize/monitoring/base"
 
   tasks:
     - name: Delete HPA
@@ -51,19 +52,15 @@
         state: absent
         src: "{{ item }}"
       loop:
-        - "{{ manifests_dir }}/monitoring/grafana.yaml"
-        - "{{ manifests_dir }}/monitoring/kube-state-metrics.yaml"
-        - "{{ manifests_dir }}/monitoring/prometheus.yaml"
-        - "{{ manifests_dir }}/monitoring/metrics-server.yaml"
+        - "{{ monitoring_manifests_dir }}/grafana.yaml"
+        - "{{ monitoring_manifests_dir }}/kube-state-metrics.yaml"
+        - "{{ monitoring_manifests_dir }}/prometheus.yaml"
       ignore_errors: yes
 
-    - name: Delete NetworkPolicies
+    - name: Delete metrics server
       kubernetes.core.k8s:
         state: absent
-        src: "{{ item }}"
-      loop:
-        - "{{ manifests_dir }}/network-policy.yaml"
-        - "{{ manifests_dir }}/monitoring/network-policy.yaml"
+        src: "{{ manifests_dir }}/metrics-server.yaml"
       ignore_errors: yes
 
     - name: Delete namespaces

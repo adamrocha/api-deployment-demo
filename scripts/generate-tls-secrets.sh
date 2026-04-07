@@ -26,7 +26,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${PROJECT_ROOT}"
 
 # Configuration
-NAMESPACE=${1:-$DEFAULT_APP_NS}
+NAMESPACE=${1:-${DEFAULT_APP_NS}}
 SECRET_NAME=${2:-nginx-ssl-certs}
 CERT_FILE="nginx/ssl/tls.crt"
 KEY_FILE="nginx/ssl/tls.key"
@@ -61,8 +61,8 @@ echo "  Output File: ${OUTPUT_FILE}"
 echo ""
 
 # Check if SSL certificates exist
-if [[ ! -f $CERT_FILE ]]; then
-	log_error "Certificate file not found: $CERT_FILE"
+if [[ ! -f ${CERT_FILE} ]]; then
+	log_error "Certificate file not found: ${CERT_FILE}"
 	log_info "Generating SSL certificates first..."
 
 	# Generate SSL certificates using the nginx script
@@ -77,28 +77,28 @@ if [[ ! -f $CERT_FILE ]]; then
 	fi
 fi
 
-if [[ ! -f $KEY_FILE ]]; then
-	log_error "Private key file not found: $KEY_FILE"
+if [[ ! -f ${KEY_FILE} ]]; then
+	log_error "Private key file not found: ${KEY_FILE}"
 	exit 1
 fi
 
 # Validate certificates
 log_info "Validating SSL certificates..."
-if openssl x509 -in "$CERT_FILE" -text -noout >/dev/null 2>&1; then
+if openssl x509 -in "${CERT_FILE}" -text -noout >/dev/null 2>&1; then
 	log_success "Certificate is valid"
 else
-	log_error "Invalid certificate file: $CERT_FILE"
+	log_error "Invalid certificate file: ${CERT_FILE}"
 	exit 1
 fi
 
 # Get certificate and key in base64 encoding
 log_info "Encoding certificates to base64..."
-CERT_B64=$(base64 -i "$CERT_FILE" | tr -d '\n')
-KEY_B64=$(base64 -i "$KEY_FILE" | tr -d '\n')
+CERT_B64=$(base64 -i "${CERT_FILE}" | tr -d '\n')
+KEY_B64=$(base64 -i "${KEY_FILE}" | tr -d '\n')
 
 # Generate the Kubernetes TLS secret YAML
 log_info "Generating TLS secret YAML..."
-cat >"$OUTPUT_FILE" <<EOF
+cat >"${OUTPUT_FILE}" <<EOF
 # =======================================================================
 # TLS Secret for Kubernetes
 # =======================================================================
@@ -131,7 +131,7 @@ echo ""
 
 # Display certificate information
 log_info "Certificate Information:"
-openssl x509 -in "$CERT_FILE" -text -noout | grep -E "(Subject:|Issuer:|Not Before|Not After |DNS:|IP Address:)" | sed 's/^/  /'
+openssl x509 -in "${CERT_FILE}" -text -noout | grep -E "(Subject:|Issuer:|Not Before|Not After |DNS:|IP Address:)" | sed 's/^/  /'
 
 echo ""
 

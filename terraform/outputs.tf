@@ -16,11 +16,11 @@ output "staging_urls" {
 output "production_urls" {
   description = "Production environment access URLs"
   value = var.environment == "production" ? {
-    web           = "http://localhost:80 (redirects to HTTPS)"
-    web_https     = "https://localhost:443"
+    web           = "http://localhost:8080 (redirects to HTTPS)"
+    web_https     = "https://localhost:8443"
     api           = "http://localhost:8000/health"
     api_docs      = "http://localhost:8000/docs"
-    api_via_nginx = "https://localhost:443/api/health"
+    api_via_nginx = "https://localhost:8443/api/health"
     grafana       = var.enable_monitoring ? "http://localhost:3000" : null
     prometheus    = var.enable_monitoring ? "http://localhost:9090" : null
   } : null

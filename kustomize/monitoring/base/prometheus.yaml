@@ -1,6 +1,3 @@
-# Prometheus ServiceAccount and RBAC
-# Required for Prometheus to discover and scrape pods
-
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -43,6 +40,7 @@ subjects:
     namespace: api-deployment-demo-ns
 
 ---
+# trunk-ignore(checkov/CKV_K8S_38): Prometheus requires the service account token because it needs to access the Kubernetes API to discover and scrape pods
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -69,6 +69,7 @@ subjects:
     namespace: api-deployment-demo-ns
 
 ---
+# trunk-ignore(checkov/CKV_K8S_38): kube-state-metrics requires the service account token because it needs to access the Kubernetes API to collect metrics about cluster resources
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -61,6 +61,7 @@ spec:
         app: prometheus
     spec:
       serviceAccountName: prometheus
+      automountServiceAccountToken: true
       securityContext:
         runAsUser: 65534
         runAsGroup: 65534
@@ -69,7 +70,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: prometheus
-          image: prom/prometheus:latest
+          image: prom/prometheus:v3.11.1@sha256:759ea6db49103737f2a6f420b0d1632062d8ad99dec086c76db605fd0bf23e15
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

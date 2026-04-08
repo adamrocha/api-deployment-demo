@@ -89,12 +89,13 @@ spec:
         component: exporter
     spec:
       serviceAccountName: kube-state-metrics
+      automountServiceAccountToken: true
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: kube-state-metrics
-          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.10.1
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.18.0@sha256:1545919b72e3ae035454fc054131e8d0f14b42ef6fc5b2ad5c751cafa6b2130e
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534

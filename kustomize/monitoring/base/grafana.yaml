@@ -15,19 +15,20 @@ spec:
       labels:
         app: grafana
     spec:
+      automountServiceAccountToken: false
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: grafana
-          image: grafana/grafana:12.4.2@sha256:dadd5d5d226b158263925982f456c98d6fbe65b1ee57f24aa01845232c2d8be8
+          image: grafana/grafana:12.4.2@sha256:e2866546bf00a3c5a0ac9f4ec0b97ba8cbacc71f205065682615e5bc347a0da9
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - ALL
+                - NET_RAW
           ports:
             - containerPort: 3000
           livenessProbe:

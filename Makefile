@@ -26,6 +26,7 @@ TF_DIR := terraform
 ANSIBLE_DIR := ansible
 
 # Port settings
+WEB_PORT := 8443
 GRAFANA_PORT := 3000
 PROMETHEUS_PORT := 9090
 API_PORT := 8000

@@ -1,0 +1,146 @@
+# NetworkPolicy for API pods
+# Allows:
+# - Ingress from anywhere on port 8000 (exposed via NodePort for external access)
+# - Egress to Postgres database
+# - Egress to DNS
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: api-network-policy
+  namespace: api-deployment-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: api-demo
+      component: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow traffic from anywhere (API is exposed via NodePort 30800)
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow API to connect to Postgres
+    - to:
+        - podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# NetworkPolicy for Nginx pods
+# Allows:
+# - Ingress from anywhere (public-facing)
+# - Egress to API pods
+# - Egress to DNS
+# - Egress to Prometheus for metrics
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: nginx-network-policy
+  namespace: api-deployment-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: api-demo
+      component: nginx
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow all traffic to Nginx (public-facing via NodePort)
+    - from: []
+      ports:
+        - protocol: TCP
+          port: 8443
+        - protocol: TCP
+          port: 8080
+    # Allow Prometheus to scrape nginx-exporter metrics
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: api-monitoring-ns
+      ports:
+        - protocol: TCP
+          port: 9113
+  egress:
+    # Allow Nginx to forward to API
+    - to:
+        - podSelector:
+            matchLabels:
+              app: api-demo
+              component: api
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# NetworkPolicy for Postgres pods
+# Allows:
+# - Ingress from API pods
+# - Ingress from Prometheus for postgres-exporter metrics
+# - Egress to DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-network-policy
+  namespace: api-deployment-demo
+spec:
+  podSelector:
+    matchLabels:
+      app: postgres
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow API pods to connect to Postgres
+    - from:
+        - podSelector:
+            matchLabels:
+              app: api-demo
+              component: api
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow Prometheus to scrape postgres-exporter metrics
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: api-monitoring-ns
+      ports:
+        - protocol: TCP
+          port: 9187
+  egress:
+    # Allow DNS resolution
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53

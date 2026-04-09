@@ -53,6 +53,24 @@ rules:
       - storageclasses
       - volumeattachments
     verbs: [list, watch]
+  - apiGroups: [coordination.k8s.io]
+    resources:
+      - leases
+    verbs: [list, watch]
+  - apiGroups: [networking.k8s.io]
+    resources:
+      - ingresses
+      - networkpolicies
+    verbs: [list, watch]
+  - apiGroups: [certificates.k8s.io]
+    resources:
+      - certificatesigningrequests
+    verbs: [list, watch]
+  - apiGroups: [admissionregistration.k8s.io]
+    resources:
+      - mutatingwebhookconfigurations
+      - validatingwebhookconfigurations
+    verbs: [list, watch]
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -97,6 +115,8 @@ spec:
       containers:
         - name: kube-state-metrics
           image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.18.0@sha256:1545919b72e3ae035454fc054131e8d0f14b42ef6fc5b2ad5c751cafa6b2130e
+          args:
+            - --resources=configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,jobs,namespaces,nodes,persistentvolumeclaims,persistentvolumes,pods,poddisruptionbudgets,replicasets,replicationcontrollers,resourcequotas,services,statefulsets,storageclasses,volumeattachments
           securityContext:
             runAsNonRoot: true
             runAsUser: 65534
@@ -114,14 +134,18 @@ spec:
             httpGet:
               path: /healthz
               port: 8080
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
+            periodSeconds: 10
             timeoutSeconds: 5
+            failureThreshold: 5
           readinessProbe:
             httpGet:
               path: /
               port: 8081
-            initialDelaySeconds: 5
+            initialDelaySeconds: 30
+            periodSeconds: 10
             timeoutSeconds: 5
+            failureThreshold: 5
           resources:
             requests:
               cpu: 50m

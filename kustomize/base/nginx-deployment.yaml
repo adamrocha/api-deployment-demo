@@ -21,6 +21,8 @@ spec:
       securityContext:
         runAsNonRoot: false
         fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
 
       containers:
         - name: nginx

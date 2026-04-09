@@ -15,7 +15,6 @@ spec:
       labels:
         app: grafana
     spec:
-      automountServiceAccountToken: false
       securityContext:
         seccompProfile:
           type: RuntimeDefault
@@ -31,6 +30,14 @@ spec:
                 - NET_RAW
           ports:
             - containerPort: 3000
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30 # up to 10 + 30*10 = 310s for migrations + startup
           livenessProbe:
             httpGet:
               path: /api/health

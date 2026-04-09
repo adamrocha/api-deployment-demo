@@ -40,6 +40,13 @@ spec:
       ports:
         - protocol: UDP
           port: 53
+    # Allow Grafana's grafana-apiserver module to reach the Kubernetes API
+    # (needed for delegated authentication / TokenReview calls in Grafana 12.x)
+    - ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443
 
 ---
 # NetworkPolicy for Prometheus
@@ -159,18 +166,11 @@ spec:
       ports:
         - protocol: UDP
           port: 53
-    # Allow access to Kubernetes API for metrics collection
-    - to:
-        - namespaceSelector: {}
-          podSelector:
-            matchLabels:
-              component: apiserver
-      ports:
+    # Allow access to Kubernetes API server (ClusterIP and direct node access).
+    # kube-state-metrics reaches the API via the kubernetes ClusterIP (10.96.0.1:443)
+    # which is a virtual IP and cannot be matched by pod/namespace selectors.
+    - ports:
         - protocol: TCP
           port: 443
-    # Allow egress to Kubernetes API server
-    - to:
-        - namespaceSelector: {}
-      ports:
         - protocol: TCP
           port: 6443

@@ -19,29 +19,29 @@ echo ""
 
 # Check if we have access to the API
 API_URL="http://localhost:8000"
-if ! curl -s "$API_URL/health" >/dev/null; then
-	echo -e "${RED}❌ API not accessible at $API_URL${NC}"
+if ! curl -s "${API_URL}/health" >/dev/null; then
+	echo -e "${RED}❌ API not accessible at ${API_URL}${NC}"
 	echo "Make sure your API is running and accessible"
 	exit 1
 fi
 
-echo -e "${GREEN}✅ API is accessible at $API_URL${NC}"
+echo -e "${GREEN}✅ API is accessible at ${API_URL}${NC}"
 echo ""
 
 # Show initial deployment status
 echo -e "${YELLOW}📊 Initial Deployment Status:${NC}"
-kubectl get deployment -n "$APP_NAMESPACE" -o wide
+kubectl get deployment -n "${APP_NAMESPACE}" -o wide
 echo ""
 
 # Show initial pods
 echo -e "${YELLOW}📦 Initial Pods:${NC}"
-kubectl get pods -n "$APP_NAMESPACE" -l app=api-demo,component=api -o wide
+kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api -o wide
 echo ""
 
 # Check for HPA
-if kubectl get hpa -n "$APP_NAMESPACE" 2>/dev/null | grep -q api; then
+if kubectl get hpa -n "${APP_NAMESPACE}" 2>/dev/null | grep -q api; then
 	echo -e "${GREEN}✅ HPA is configured!${NC}"
-	kubectl get hpa -n "$APP_NAMESPACE"
+	kubectl get hpa -n "${APP_NAMESPACE}"
 	echo ""
 else
 	echo -e "${YELLOW}⚠️  No HPA found - pods will not autoscale${NC}"
@@ -49,9 +49,9 @@ else
 fi
 
 # Check for metrics
-if kubectl top pods -n "$APP_NAMESPACE" 2>/dev/null | grep -q .; then
+if kubectl top pods -n "${APP_NAMESPACE}" 2>/dev/null | grep -q .; then
 	echo -e "${YELLOW}💻 Initial Pod Resource Usage:${NC}"
-	kubectl top pods -n "$APP_NAMESPACE"
+	kubectl top pods -n "${APP_NAMESPACE}"
 	echo ""
 else
 	echo -e "${YELLOW}⚠️  Metrics not available - install metrics-server for detailed stats${NC}"
@@ -73,9 +73,9 @@ run_load_test() {
 	# Function to run in each worker
 	worker() {
 		local end_time=$1
-		while [ "$(date +%s)" -lt "$end_time" ]; do
+		while [[ "$(date +%s)" -lt ${end_time} ]]; do
 			# Use CPU-intensive /stress endpoint to trigger autoscaling
-			curl -s "$API_URL/stress" >/dev/null &
+			curl -s "${API_URL}/stress" >/dev/null &
 
 			# Optional small delay to avoid ultra-rapid process spawning
 			sleep 0.01
@@ -84,7 +84,7 @@ run_load_test() {
 			while :; do
 				local job_count
 				job_count=$(jobs -r | wc -l)
-				if [ "$job_count" -lt "$max_background_jobs" ]; then
+				if [[ ${job_count} -lt ${max_background_jobs} ]]; then
 					break
 				fi
 				# Wait for at least one background job to finish before spawning more
@@ -99,9 +99,9 @@ run_load_test() {
 	local end_time=$(($(date +%s) + duration))
 
 	# Start worker processes
-	echo -e "${BLUE}⚡ Launching $workers concurrent workers hitting /stress endpoint...${NC}"
-	for _ in $(seq 1 $workers); do
-		worker $end_time &
+	echo -e "${BLUE}⚡ Launching ${workers} concurrent workers hitting /stress endpoint...${NC}"
+	for _ in $(seq 1 ${workers}); do
+		worker ${end_time} &
 	done
 
 	# Wait for all workers to complete
@@ -114,36 +114,36 @@ monitor_pods() {
 	local end_time=$(($(date +%s) + duration))
 	local iteration=0
 
-	while [ "$(date +%s)" -lt "$end_time" ]; do
+	while [ "$(date +%s)" -lt "${end_time}" ]; do
 		iteration=$((iteration + 1))
 		clear
-		echo -e "${CYAN}╔════════════════════════════════════════════════════════════════╗${NC}"
-		echo -e "${CYAN}║  HPA Autoscaling Demo - Live Monitoring  [Iteration: $(printf '%3d' "$iteration")]  ║${NC}"
-		echo -e "${CYAN}╚════════════════════════════════════════════════════════════════╝${NC}"
+		echo -e "${CYAN}╔════════════════════════════════════════════════════════════════${NC}"
+		echo -e "${CYAN}║  HPA Autoscaling Demo - Live Monitoring  [Iteration: $(printf '%3d' "${iteration}")]  ║${NC}"
+		echo -e "${CYAN}╚════════════════════════════════════════════════════════════════${NC}"
 		echo ""
 
 		# Show HPA status if available
-		if kubectl get hpa -n "$APP_NAMESPACE" 2>/dev/null | grep -q api; then
+		if kubectl get hpa -n "${APP_NAMESPACE}" 2>/dev/null | grep -q api; then
 			echo -e "${GREEN}📈 HPA Status (triggers at 50% CPU):${NC}"
-			kubectl get hpa -n "$APP_NAMESPACE"
+			kubectl get hpa -n "${APP_NAMESPACE}"
 			echo ""
 		fi
 
 		# Current pod count
-		POD_COUNT=$(kubectl get pods -n "$APP_NAMESPACE" -l app=api-demo,component=api --no-headers 2>/dev/null | grep -c Running || echo 0)
-		echo -e "${BLUE}🚀 Current API Pods: ${GREEN}$POD_COUNT running${NC}"
+		POD_COUNT=$(kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api --no-headers 2>/dev/null | grep -c Running || echo 0)
+		echo -e "${BLUE}🚀 Current API Pods: ${GREEN}${POD_COUNT} running${NC}"
 		echo ""
 
 		# Show resource usage if metrics available
-		if kubectl top pods -n "$APP_NAMESPACE" 2>/dev/null | grep -q .; then
+		if kubectl top pods -n "${APP_NAMESPACE}" 2>/dev/null | grep -q .; then
 			echo -e "${YELLOW}💻 Pod Resource Usage:${NC}"
-			kubectl top pods -n "$APP_NAMESPACE" -l app=api-demo,component=api 2>/dev/null || true
+			kubectl top pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api 2>/dev/null || true
 			echo ""
 		fi
 
 		# Show pod details
 		echo -e "${YELLOW}📦 Pod Details:${NC}"
-		kubectl get pods -n "$APP_NAMESPACE" -l app=api-demo,component=api -o wide --no-headers 2>/dev/null | head -10 || true
+		kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api -o wide --no-headers 2>/dev/null | head -10 || true
 
 		echo ""
 		echo -e "${CYAN}⏱️  Time remaining: $((end_time - $(date +%s))) seconds${NC}"
@@ -163,7 +163,7 @@ echo ""
 run_load_test 300
 
 # Stop monitoring
-kill $MONITOR_PID 2>/dev/null || true
+kill "${MONITOR_PID}" 2>/dev/null || true
 clear
 
 echo ""
@@ -172,24 +172,24 @@ echo ""
 
 # Show final status
 echo -e "${YELLOW}📊 Final Deployment Status:${NC}"
-kubectl get deployment -n "$APP_NAMESPACE" -o wide
+kubectl get deployment -n "${APP_NAMESPACE}" -o wide
 
 echo ""
 echo -e "${YELLOW}📈 Final HPA Status:${NC}"
-if kubectl get hpa -n "$APP_NAMESPACE" 2>/dev/null | grep -q api; then
-	kubectl get hpa -n "$APP_NAMESPACE"
+if kubectl get hpa -n "${APP_NAMESPACE}" 2>/dev/null | grep -q api; then
+	kubectl get hpa -n "${APP_NAMESPACE}"
 else
 	echo -e "${RED}No HPA configured${NC}"
 fi
 
 echo ""
 echo -e "${YELLOW}📦 Final Pod Status:${NC}"
-kubectl get pods -n "$APP_NAMESPACE" -l app=api-demo,component=api
+kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api
 
 echo ""
-if kubectl top pods -n "$APP_NAMESPACE" 2>/dev/null | grep -q .; then
+if kubectl top pods -n "${APP_NAMESPACE}" 2>/dev/null | grep -q .; then
 	echo -e "${YELLOW}💻 Final Resource Usage:${NC}"
-	kubectl top pods -n "$APP_NAMESPACE" -l app=api-demo,component=api
+	kubectl top pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api
 	echo ""
 fi
 
@@ -200,10 +200,10 @@ echo -e "${BLUE}📊 Summary:${NC}"
 echo "  • Load test ran for 5 minutes with 75 concurrent workers targeting CPU-intensive /stress endpoint"
 
 # Get pod count with error handling
-POD_COUNT=$(kubectl get pods -n "$APP_NAMESPACE" -l app=api-demo,component=api --no-headers 2>/dev/null | grep -c Running || echo 0)
-if [[ -n $POD_COUNT && $POD_COUNT =~ ^[0-9]+$ && $POD_COUNT -gt 0 ]]; then
-	echo "  • Scaled to $POD_COUNT pod(s) during load test"
-	if [ "$POD_COUNT" -gt 2 ]; then
+POD_COUNT=$(kubectl get pods -n "${APP_NAMESPACE}" -l app=api-demo,component=api --no-headers 2>/dev/null | grep -c Running || echo 0)
+if [[ -n ${POD_COUNT} && ${POD_COUNT} =~ ^[0-9]+$ && ${POD_COUNT} -gt 0 ]]; then
+	echo "  • Scaled to ${POD_COUNT} pod(s) during load test"
+	if [[ ${POD_COUNT} -gt 2 ]]; then
 		echo -e "  • ${GREEN}✅ HPA successfully triggered autoscaling!${NC}"
 	else
 		echo -e "  • ${YELLOW}⚠️  HPA did not scale up (load may not have been sufficient)${NC}"
@@ -214,9 +214,9 @@ fi
 
 echo ""
 echo -e "${CYAN}💡 Tips:${NC}"
-echo "  • Watch pods scale down: kubectl get pods -n "$APP_NAMESPACE" -w"
-echo "  • Check HPA events: kubectl describe hpa -n "$APP_NAMESPACE""
-echo "  • View API logs: kubectl logs -n "$APP_NAMESPACE" -l app=api-demo,component=api"
-echo "  • Monitor metrics: kubectl top pods -n "$APP_NAMESPACE""
+echo "  • Watch pods scale down: kubectl get pods -n ${APP_NAMESPACE} -w"
+echo "  • Check HPA events: kubectl describe hpa -n ${APP_NAMESPACE}"
+echo "  • View API logs: kubectl logs -n ${APP_NAMESPACE} -l app=api-demo,component=api"
+echo "  • Monitor metrics: kubectl top pods -n ${APP_NAMESPACE}"
 echo ""
 echo -e "${YELLOW}Note: Pods will gradually scale down after ~5 minutes of low load${NC}"

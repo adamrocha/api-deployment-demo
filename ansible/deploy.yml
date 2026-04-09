@@ -9,10 +9,10 @@
   gather_facts: true
 
   vars:
-    k8s_namespace: api-deployment-demo-ns
-    monitoring_namespace: api-deployment-demo-ns
-    k8s_context: kind-api-demo-cluster
     deployment_env: "{{ deployment_env | default('production') }}"
+    k8s_namespace: "{{ k8s_namespace | default('api-deployment-demo-staging-ns' if deployment_env == 'staging' else 'api-deployment-demo-ns') }}"
+    monitoring_namespace: "{{ monitoring_namespace | default('api-monitoring-staging-ns' if deployment_env == 'staging' else 'api-monitoring-ns') }}"
+    k8s_context: kind-api-demo-cluster
 
   pre_tasks:
     - name: Display deployment plan
@@ -129,7 +129,7 @@
           - "{{ services.stdout_lines }}"
           - ""
           - "🎯 Access Points:"
-          - "  • Web: https://localhost (or http://localhost)"
+          - "  • Web: https://localhost:8443 (or http://localhost:8080 for HTTP)"
           - "  • API: http://localhost:8000"
           - "  • API Docs: http://localhost:8000/docs"
           - "  • Grafana: http://localhost:3000"

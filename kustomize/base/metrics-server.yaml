@@ -102,6 +102,9 @@ spec:
         app: metrics-server
     spec:
       serviceAccountName: metrics-server
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: metrics-server
           image: registry.k8s.io/metrics-server/metrics-server:v0.7.0

@@ -1,14 +1,18 @@
 {
-  "title": "Database Performance",
-  "tags": ["database", "postgres"],
+  "title": "Nginx Traffic & Performance",
+  "tags": ["nginx", "web"],
   "timezone": "browser",
   "schemaVersion": 16,
   "version": 1,
-  "refresh": "30s",
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
-      "title": "Database Status",
+      "title": "Nginx Status",
       "type": "stat",
       "gridPos": {
         "x": 0,
@@ -17,13 +21,13 @@
         "h": 4
       },
       "options": {
-        "colorMode": "background",
-        "graphMode": "none",
+        "colorMode": "value",
+        "graphMode": "area",
         "textMode": "value_and_name"
       },
       "targets": [
         {
-          "expr": "pg_up{job=\"postgres-exporter\"}",
+          "expr": "nginx_up",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -39,11 +43,11 @@
               "type": "value",
               "options": {
                 "0": {
-                  "text": "DOWN",
+                  "text": "Down",
                   "color": "red"
                 },
                 "1": {
-                  "text": "UP",
+                  "text": "Up",
                   "color": "green"
                 }
               }
@@ -82,7 +86,7 @@
       },
       "targets": [
         {
-          "expr": "pg_stat_activity_count{job=\"postgres-exporter\",state=\"active\"}",
+          "expr": "sum(nginx_connections_active)",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -101,11 +105,11 @@
                 "color": "green"
               },
               {
-                "value": 50,
+                "value": 100,
                 "color": "yellow"
               },
               {
-                "value": 100,
+                "value": 500,
                 "color": "red"
               }
             ]
@@ -115,7 +119,7 @@
     },
     {
       "id": 3,
-      "title": "Database Size",
+      "title": "Total Requests",
       "type": "stat",
       "gridPos": {
         "x": 12,
@@ -130,47 +134,7 @@
       },
       "targets": [
         {
-          "expr": "pg_database_size_bytes{job=\"postgres-exporter\"}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          }
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "value": null,
-                "color": "green"
-              }
-            ]
-          }
-        }
-      }
-    },
-    {
-      "id": 4,
-      "title": "Total Connections",
-      "type": "stat",
-      "gridPos": {
-        "x": 18,
-        "y": 0,
-        "w": 6,
-        "h": 4
-      },
-      "options": {
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "sum(pg_stat_activity_count{job=\"postgres-exporter\"})",
+          "expr": "sum(nginx_http_requests_total)",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -187,14 +151,46 @@
               {
                 "value": null,
                 "color": "green"
-              },
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Waiting Connections",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "sum(nginx_connections_waiting)",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
               {
-                "value": 80,
-                "color": "yellow"
-              },
-              {
-                "value": 100,
-                "color": "red"
+                "value": null,
+                "color": "green"
               }
             ]
           }
@@ -203,7 +199,7 @@
     },
     {
       "id": 5,
-      "title": "Connections by State",
+      "title": "HTTP Request Rate",
       "type": "graph",
       "gridPos": {
         "x": 0,
@@ -213,9 +209,73 @@
       },
       "targets": [
         {
-          "expr": "pg_stat_activity_count{job=\"postgres-exporter\"}",
-          "legendFormat": "{{state}}",
+          "expr": "rate(nginx_http_requests_total[1m])",
+          "legendFormat": "{{pod}}",
           "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        }
+      ],
+      "xaxis": {
+        "show": true,
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "show": true,
+          "format": "reqps",
+          "label": "Requests/sec"
+        },
+        {
+          "show": true,
+          "format": "short"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Connection States",
+      "type": "graph",
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "expr": "sum(nginx_connections_active)",
+          "legendFormat": "Active",
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "sum(nginx_connections_reading)",
+          "legendFormat": "Reading",
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "sum(nginx_connections_writing)",
+          "legendFormat": "Writing",
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          }
+        },
+        {
+          "expr": "sum(nginx_connections_waiting)",
+          "legendFormat": "Waiting",
+          "refId": "D",
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
@@ -239,54 +299,8 @@
       ]
     },
     {
-      "id": 6,
-      "title": "Transaction Rate",
-      "type": "graph",
-      "gridPos": {
-        "x": 12,
-        "y": 4,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "expr": "rate(pg_stat_database_xact_commit{job=\"postgres-exporter\"}[5m])",
-          "legendFormat": "Commits - {{datname}}",
-          "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          }
-        },
-        {
-          "expr": "rate(pg_stat_database_xact_rollback{job=\"postgres-exporter\"}[5m])",
-          "legendFormat": "Rollbacks - {{datname}}",
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          }
-        }
-      ],
-      "xaxis": {
-        "show": true,
-        "mode": "time"
-      },
-      "yaxes": [
-        {
-          "show": true,
-          "format": "short",
-          "label": "Transactions/sec"
-        },
-        {
-          "show": true,
-          "format": "short"
-        }
-      ]
-    },
-    {
       "id": 7,
-      "title": "Rows Fetched vs Returned",
+      "title": "Connections Accepted vs Handled",
       "type": "graph",
       "gridPos": {
         "x": 0,
@@ -296,8 +310,8 @@
       },
       "targets": [
         {
-          "expr": "rate(pg_stat_database_tup_fetched{job=\"postgres-exporter\"}[5m])",
-          "legendFormat": "Fetched - {{datname}}",
+          "expr": "rate(nginx_connections_accepted[1m])",
+          "legendFormat": "{{pod}} - Accepted",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -305,8 +319,8 @@
           }
         },
         {
-          "expr": "rate(pg_stat_database_tup_returned{job=\"postgres-exporter\"}[5m])",
-          "legendFormat": "Returned - {{datname}}",
+          "expr": "rate(nginx_connections_handled[1m])",
+          "legendFormat": "{{pod}} - Handled",
           "refId": "B",
           "datasource": {
             "type": "prometheus",
@@ -321,8 +335,8 @@
       "yaxes": [
         {
           "show": true,
-          "format": "short",
-          "label": "Rows/sec"
+          "format": "cps",
+          "label": "Connections/sec"
         },
         {
           "show": true,
@@ -332,7 +346,7 @@
     },
     {
       "id": 8,
-      "title": "Database Operations",
+      "title": "Request Rate by Pod",
       "type": "graph",
       "gridPos": {
         "x": 12,
@@ -342,27 +356,9 @@
       },
       "targets": [
         {
-          "expr": "rate(pg_stat_database_tup_inserted{job=\"postgres-exporter\"}[5m])",
-          "legendFormat": "Inserts - {{datname}}",
+          "expr": "sum by (pod) (rate(nginx_http_requests_total[1m]))",
+          "legendFormat": "{{pod}}",
           "refId": "A",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          }
-        },
-        {
-          "expr": "rate(pg_stat_database_tup_updated{job=\"postgres-exporter\"}[5m])",
-          "legendFormat": "Updates - {{datname}}",
-          "refId": "B",
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          }
-        },
-        {
-          "expr": "rate(pg_stat_database_tup_deleted{job=\"postgres-exporter\"}[5m])",
-          "legendFormat": "Deletes - {{datname}}",
-          "refId": "C",
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
@@ -376,8 +372,8 @@
       "yaxes": [
         {
           "show": true,
-          "format": "short",
-          "label": "Operations/sec"
+          "format": "reqps",
+          "label": "Requests/sec"
         },
         {
           "show": true,

@@ -54,6 +54,15 @@ escape_sed_replacement() {
 	printf '%s' "$1" | sed -e 's/[&|]/\\&/g'
 }
 
+# Portable sed -i for both BSD/macOS and GNU/Linux
+sed_inplace() {
+	if [[ "$(uname)" == "Darwin" ]]; then
+		sed -i '' "$@"
+	else
+		sed -i "$@"
+	fi
+}
+
 set_or_append_env() {
 	local key="$1"
 	local value="$2"
@@ -62,7 +71,7 @@ set_or_append_env() {
 	escaped="$(escape_sed_replacement "${value}")"
 
 	if grep -q "^${key}=" "${file}"; then
-		sed -i '' -e "s|^${key}=.*$|${key}=${escaped}|" "${file}"
+		sed_inplace "s|^${key}=.*$|${key}=${escaped}|" "${file}"
 	else
 		printf '\n%s=%s\n' "${key}" "${value}" >>"${file}"
 	fi
@@ -76,7 +85,7 @@ echo -e "${NC}"
 
 # Validate overlay
 if [[ ! -f ${KUSTOMIZE_FILE} ]]; then
-	log_error "Kustomization file not found: $KUSTOMIZE_FILE"
+	log_error "Kustomization file not found: ${KUSTOMIZE_FILE}"
 	log_info "Available overlays:"
 	ls -1 "${PROJECT_ROOT}/kustomize/overlays/" | sed 's/^/  - /'
 	exit 1
@@ -138,26 +147,40 @@ cat >"${OVERLAY_DIR}/api-secrets.env" <<EOF
 SECRET_KEY=${SECRET_KEY}
 EOF
 
-cat >"${OVERLAY_DIR}/grafana-secrets.env" <<EOF
-admin-password=${GRAFANA_ADMIN_PASSWORD}
-EOF
-
 if [[ ${OVERLAY} == "production" ]]; then
 	cat >"${OVERLAY_DIR}/production-secrets.env" <<EOF
 ADMIN_EMAIL=${ADMIN_EMAIL}
 EOF
 fi
 
+# Write grafana-secrets.env into the monitoring overlay too
+MONITORING_OVERLAY_DIR="${PROJECT_ROOT}/kustomize/monitoring/overlays/${OVERLAY}"
+mkdir -p "${MONITORING_OVERLAY_DIR}"
+cat >"${MONITORING_OVERLAY_DIR}/grafana-secrets.env" <<EOF
+admin-password=${GRAFANA_ADMIN_PASSWORD}
+EOF
+
 log_success "Generated overlay env files in ${OVERLAY_DIR}"
+log_success "Generated monitoring env files in ${MONITORING_OVERLAY_DIR}"
 echo ""
 
-# Test kustomize build
-log_info "Testing kustomize build..."
+# Test kustomize build (app overlay)
+log_info "Testing kustomize build (app overlay)..."
 if kubectl kustomize "${PROJECT_ROOT}/kustomize/overlays/${OVERLAY}" >/dev/null 2>&1; then
-	log_success "Kustomize build successful"
+	log_success "App kustomize build successful"
 else
-	log_error "Kustomize build failed"
+	log_error "App kustomize build failed"
 	log_warning "Ensure secretGenerator uses envs in ${KUSTOMIZE_FILE}"
+	exit 1
+fi
+
+# Test kustomize build (monitoring overlay)
+log_info "Testing kustomize build (monitoring overlay)..."
+if kubectl kustomize "${PROJECT_ROOT}/kustomize/monitoring/overlays/${OVERLAY}" >/dev/null 2>&1; then
+	log_success "Monitoring kustomize build successful"
+else
+	log_error "Monitoring kustomize build failed"
+	log_warning "Ensure secretGenerator uses envs in ${MONITORING_OVERLAY_DIR}/kustomization.yaml"
 	exit 1
 fi
 
@@ -167,12 +190,13 @@ log_success "Secret generation complete!"
 echo ""
 echo -e "${YELLOW}⚠️  IMPORTANT:${NC}"
 echo "  1. Root secrets are in: ${ROOT_ENV_FILE}"
-echo "  2. Overlay files are local: ${OVERLAY_DIR}/*.env"
-echo "  3. Do not commit files that contain real secret values"
+echo "  2. App overlay files:        ${OVERLAY_DIR}/*.env"
+echo "  3. Monitoring overlay files: ${MONITORING_OVERLAY_DIR}/*.env"
+echo "  4. Do not commit files that contain real secret values"
 echo ""
 echo -e "${GREEN}Next steps:${NC}"
 echo "  • Deploy with: make deploy ENV=${OVERLAY}"
-echo "  • Or manually: kubectl apply -k kustomize/overlays/${OVERLAY}"
+echo "  • Or manually: kubectl apply -k kustomize/overlays/${OVERLAY} && kubectl apply -k kustomize/monitoring/overlays/${OVERLAY}"
 if [[ ${ROTATE} != "true" ]]; then
 	echo "  • Use --rotate to force brand new random values"
 fi

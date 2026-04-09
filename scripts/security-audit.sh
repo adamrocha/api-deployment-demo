@@ -78,10 +78,10 @@ echo -e "\n${BLUE}3. Checking terraform.tfvars Security${NC}"
 if [[ -f "terraform/terraform.tfvars" ]]; then
 	# Check file permissions
 	perms=$(ls -l terraform/terraform.tfvars | awk '{print $1}')
-	if [[ $perms == "-rw-------" ]]; then
+	if [[ ${perms} == "-rw-------" ]]; then
 		echo -e "   ${GREEN}✅${NC} terraform.tfvars has secure permissions (600)"
 	else
-		echo -e "   ${YELLOW}⚠️  terraform.tfvars permissions: $perms${NC}"
+		echo -e "   ${YELLOW}⚠️  terraform.tfvars permissions: ${perms}${NC}"
 		echo -e "   ${YELLOW}   Recommended: chmod 600 terraform/terraform.tfvars${NC}"
 		((ISSUES_FOUND++))
 	fi
@@ -117,28 +117,28 @@ echo -e "\n${BLUE}4. Checking Kubernetes Secrets Configuration${NC}"
 # Check if kubectl is available
 if command -v kubectl &>/dev/null; then
 	if kubectl cluster-info &>/dev/null; then
-		# Check for secrets in $APP_NAMESPACE namespace
-		if kubectl get namespace $APP_NAMESPACE &>/dev/null; then
-			secret_count=$(kubectl get secrets -n "$APP_NAMESPACE" 2>/dev/null | grep -v "default-token" | tail -n +2 | wc -l | tr -d ' ')
+		# Check for secrets in ${APP_NAMESPACE} namespace
+		if kubectl get namespace "${APP_NAMESPACE}" &>/dev/null; then
+			secret_count=$(kubectl get secrets -n "${APP_NAMESPACE}" 2>/dev/null | grep -v "default-token" | tail -n +2 | wc -l | tr -d ' ')
 
-			if [[ $secret_count -gt 0 ]]; then
-				echo -e "   ${GREEN}✅${NC} Found $secret_count Kubernetes secret(s)"
+			if [[ ${secret_count} -gt 0 ]]; then
+				echo -e "   ${GREEN}✅${NC} Found ${secret_count} Kubernetes secret(s)"
 
 				# Check for required secrets
 				required_secrets=("api-secrets" "db-secrets" "tls-secret")
 				for secret in "${required_secrets[@]}"; do
-					if kubectl get secret "$secret" -n "$APP_NAMESPACE" &>/dev/null; then
-						echo -e "   ${GREEN}✅${NC} Secret '$secret' exists"
+					if kubectl get secret "${secret}" -n "${APP_NAMESPACE}" &>/dev/null; then
+						echo -e "   ${GREEN}✅${NC} Secret '${secret}' exists"
 					else
-						echo -e "   ${YELLOW}⚠️  Secret '$secret' not found${NC}"
+						echo -e "   ${YELLOW}⚠️  Secret '${secret}' not found${NC}"
 					fi
 				done
 			else
-				echo -e "   ${YELLOW}⚠️  No secrets found in $APP_NAMESPACE namespace${NC}"
+				echo -e "   ${YELLOW}⚠️  No secrets found in ${APP_NAMESPACE} namespace${NC}"
 				echo -e "   ${YELLOW}   Deploy with: make deploy${NC}"
 			fi
 		else
-			echo -e "   ${YELLOW}⚠️  Namespace '$APP_NAMESPACE' not found${NC}"
+			echo -e "   ${YELLOW}⚠️  Namespace '${APP_NAMESPACE}' not found${NC}"
 			echo -e "   ${YELLOW}   Deploy with: make deploy${NC}"
 		fi
 	else
@@ -180,11 +180,11 @@ missing_patterns=()
 
 for pattern in "${required_patterns[@]}"; do
 	# Check if pattern exists in .gitignore (handles wildcards and path-specific entries)
-	if grep -F "$pattern" .gitignore 2>/dev/null >/dev/null; then
-		echo -e "   ${GREEN}✅${NC} '$pattern' is in .gitignore"
+	if grep -F "${pattern}" .gitignore 2>/dev/null >/dev/null; then
+		echo -e "   ${GREEN}✅${NC} '${pattern}' is in .gitignore"
 	else
-		echo -e "   ${YELLOW}⚠️  '$pattern' not found in .gitignore${NC}"
-		missing_patterns+=("$pattern")
+		echo -e "   ${YELLOW}⚠️  '${pattern}' not found in .gitignore${NC}"
+		missing_patterns+=("${pattern}")
 		((ISSUES_FOUND++))
 	fi
 done
@@ -192,7 +192,7 @@ done
 if [[ ${#missing_patterns[@]} -gt 0 ]]; then
 	echo -e "\n   ${YELLOW}Add to .gitignore:${NC}"
 	for pattern in "${missing_patterns[@]}"; do
-		echo -e "      $pattern"
+		echo -e "      ${pattern}"
 	done
 fi
 
@@ -207,12 +207,12 @@ sensitive_files=(
 )
 
 for file in "${sensitive_files[@]}"; do
-	if [[ -f $file ]]; then
-		perms=$(ls -l "$file" | awk '{print $1}')
-		if [[ $perms =~ ^-rw------- ]]; then
-			echo -e "   ${GREEN}✅${NC} $file has secure permissions"
+	if [[ -f ${file} ]]; then
+		perms=$(ls -l "${file}" | awk '{print $1}')
+		if [[ ${perms} =~ ^-rw------- ]]; then
+			echo -e "   ${GREEN}✅${NC} ${file} has secure permissions"
 		else
-			echo -e "   ${YELLOW}⚠️  $file permissions: $perms (recommend 600)${NC}"
+			echo -e "   ${YELLOW}⚠️  ${file} permissions: ${perms} (recommend 600)${NC}"
 			((ISSUES_FOUND++))
 		fi
 	fi
@@ -225,11 +225,11 @@ echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━�
 echo -e "${BLUE}📋 Security Audit Summary${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
-if [[ $ISSUES_FOUND -eq 0 ]]; then
+if [[ ${ISSUES_FOUND} -eq 0 ]]; then
 	echo -e "${GREEN}🎉 Security Audit: PASSED${NC}"
 	echo -e "${GREEN}✅ No security issues detected${NC}\n"
 else
-	echo -e "${YELLOW}⚠️  Security Audit: $ISSUES_FOUND issue(s) found${NC}"
+	echo -e "${YELLOW}⚠️  Security Audit: ${ISSUES_FOUND} issue(s) found${NC}"
 	echo -e "${YELLOW}Review the output above for details${NC}\n"
 fi
 
@@ -240,4 +240,4 @@ echo -e "   • Check git history: ${YELLOW}git log --all --full-history -- '*tf
 echo -e "   • Rotate secrets regularly and use strong random passwords"
 echo -e "   • Never commit terraform.tfvars, .vault_pass, or private keys${NC}\n"
 
-exit $ISSUES_FOUND
+exit "${ISSUES_FOUND}"

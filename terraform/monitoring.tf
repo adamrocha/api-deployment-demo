@@ -506,7 +506,7 @@ resource "kubernetes_config_map_v1" "grafana_dashboard_api_performance" {
   }
 
   data = {
-    "api-performance.json" = file("${path.module}/../monitoring/dashboards/api-performance.json")
+    "api-performance.json" = file("${path.module}/../kustomize/monitoring/base/dashboards/api-performance.json")
   }
 }
 
@@ -522,7 +522,7 @@ resource "kubernetes_config_map_v1" "grafana_dashboard_infrastructure" {
   }
 
   data = {
-    "infrastructure.json" = file("${path.module}/../monitoring/dashboards/infrastructure.json")
+    "infrastructure.json" = file("${path.module}/../kustomize/monitoring/base/dashboards/infrastructure.json")
   }
 }
 
@@ -538,7 +538,7 @@ resource "kubernetes_config_map_v1" "grafana_dashboard_database" {
   }
 
   data = {
-    "database.json" = file("${path.module}/../monitoring/dashboards/database.json")
+    "database.json" = file("${path.module}/../kustomize/monitoring/base/dashboards/database.json")
   }
 }
 
@@ -554,7 +554,7 @@ resource "kubernetes_config_map_v1" "grafana_dashboard_nginx_traffic" {
   }
 
   data = {
-    "nginx-traffic.json" = file("${path.module}/../monitoring/dashboards/nginx-traffic.json")
+    "nginx-traffic.json" = file("${path.module}/../kustomize/monitoring/base/dashboards/nginx-traffic.json")
   }
 }
 

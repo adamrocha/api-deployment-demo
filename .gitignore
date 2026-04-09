@@ -45,12 +45,7 @@ ansible/.ansible/
 # =======================================================================
 # Kubernetes Secrets (SECURITY CRITICAL)
 # =======================================================================
-kubernetes/secrets.yaml
-kubernetes/secrets-*.yaml
-kubernetes/configmap-*.yaml
-kubernetes/monitoring-secrets.yaml
-kubernetes/tls-secret.yaml
-!kubernetes/*-example.yaml
+kustomize/base/nginx-tls-secret.yaml
 
 # Kustomize Secrets (SECURITY CRITICAL)
 kustomize/**/secrets.yaml

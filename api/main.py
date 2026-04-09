@@ -120,6 +120,15 @@ http_exceptions_total = Counter(
     "http_exceptions_total", "Total exceptions raised", ["exception_type", "endpoint"]
 )
 
+http_requests_in_progress = Gauge(
+    "http_requests_in_progress", "Number of HTTP requests currently being processed"
+)
+
+# Health Status
+api_health_status = Gauge(
+    "api_health_status", "API health status (1 = healthy, 0 = unhealthy)"
+)
+
 # Business Metrics
 active_users_gauge = Gauge(
     "active_users_total", "Total number of users in the database"
@@ -234,6 +243,17 @@ app = FastAPI(
 )
 
 
+# Middleware to track in-progress requests
+@app.middleware("http")
+async def track_requests(request: Request, call_next):
+    http_requests_in_progress.inc()
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        http_requests_in_progress.dec()
+
+
 # Database dependency
 def get_db():
     db = SessionLocal()
@@ -283,6 +303,9 @@ async def health_check():
             db_status = f"connected to {db_name}"
         except Exception:
             db_status = "connected"
+
+    # Set health status metric
+    api_health_status.set(1)
 
     return {
         "status": "healthy",

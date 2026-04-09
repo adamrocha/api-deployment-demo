@@ -11,6 +11,7 @@ resources:
   - grafana.yaml
   - grafana-config.yaml
   - kube-state-metrics.yaml
+  - network-policies.yaml
 
 configMapGenerator:
   - name: grafana-dashboard-api-performance

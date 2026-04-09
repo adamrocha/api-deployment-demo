@@ -32,7 +32,7 @@ wait_for_service() {
 			echo -e "${GREEN}✅ ${name} is ready!${NC}"
 			return 0
 		fi
-		if [[ "${i}" -eq "${max_attempts}" ]]; then
+		if [[ ${i} -eq ${max_attempts} ]]; then
 			echo -e "${RED}❌ ${name} failed to start within ${max_attempts} attempts${NC}"
 			return 1
 		fi

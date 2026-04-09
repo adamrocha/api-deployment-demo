@@ -30,6 +30,9 @@ resources:
   - pdb.yaml
   - nginx-tls-secret.yaml
 
+  # Network security
+  - network-policies.yaml
+
   # Metrics server (kube-system - required for HPA)
   - metrics-server.yaml
 

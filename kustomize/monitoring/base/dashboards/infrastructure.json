@@ -4,7 +4,11 @@
   "timezone": "browser",
   "schemaVersion": 16,
   "version": 1,
-  "refresh": "30s",
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
@@ -23,7 +27,7 @@
       },
       "targets": [
         {
-          "expr": "count(kube_pod_info{namespace=\"api-deployment-demo\"})",
+          "expr": "count(kube_pod_info{namespace=~\"api-deployment-demo.*\"})",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -63,7 +67,7 @@
       },
       "targets": [
         {
-          "expr": "count(kube_pod_status_phase{namespace=\"api-deployment-demo\",phase=\"Running\"})",
+          "expr": "count(kube_pod_status_phase{namespace=~\"api-deployment-demo.*\",phase=\"Running\"})",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -103,7 +107,7 @@
       },
       "targets": [
         {
-          "expr": "count(kube_deployment_created{namespace=\"api-deployment-demo\"})",
+          "expr": "count(kube_deployment_created{namespace=~\"api-deployment-demo.*\"})",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -143,7 +147,7 @@
       },
       "targets": [
         {
-          "expr": "sum(kube_deployment_status_replicas_available{namespace=\"api-deployment-demo\"})",
+          "expr": "sum(kube_deployment_status_replicas_available{namespace=~\"api-deployment-demo.*\"})",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -178,7 +182,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (phase) (kube_pod_status_phase{namespace=\"api-deployment-demo\"})",
+          "expr": "sum by (phase) (kube_pod_status_phase{namespace=~\"api-deployment-demo.*\"})",
           "legendFormat": "{{phase}}",
           "refId": "A",
           "datasource": {
@@ -215,7 +219,7 @@
       },
       "targets": [
         {
-          "expr": "kube_deployment_status_replicas_available{namespace=\"api-deployment-demo\"}",
+          "expr": "kube_deployment_status_replicas_available{namespace=~\"api-deployment-demo.*\"}",
           "legendFormat": "{{deployment}} - Available",
           "refId": "A",
           "datasource": {
@@ -224,7 +228,7 @@
           }
         },
         {
-          "expr": "kube_deployment_spec_replicas{namespace=\"api-deployment-demo\"}",
+          "expr": "kube_deployment_spec_replicas{namespace=~\"api-deployment-demo.*\"}",
           "legendFormat": "{{deployment}} - Desired",
           "refId": "B",
           "datasource": {
@@ -261,7 +265,7 @@
       },
       "targets": [
         {
-          "expr": "sum by (pod) (kube_pod_container_status_restarts_total{namespace=\"api-deployment-demo\"})",
+          "expr": "sum by (pod) (kube_pod_container_status_restarts_total{namespace=~\"api-deployment-demo.*\"})",
           "legendFormat": "{{pod}}",
           "refId": "A",
           "datasource": {
@@ -298,7 +302,7 @@
       },
       "targets": [
         {
-          "expr": "rate(process_cpu_seconds_total{job=\"api\"}[1m])",
+          "expr": "api_cpu_usage_percent{job=\"api\",namespace=~\"api-deployment-demo.*\"}",
           "legendFormat": "{{pod}}",
           "refId": "A",
           "datasource": {
@@ -314,7 +318,7 @@
       "yaxes": [
         {
           "show": true,
-          "format": "percentunit",
+          "format": "percent",
           "label": "CPU"
         },
         {
@@ -335,7 +339,7 @@
       },
       "targets": [
         {
-          "expr": "process_resident_memory_bytes{job=\"api\"} / 1024 / 1024",
+          "expr": "api_memory_usage_bytes{job=\"api\",namespace=~\"api-deployment-demo.*\"} / 1024 / 1024",
           "legendFormat": "{{pod}}",
           "refId": "A",
           "datasource": {
@@ -376,7 +380,7 @@
       },
       "targets": [
         {
-          "expr": "count(kube_service_info{namespace=\"api-deployment-demo\"})",
+          "expr": "count(kube_service_info{namespace=~\"api-deployment-demo.*\"})",
           "refId": "A",
           "datasource": {
             "type": "prometheus",
@@ -415,7 +419,7 @@
       },
       "targets": [
         {
-          "expr": "count(kube_configmap_info{namespace=\"api-deployment-demo\"})",
+          "expr": "count(kube_configmap_info{namespace=~\"api-deployment-demo.*\"})",
           "refId": "A",
           "datasource": {
             "type": "prometheus",

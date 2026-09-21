@@ -166,7 +166,7 @@ echo ""
 
 # Test kustomize build (app overlay)
 log_info "Testing kustomize build (app overlay)..."
-if kubectl kustomize "${PROJECT_ROOT}/kustomize/overlays/${OVERLAY}" >/dev/null 2>&1; then
+if kubectl kustomize "${PROJECT_ROOT}/kustomize/overlays/${OVERLAY}" >/dev/null; then
 	log_success "App kustomize build successful"
 else
 	log_error "App kustomize build failed"
@@ -176,7 +176,7 @@ fi
 
 # Test kustomize build (monitoring overlay)
 log_info "Testing kustomize build (monitoring overlay)..."
-if kubectl kustomize "${PROJECT_ROOT}/kustomize/monitoring/overlays/${OVERLAY}" >/dev/null 2>&1; then
+if kubectl kustomize "${PROJECT_ROOT}/kustomize/monitoring/overlays/${OVERLAY}" >/dev/null; then
 	log_success "Monitoring kustomize build successful"
 else
 	log_error "Monitoring kustomize build failed"

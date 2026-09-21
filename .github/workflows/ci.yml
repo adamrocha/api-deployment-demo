@@ -23,7 +23,7 @@ jobs:
       - name: Install kubectl
         run: |
           curl -fsSL -o /tmp/kubectl "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+          sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
           kubectl version --client --output=yaml
 
       - name: Install Ansible

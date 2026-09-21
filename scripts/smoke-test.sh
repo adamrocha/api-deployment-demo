@@ -6,27 +6,32 @@ API_URL="${API_URL:-http://localhost:8000}"
 TIMEOUT="${TIMEOUT:-20}"
 
 log() {
-  echo "[$(date +%H:%M:%S)] $*"
+	echo "[$(date +%H:%M:%S)] $*"
 }
 
 check_http() {
-  local url="$1"
-  local label="$2"
+	local url="$1"
+	local label="$2"
 
-  log "Checking ${label}: ${url}"
-  curl -fsS --max-time "${TIMEOUT}" "${url}" >/dev/null
+	log "Checking ${label}: ${url}"
+	curl -fsS --max-time "${TIMEOUT}" "${url}" >/dev/null
 }
 
 python_json_check() {
-  local label="$1"
-  local payload="$2"
+	local label="$1"
+	local payload="$2"
+	local tmp_file
+	tmp_file="$(mktemp)"
 
-  printf '%s' "${payload}" | python3 - "$label" <<'PY'
+	printf '%s' "${payload}" >"${tmp_file}"
+	python3 - "${label}" "${tmp_file}" <<'PY'
 import json
 import sys
+from pathlib import Path
 
 label = sys.argv[1]
-raw = json.load(sys.stdin)
+path = Path(sys.argv[2])
+raw = json.loads(path.read_text(encoding='utf-8'))
 if not isinstance(raw, dict):
     raise SystemExit(f"{label}: expected JSON object, got {type(raw).__name__}")
 if label == 'health' and raw.get('status') != 'healthy':
@@ -34,6 +39,7 @@ if label == 'health' and raw.get('status') != 'healthy':
 if label == 'user' and raw.get('email') is None:
     raise SystemExit(f"{label}: missing email in user payload: {raw}")
 PY
+	rm -f "${tmp_file}"
 }
 
 check_http "${API_URL}/health" "health endpoint"
@@ -48,15 +54,15 @@ USER_EMAIL="smoke-$(date +%s)@example.com"
 USER_PAYLOAD="{\"name\":\"Smoke Test\",\"email\":\"${USER_EMAIL}\"}"
 USER_RESPONSE_FILE="$(mktemp)"
 HTTP_CODE=$(curl -sS --max-time "${TIMEOUT}" -w '%{http_code}' -o "${USER_RESPONSE_FILE}" -X POST "${API_URL}/users" \
-  -H 'Content-Type: application/json' \
-  -d "${USER_PAYLOAD}")
+	-H 'Content-Type: application/json' \
+	-d "${USER_PAYLOAD}")
 
-if [[ "${HTTP_CODE}" != "200" && "${HTTP_CODE}" != "201" ]]; then
-  echo "POST /users returned HTTP ${HTTP_CODE}"
-  echo "Response body:"
-  cat "${USER_RESPONSE_FILE}"
-  rm -f "${USER_RESPONSE_FILE}"
-  exit 1
+if [[ ${HTTP_CODE} != "200" && ${HTTP_CODE} != "201" ]]; then
+	echo "POST /users returned HTTP ${HTTP_CODE}"
+	echo "Response body:"
+	cat "${USER_RESPONSE_FILE}"
+	rm -f "${USER_RESPONSE_FILE}"
+	exit 1
 fi
 
 python3 - "${USER_RESPONSE_FILE}" <<'PY'

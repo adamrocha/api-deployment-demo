@@ -5,8 +5,18 @@ This project uses a small set of canonical docs to reduce duplication.
 ## Start Here
 
 1. [README](../README.md): project overview and entry commands
-2. [Quick Start](./QUICK-START.md): operational runbook
-3. [Secrets and Security](./SECRETS-SECURITY.md): security expectations and guardrails
+2. [Quick Start](./QUICK-START.md): operational runbook including bootstrap and smoke testing
+3. [Developer Onboarding](./DEVELOPER-ONBOARDING.md): first-run and contributor setup
+4. [Secrets and Security](./SECRETS-SECURITY.md): security expectations and guardrails
+
+## Fresh-Setup Checklist
+
+- Run `make bootstrap` on a new clone
+- Confirm `.env` and `terraform/terraform.tfvars` were created from templates if missing
+- Validate the repo with `make validate`
+- Create the cluster with `make cluster`
+- Deploy with `make deploy` or `make deploy ENV=staging`
+- Run `make smoke-test` against the live API
 
 ## Topic Guides
 

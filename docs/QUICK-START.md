@@ -8,25 +8,34 @@ Operational runbook for deploying and managing this repository.
 - Kind
 - kubectl
 - Ansible
+- Python 3.12+
+- Poetry
 
 ## First Deployment
 
+For a fresh clone, bootstrap and validate before deploying:
+
 ```bash
+make bootstrap
+make validate
 make cluster
 make deploy
-make get-secrets
+make smoke-test
 ```
 
 ## Core Commands
 
 ```bash
+make bootstrap
+make validate
 make deploy
 make deploy ENV=staging
 make status
 make urls
 make logs-api
 make logs-nginx
-make validate
+make smoke-test
+make get-secrets
 make destroy
 ```
 

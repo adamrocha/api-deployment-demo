@@ -4,12 +4,24 @@ Kubernetes deployment demo using Kustomize overlays for manifests and Ansible fo
 
 ## Quick Start
 
-Prerequisites: Docker, Kind, kubectl, Ansible.
+Prerequisites: Docker, Kind, kubectl, Ansible, Python 3.12+, Poetry.
+
+Fresh clone workflow:
+
+```bash
+make bootstrap
+make validate
+make cluster
+make deploy
+make smoke-test
+```
+
+If you already have a configured repo, the shorter path still works:
 
 ```bash
 make cluster
 make deploy
-make get-secrets
+make smoke-test
 ```
 
 Access URLs:
@@ -29,11 +41,13 @@ Access URLs:
 ## Common Commands
 
 ```bash
+make bootstrap              # set up local env and generated secrets
+make validate               # validate repo before deployment
 make deploy                 # production
 make deploy ENV=staging     # staging
+make smoke-test             # verify live API response
 make status
 make logs-api
-make validate
 make destroy
 ```
 
@@ -43,6 +57,7 @@ Primary documentation is intentionally consolidated:
 
 - docs/INDEX.md
 - docs/QUICK-START.md
+- docs/DEVELOPER-ONBOARDING.md
 - docs/SECRETS-SECURITY.md
 - docs/MONITORING.md
 - kustomize/SECRET-MANAGEMENT.md

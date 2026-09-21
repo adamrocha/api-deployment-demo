@@ -48,8 +48,11 @@ help: ## Show this help message
 	@echo "============================================"
 	@echo ""
 	@echo "📋 Quick Start:"
+	@echo "  make bootstrap            # Create .env defaults + generated secret files"
+	@echo "  make validate             # Validate repo before deployment"
 	@echo "  make deploy               # Deploy with Kustomize + Ansible"
 	@echo "  make deploy ENV=staging   # Deploy to staging"
+	@echo "  make smoke-test           # Verify the live API responds"
 	@echo "  make status               # Check deployment status"
 	@echo "  make urls                 # Show access URLs"
 	@echo "  make destroy              # Remove deployment"
@@ -221,11 +224,26 @@ urls: ## Display access URLs
 	@echo "Prometheus: http://localhost:$(PROMETHEUS_PORT)"
 
 # =============================================================================
+# Environment Bootstrap & Validation
+# =============================================================================
+
+bootstrap-secrets: ## Create local env defaults and generate required Kustomize secret env files
+	@if [ ! -f .env ]; then cp .env.example .env; fi
+	@if [ ! -f terraform/terraform.tfvars ]; then cp terraform/terraform.tfvars.example terraform/terraform.tfvars; fi
+	@./scripts/generate-kustomize-secrets.sh staging
+	@./scripts/generate-kustomize-secrets.sh production
+
+bootstrap: bootstrap-secrets validate ## Fresh-clone bootstrap: env defaults + generated secrets + validation
+
+# =============================================================================
 # Testing & Validation
 # =============================================================================
 
 test: ## Run deployment tests
 	@./scripts/test-automated-deployment.sh
+
+smoke-test: ## Run a lightweight smoke test against the running API
+	@./scripts/smoke-test.sh
 
 test-load: ## Run load test
 	@./scripts/load-test.sh
@@ -236,7 +254,7 @@ test-traffic: ## Generate test traffic
 verify-metrics: ## Verify metrics server and HPA status
 	@./scripts/verify-metrics.sh
 
-validate: ## Validate all configurations
+validate: bootstrap-secrets ## Validate all configurations
 	@echo "✅ Validating..."
 	@docker compose config >/dev/null && echo "  ✅ Docker Compose"
 	@kubectl kustomize kustomize/overlays/production >/dev/null && echo "  ✅ Kustomize app/production" || echo "  ❌ Kustomize app/production"
@@ -245,6 +263,9 @@ validate: ## Validate all configurations
 	@kubectl kustomize kustomize/monitoring/overlays/staging >/dev/null && echo "  ✅ Kustomize monitoring/staging" || echo "  ❌ Kustomize monitoring/staging"
 	@cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml --syntax-check && echo "  ✅ Ansible deploy.yml"
 	@for script in scripts/*.sh; do bash -n "$$script" 2>/dev/null && echo "  ✅ $$script"; done
+
+verify-app: ## Smoke-test the running API endpoints and core functionality
+	@./scripts/smoke-test.sh
 
 # =============================================================================
 # Secrets Management

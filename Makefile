@@ -230,6 +230,7 @@ urls: ## Display access URLs
 bootstrap-secrets: ## Create local env defaults and generate required Kustomize secret env files
 	@if [ ! -f .env ]; then cp .env.example .env; fi
 	@if [ ! -f terraform/terraform.tfvars ]; then cp terraform/terraform.tfvars.example terraform/terraform.tfvars; fi
+	@./scripts/generate-tls-secrets.sh $(APP_NAMESPACE) nginx-ssl-certs
 	@./scripts/generate-kustomize-secrets.sh staging
 	@./scripts/generate-kustomize-secrets.sh production
 

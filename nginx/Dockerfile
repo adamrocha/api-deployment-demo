@@ -1,8 +1,10 @@
-FROM nginx:1.29.6-alpine-slim
+FROM nginx:1.29.7-alpine-slim
 
 # Install dependencies, create directories, and set up non-root user
+# Keep security packages on the current Alpine repository release.
+# hadolint ignore=DL3018
 RUN apk add --no-cache \
-    openssl-dev=3.5.5-r0 && \
+    openssl && \
     apk upgrade --no-cache && \
     # Remove default nginx configuration
     rm /etc/nginx/nginx.conf && \
@@ -38,7 +40,7 @@ RUN chmod +x /usr/local/bin/entrypoint.sh \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD /usr/local/bin/health-check.sh
+    CMD ["/usr/local/bin/health-check.sh"]
 
 # Expose non-privileged ports
 EXPOSE 8080 8443
@@ -47,7 +49,7 @@ EXPOSE 8080 8443
 WORKDIR /usr/share/nginx/html
 
 # Switch to non-root user
-USER nginx-app
+USER 10001
 
 # Start with entrypoint script
 CMD ["/usr/local/bin/entrypoint.sh"]

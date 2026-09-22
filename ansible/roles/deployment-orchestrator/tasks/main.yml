@@ -45,6 +45,32 @@
     msg: "Kustomize overlay for environment '{{ deployment_env }}' not found at {{ playbook_dir }}/../kustomize/overlays/{{ deployment_env }}"
   when: not kustomize_overlay.stat.exists
 
+- name: Build metrics-server manifests (dry-run)
+  command: kubectl kustomize {{ playbook_dir }}/../kustomize/metrics-server
+  register: metrics_server_build
+  changed_when: false
+  failed_when: metrics_server_build.rc != 0
+
+- name: Apply metrics-server manifests
+  command: kubectl apply -k {{ playbook_dir }}/../kustomize/metrics-server
+  register: kubectl_apply_metrics_server
+  when: not dry_run | default(false)
+
+- name: Remove legacy app-namespace metrics-server resources
+  command: >
+    kubectl delete deployment,service,serviceaccount,rolebinding
+    -n {{ k8s_namespace }}
+    -l app=metrics-server
+    --ignore-not-found=true
+  register: legacy_metrics_server_cleanup
+  changed_when: "'deleted' in legacy_metrics_server_cleanup.stdout"
+  when: not dry_run | default(false)
+
+- name: Display metrics-server apply results
+  debug:
+    var: kubectl_apply_metrics_server.stdout_lines
+  when: kubectl_apply_metrics_server is defined and kubectl_apply_metrics_server.stdout_lines is defined
+
 - name: Build Kustomize manifests (dry-run)
   command: kubectl kustomize {{ playbook_dir }}/../kustomize/overlays/{{ deployment_env }}
   register: kustomize_build

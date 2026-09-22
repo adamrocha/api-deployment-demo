@@ -60,7 +60,7 @@
     - name: Delete metrics server
       kubernetes.core.k8s:
         state: absent
-        src: "{{ manifests_dir }}/metrics-server.yaml"
+        src: "{{ playbook_dir }}/../kustomize/metrics-server/metrics-server.yaml"
       ignore_errors: yes
 
     - name: Delete namespaces

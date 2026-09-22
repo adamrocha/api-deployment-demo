@@ -33,9 +33,6 @@ resources:
   # Network security
   - network-policies.yaml
 
-  # Metrics server (kube-system - required for HPA)
-  - metrics-server.yaml
-
 # Common labels for all resources
 labels:
   - pairs:

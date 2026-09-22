@@ -260,6 +260,7 @@ validate: bootstrap-secrets ## Validate all configurations
 	@docker compose config >/dev/null && echo "  ✅ Docker Compose"
 	@kubectl kustomize kustomize/overlays/production >/dev/null && echo "  ✅ Kustomize app/production" || echo "  ❌ Kustomize app/production"
 	@kubectl kustomize kustomize/overlays/staging >/dev/null && echo "  ✅ Kustomize app/staging" || echo "  ❌ Kustomize app/staging"
+	@kubectl kustomize kustomize/metrics-server >/dev/null && echo "  ✅ Kustomize metrics-server" || echo "  ❌ Kustomize metrics-server"
 	@kubectl kustomize kustomize/monitoring/overlays/production >/dev/null && echo "  ✅ Kustomize monitoring/production" || echo "  ❌ Kustomize monitoring/production"
 	@kubectl kustomize kustomize/monitoring/overlays/staging >/dev/null && echo "  ✅ Kustomize monitoring/staging" || echo "  ❌ Kustomize monitoring/staging"
 	@cd $(ANSIBLE_DIR) && ansible-playbook deploy.yml --syntax-check && echo "  ✅ Ansible deploy.yml"

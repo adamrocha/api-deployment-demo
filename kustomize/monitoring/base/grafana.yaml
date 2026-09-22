@@ -37,7 +37,7 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 5
-            failureThreshold: 30 # up to 10 + 30*10 = 310s for migrations + startup
+            failureThreshold: 60 # up to 10 + 60*10 = 610s for Grafana 12 startup on local Kind clusters
           livenessProbe:
             httpGet:
               path: /api/health
@@ -62,6 +62,8 @@ spec:
                   key: admin-password
             - name: GF_PATHS_PROVISIONING
               value: /etc/grafana/provisioning
+            - name: GF_PLUGINS_PREINSTALL_DISABLED
+              value: "true"
           volumeMounts:
             - name: dashboards-provisioning
               mountPath: /etc/grafana/provisioning/dashboards
@@ -81,11 +83,11 @@ spec:
               mountPath: /etc/grafana/provisioning/datasources
           resources:
             requests:
-              memory: 128Mi
-              cpu: 100m
-            limits:
               memory: 256Mi
               cpu: 250m
+            limits:
+              memory: 512Mi
+              cpu: 500m
       volumes:
         - name: dashboards-provisioning
           configMap:
